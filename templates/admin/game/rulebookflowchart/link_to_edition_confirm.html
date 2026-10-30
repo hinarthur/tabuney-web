@@ -1,0 +1,49 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Link flowchart(s) to edition{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  {{ form.media }}
+{% endblock %}
+
+{% block content %}
+<h1>Link {{ queryset|length }} flowchart(s) to an edition (shared, not copied)</h1>
+
+<p><strong>此為共用連結,不會複製資料。</strong>目標 edition 之後看到的就是同一筆
+flowchart——日後若在任一連結的 edition 調整此圖(排版、內容),所有連結的 edition
+會同時看到改動,無法各自獨立修改。適合同一遊戲的不同語言版本共用同一張流程圖的情境;
+若需要各自獨立調整,請改用「Copy to edition」。</p>
+
+<ul>
+  {% for obj in queryset %}
+    <li>{{ obj.rulebook.title }} — ruleset "{{ obj.ruleset }}" ({{ obj.detail }})</li>
+  {% endfor %}
+</ul>
+
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="link_to_edition">
+  {% for obj in queryset %}
+    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}">
+  {% endfor %}
+
+  <fieldset class="module aligned">
+    <div class="form-row">
+      <label for="id_target_edition">Target Edition <span class="required">*</span></label>
+      {{ form.target_edition }}
+      {% if form.target_edition.errors %}
+        <ul class="errorlist">{% for e in form.target_edition.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+      {% endif %}
+    </div>
+  </fieldset>
+
+  <div style="margin-top: 20px;">
+    <input type="submit" name="apply_link" value="Confirm link" class="default"
+      style="background:#417690; color:white; padding:8px 16px; border:none; cursor:pointer; font-size:14px;">
+    &nbsp;
+    <a href="{% url 'admin:game_rulebookflowchart_changelist' %}" class="button cancel-link">Cancel</a>
+  </div>
+</form>
+{% endblock %}

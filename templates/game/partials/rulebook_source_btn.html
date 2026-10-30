@@ -1,0 +1,11 @@
+{% load translate_tags %}{% comment %}規則書出處按鈕（Rulesbot / Flowchart 工具列共用）。
+
+傳入 btn_class（外觀 class）。狀態來自 selectors.rulebook_source_link：
+ok 可點並標示網域與外部連結圖示；broken / missing 灰色不可點，共用同一句 tooltip。
+{% t %} 回傳 mark_safe，進 title/aria-label 屬性一律 force_escape。
+只留 rel="noopener"（不加 noreferrer）：讓對方看得到流量來源。{% endcomment %}{% if rulebook_source %}{% if rulebook_source.state == "ok" %}{% t "game.rulebook.source" as rb_tip %}<a class="{{ btn_class }}" href="{{ rulebook_source.url }}" target="_blank" rel="noopener"
+   title="{{ rb_tip|force_escape }} · {{ rulebook_source.host }}"
+   aria-label="{{ rb_tip|force_escape }} · {{ rulebook_source.host }}"
+   style="text-decoration:none;"><i class="fa-solid fa-book"></i><i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.6em;margin-left:2px;opacity:0.7;"></i></a>{% else %}{% t "game.rulebook.source.unavailable" as rb_tip %}<span class="{{ btn_class }}" role="img" aria-disabled="true"
+   title="{{ rb_tip|force_escape }}" aria-label="{{ rb_tip|force_escape }}"
+   style="opacity:0.4;cursor:not-allowed;"><i class="fa-solid fa-book"></i></span>{% endif %}{% endif %}

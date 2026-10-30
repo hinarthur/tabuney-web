@@ -1,0 +1,157 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}匯入 Variant{% endblock %}
+
+{% block content %}
+<h1>匯入 Variant</h1>
+<p>
+  每筆資料將以其 <strong>Game 名稱</strong>在 DB 中找到對應的 parent Game，並建立一筆 <strong>kind=Variant</strong> 的 Game 及新 Edition。<br>
+  Edition 名稱取自 <strong>Alternative Name</strong>（若為空則沿用 Game 名稱）。<br>
+  同時將以 Alternative Name 建立一筆 GameTitle（語言由下方共用設定指定）。
+</p>
+<p>即將匯入以下 <strong>{{ products|length }}</strong> 筆資料，請確認下方共用設定後按「確認匯入」。</p>
+
+<form method="post">
+  {% csrf_token %}
+
+  <h2 style="margin-top:20px;">待匯入清單</h2>
+  <table style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr style="background:#f8f8f8; text-align:left;">
+        <th style="padding:8px; border:1px solid #ddd;">#</th>
+        <th style="padding:8px; border:1px solid #ddd;">Game</th>
+        <th style="padding:8px; border:1px solid #ddd;">名稱（= Parent Game）</th>
+        <th style="padding:8px; border:1px solid #ddd;">Alternative Name（= Edition / GameTitle 名稱）</th>
+        <th style="padding:8px; border:1px solid #ddd;">Barcode</th>
+        <th style="padding:8px; border:1px solid #ddd;">Thumbnail</th>
+        <th style="padding:8px; border:1px solid #ddd;">Rulebooks</th>
+        <th style="padding:8px; border:1px solid #ddd;">MSRP</th>
+        <th style="padding:8px; border:1px solid #ddd;">Players</th>
+        <th style="padding:8px; border:1px solid #ddd;">Playtime</th>
+        <th style="padding:8px; border:1px solid #ddd;">Age</th>
+        <th style="padding:8px; border:1px solid #ddd;">Designer</th>
+        <th style="padding:8px; border:1px solid #ddd;">Artist</th>
+        <th style="padding:8px; border:1px solid #ddd;">BGG ID</th>
+        <th style="padding:8px; border:1px solid #ddd;">Categories</th>
+        <th style="padding:8px; border:1px solid #ddd;">Mechanisms</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in products %}
+      <tr style="border-bottom:1px solid #eee;">
+        <td style="padding:8px; border:1px solid #ddd;">{{ forloop.counter }}</td>
+        <td style="padding:8px; border:1px solid #ddd; text-align:center;">
+          {% if p.game_exists %}⚠️{% else %}—{% endif %}
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          <input type="text" name="name_{{ p.obj.id }}" value="{{ p.nd.name|default_if_none:'' }}" style="width:200px;">
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          <input type="text" name="alternate_name_{{ p.obj.id }}" value="{{ p.nd.alternate_name|default_if_none:'' }}" style="width:200px;">
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          <input type="text" name="barcode_{{ p.obj.id }}" value="{{ p.nd.barcode|default_if_none:'' }}" style="width:140px;">
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          {% if p.nd.thumbnail_url %}
+          <a href="{{ p.nd.thumbnail_url }}" target="_blank">
+            <img src="{{ p.nd.thumbnail_url }}" style="max-height:60px; max-width:80px;" onerror="this.style.display='none'">
+          </a>
+          {% else %}—{% endif %}
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          {% if p.nd.rulebooks %}
+            <div style="max-height:150px; overflow-y:auto;">
+              {% for rb in p.nd.rulebooks %}
+                <div style="margin-bottom:4px; padding:3px 5px; background:#f0f4f8; border-left:3px solid #417690; border-radius:2px;">
+                  <span style="font-weight:bold; color:#417690; font-size:11px; text-transform:uppercase;">{{ rb.language|default:"?" }}</span>
+                  &nbsp;<a href="{{ rb.url }}" target="_blank" style="text-decoration:underline; font-size:12px;">PDF ↗</a>
+                </div>
+              {% empty %}—{% endfor %}
+            </div>
+          {% elif p.nd.rulebook_url %}
+            <div style="padding:3px 5px; background:#f0f4f8; border-left:3px solid #999; border-radius:2px;">
+              <span style="font-weight:bold; color:#999; font-size:11px; text-transform:uppercase;">{{ p.nd.language|default:"?" }}</span>
+              &nbsp;<a href="{{ p.nd.rulebook_url }}" target="_blank" style="text-decoration:underline; font-size:12px;">PDF ↗</a>
+            </div>
+          {% else %}—{% endif %}
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">{{ p.nd.msrp|default:p.nd.price|default:"—" }}</td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          {% if p.nd.min_players or p.nd.max_players %}{{ p.nd.min_players|default:"?" }}–{{ p.nd.max_players|default:"?" }}{% else %}—{% endif %}
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          {% if p.nd.min_playtime or p.nd.max_playtime %}{{ p.nd.min_playtime|default:"?" }}–{{ p.nd.max_playtime|default:"?" }} 分鐘{% else %}—{% endif %}
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">{{ p.nd.age|default:"—" }}</td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          <input type="text" name="designer_{{ p.obj.id }}" value="{{ p.nd.designer|default_if_none:'' }}" style="width:160px;">
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          <input type="text" name="artist_{{ p.obj.id }}" value="{{ p.nd.artist|default_if_none:'' }}" style="width:160px;">
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          <input type="text" name="bgg_id_{{ p.obj.id }}" value="{{ p.nd.bgg_id|default_if_none:'' }}" style="width:80px;">
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          <input type="text" name="categories_{{ p.obj.id }}" value="{{ p.nd.categories|default_if_none:'' }}" style="width:150px;">
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          <input type="text" name="mechanisms_{{ p.obj.id }}" value="{{ p.nd.mechanisms|default_if_none:'' }}" style="width:150px;">
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% for pid in product_ids %}
+  <input type="hidden" name="product_ids" value="{{ pid }}">
+  {% endfor %}
+
+  <fieldset class="module aligned">
+    <h2>匯入設定（套用至全部選取資料）</h2>
+
+    <div class="form-row">
+      <label>Reviewed by</label>
+      <div style="padding-top:7px;">{{ reviewer_display }}</div>
+    </div>
+    <div class="form-row">
+      <label for="id_language">語言 <span class="required">*</span></label>
+      {{ form.language }}
+      {% if form.language.errors %}<ul class="errorlist">{% for e in form.language.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+    <div class="form-row">
+      <label for="id_publisher_entity">出版商 Entity</label>
+      {{ form.publisher_entity }}
+    </div>
+    <div class="form-row">
+      <label for="id_is_primary">設為 Primary Edition</label>
+      {{ form.is_primary }}
+    </div>
+    <div class="form-row">
+      <label for="id_currency">MSRP Currency（可選）</label>
+      {{ form.currency }}
+    </div>
+    <div class="form-row">
+      <label for="id_region">Region（可選）</label>
+      {{ form.region }}
+    </div>
+    <div class="form-row">
+      <label for="id_packaging_languages">Packaging Languages（可選，多選）</label>
+      {{ form.packaging_languages }}
+    </div>
+    <div class="form-row">
+      <label for="id_game_title_language">GameTitle 語言（可選）</label>
+      {{ form.game_title_language }}
+    </div>
+  </fieldset>
+
+  <div style="margin-top:20px;">
+    <input type="submit" value="確認匯入" class="default"
+      style="background:#417690; color:white; padding:8px 16px; border:none; cursor:pointer; font-size:14px;">
+    &nbsp;
+    <a href="{% url 'admin:game_scrapedproduct_changelist' %}" class="button cancel-link">取消</a>
+  </div>
+</form>
+{% endblock %}

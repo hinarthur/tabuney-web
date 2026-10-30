@@ -1,0 +1,1631 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+{{ block.super }}
+
+<style>
+    /* 各頁面到訪圖的分類色——順序固定（不循環），順序本身就是色盲安全性的
+       一部分，改動請連同 renderPageVisits() 裡的 PAGE_ORDER 一起改。數值取自
+       站方 dataviz 規範的驗證色盤（node scripts/validate_palette.js 過關）。
+       首頁量級比其餘 4 頁高一個數量級，共用左軸會把其他線壓成貼底的直線，
+       所以 --pv-home 走長條＋右軸，其餘 4 頁維持折線＋左軸。 */
+    .pv-chart-wrap {
+        --pv-home: #2a78d6;
+        --pv-membership: #eb6834;
+        --pv-game_search: #1baf7a;
+        --pv-about: #eda100;
+        --pv-feed_list: #e87ba4;
+    }
+    @media (prefers-color-scheme: dark) {
+        html:not([data-theme="light"]) .pv-chart-wrap {
+            --pv-home: #3987e5;
+            --pv-membership: #d95926;
+            --pv-game_search: #199e70;
+            --pv-about: #c98500;
+            --pv-feed_list: #d55181;
+        }
+    }
+    html[data-theme="dark"] .pv-chart-wrap {
+        --pv-home: #3987e5;
+        --pv-membership: #d95926;
+        --pv-game_search: #199e70;
+        --pv-about: #c98500;
+        --pv-feed_list: #d55181;
+    }
+
+    /* 語言點擊圖：同一份分類色盤的前六格（藍/橘/青/黃/洋紅/綠），順序對應
+       stats/reports.py 的 LANG_CLICK_ORDER，一樣不循環套色。淺色與深色兩組都跑過
+       node scripts/validate_palette.js（--surface #ffffff / #121212）全數通過；
+       淺色下青、黃、洋紅對白底不足 3:1，靠圖例上的語言名稱與數字補位（relief rule），
+       所以圖例不能拿掉。--lc-menu 是長條用的中性灰：它不是第七種語言，刻意不給色相。 */
+    .lc-chart-wrap {
+        --lc-en: #2a78d6;
+        --lc-zh: #eb6834;
+        --lc-ja: #1baf7a;
+        --lc-de: #eda100;
+        --lc-fr: #e87ba4;
+        --lc-es: #008300;
+        --lc-menu: #898781;
+    }
+    @media (prefers-color-scheme: dark) {
+        html:not([data-theme="light"]) .lc-chart-wrap {
+            --lc-en: #3987e5;
+            --lc-zh: #d95926;
+            --lc-ja: #199e70;
+            --lc-de: #c98500;
+            --lc-fr: #d55181;
+            --lc-es: #008300;
+            --lc-menu: #898781;
+        }
+    }
+    html[data-theme="dark"] .lc-chart-wrap {
+        --lc-en: #3987e5;
+        --lc-zh: #d95926;
+        --lc-ja: #199e70;
+        --lc-de: #c98500;
+        --lc-fr: #d55181;
+        --lc-es: #008300;
+        --lc-menu: #898781;
+    }
+    .pv-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 20px;
+        margin: 8px 0 4px;
+        font-size: 0.85em;
+    }
+    .pv-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    /* 錯誤警示。刻意用「白字＋深色底的徽章」而不是整列染背景色：admin 有淺色與
+       深色兩套主題，整列底色在其中一套一定會跟前景撞到；徽章自帶前景色，兩套都安全。 */
+    .err-badge {
+        display: inline-block;
+        padding: 1px 8px;
+        border-radius: 10px;
+        font-size: 0.85em;
+        font-weight: bold;
+        white-space: nowrap;
+        color: #fff;
+    }
+    .err-badge.critical { background: #ba2121; }
+    .err-badge.warning  { background: #8a5a00; }
+    /* 沒有警示時的綠字。這是整個模組最常出現的狀態，要一眼看得出來是好事 */
+    .err-clear { color: #1baf7a; font-weight: bold; }
+    /* 網址可能很長（尤其外站 referer），不換行會把整張表撐爆版面 */
+    .err-url {
+        word-break: break-all;
+        max-width: 28em;
+        font-family: monospace;
+        font-size: 0.9em;
+    }
+    .err-note { color: #666; font-size: 0.9em; }
+    .err-raw > summary { cursor: pointer; font-weight: bold; margin: 12px 0 4px; }
+    .pv-legend-swatch {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        display: inline-block;
+        flex: none;
+    }
+    /* ── 待辦色塊 ──────────────────────────────────────────────
+       跟 .err-badge 同一個理由：白字＋實心底色自帶前景，admin 淺色／深色兩套主題
+       都安全，所以不需要另外寫深色版。數字是 0 時退成中性灰，用 admin 自己的
+       變數，跟著主題走——0 是常態，不該搶眼。 */
+    .todo-grid {
+        --todo-active: #2a78d6;
+        --todo-alert: #ba2121;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        gap: 12px;
+        margin: 0 0 20px;
+    }
+    a.todo-tile, a.todo-tile:link, a.todo-tile:visited, a.todo-tile:hover {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 14px 16px;
+        border-radius: 6px;
+        text-decoration: none;
+        color: #fff;
+        background: var(--todo-active);
+    }
+    a.todo-tile:hover { filter: brightness(1.08); }
+    a.todo-tile.alert { background: var(--todo-alert); }
+    a.todo-tile.zero {
+        background: var(--darkened-bg, #f8f8f8);
+        color: var(--body-quiet-color, #666);
+    }
+    .todo-num { font-size: 2.6em; font-weight: 700; line-height: 1.1; }
+    .todo-label { font-weight: 600; }
+    .todo-sub { font-size: 0.8em; opacity: 0.9; min-height: 1.2em; }
+
+    /* ── 分頁 ── */
+    .dash-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        border-bottom: 2px solid var(--hairline-color, #e8e8e8);
+        margin: 0 0 16px;
+    }
+    .dash-tabs button {
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 1em;
+        color: var(--body-quiet-color, #666);
+    }
+    .dash-tabs button[aria-selected="true"] {
+        color: var(--body-fg, #333);
+        border-bottom-color: var(--primary, #79aec8);
+        font-weight: 600;
+    }
+    .dash-tabs .err-badge { margin-left: 4px; }
+
+    /* VPS 負荷圖：沿用同一份分類色盤的前兩格（藍／橘），閾值線用警示紅 */
+    .srv-chart-wrap {
+        --srv-avail: #2a78d6;
+        --srv-swap: #eb6834;
+        --srv-threshold: #ba2121;
+    }
+    @media (prefers-color-scheme: dark) {
+        html:not([data-theme="light"]) .srv-chart-wrap {
+            --srv-avail: #3987e5;
+            --srv-swap: #d95926;
+            --srv-threshold: #e35d5d;
+        }
+    }
+    html[data-theme="dark"] .srv-chart-wrap {
+        --srv-avail: #3987e5;
+        --srv-swap: #d95926;
+        --srv-threshold: #e35d5d;
+    }
+</style>
+
+<div class="module" id="stats-source-module">
+    <h2>資料來源：<span id="stats-source-label">載入中…</span></h2>
+    <p>
+        <!-- 預設隱藏：等第一次回應帶回 can_switch_source 才決定要不要顯示，
+             避免在正式站上出現「按鈕閃一下才消失」 -->
+        <button type="button" id="stats-source-toggle" style="display:none;">切換到正式站</button>
+        <button type="button" id="stats-refresh">重新抓取</button>
+        <span id="stats-source-note"></span>
+    </p>
+    <p id="stats-error" style="color:#ba2121;font-weight:bold;"></p>
+</div>
+
+{# ── 待辦 ─────────────────────────────────────────────────────
+   只放「數字 > 0 就代表有事要做」的東西，其餘統計一律進下面的分頁。
+   數字由 renderTodo() 填；正式站還沒部署新欄位時顯示「—」而不是 0。 #}
+<div class="todo-grid" style="margin-bottom:12px;">
+    <a class="todo-tile zero" id="todo-game" href="{% url 'admin:game_gamesuggestion_changelist' %}?status__exact=pending">
+        <span class="todo-num">—</span><span class="todo-label">推薦新增桌遊</span><span class="todo-sub"></span>
+    </a>
+    <a class="todo-tile zero" id="todo-flowchart" href="{% url 'admin:game_flowchartsuggestion_changelist' %}?status__exact=pending">
+        <span class="todo-num">—</span><span class="todo-label">流程圖改善建議</span><span class="todo-sub"></span>
+    </a>
+    <a class="todo-tile zero" id="todo-rss" href="{% url 'admin:feed_rss_changelist' %}?review=pending">
+        <span class="todo-num">—</span><span class="todo-label">RSS 推薦</span><span class="todo-sub"></span>
+    </a>
+    <a class="todo-tile zero" id="todo-error" href="#system">
+        <span class="todo-num">—</span><span class="todo-label">錯誤紀錄</span><span class="todo-sub"></span>
+    </a>
+</div>
+<div class="todo-grid">
+    {# 第二行：以下 6 塊是製作流程的關卡，由前到後：搜尋 → 寫入 → 擷規則 → Stats → 生圖 → 檢圖 #}
+    <a class="todo-tile zero" id="todo-import-search" href="{% url 'admin:game_editionimportqueue_changelist' %}?status__exact=searching">
+        <span class="todo-num">—</span><span class="todo-label">待搜</span><span class="todo-sub">作品清單</span>
+    </a>
+    <a class="todo-tile zero" id="todo-import-review" href="{% url 'admin:game_editionimportqueue_changelist' %}?status__exact=review">
+        <span class="todo-num">—</span><span class="todo-label">待寫入</span><span class="todo-sub">匯入待審</span>
+    </a>
+    <a class="todo-tile zero" id="todo-whole-context" href="{% url 'admin:game_rulebook_changelist' %}?whole_context_state=empty">
+        <span class="todo-num">—</span><span class="todo-label">待擷規則</span><span class="todo-sub">whole_context 空值</span>
+    </a>
+    {# 待Stats 還沒開發：先佔位，維持整條流程的順序。沒有資料來源，所以不走 setTile #}
+    <a class="todo-tile zero" id="todo-stats" style="cursor:default;" aria-disabled="true">
+        <span class="todo-num">—</span><span class="todo-label">待 Stats</span><span class="todo-sub">未開發</span>
+    </a>
+    <a class="todo-tile zero" id="todo-flowchart-generate" href="{% url 'admin:game_rulebook_changelist' %}?whole_context_state=has&flowchart_published=no_flowcharts">
+        <span class="todo-num">—</span><span class="todo-label">待生圖</span><span class="todo-sub"></span>
+    </a>
+    <a class="todo-tile zero" id="todo-flowchart-check" href="{% url 'admin:game_rulebookflowchart_changelist' %}">
+        <span class="todo-num">—</span><span class="todo-label">待檢圖</span><span class="todo-sub"></span>
+    </a>
+</div>
+
+{# 分頁狀態記在網址 hash（#users / #usage / #rss / #system），重新整理會停在同一頁。
+   hash 刻意不等於任何元素的 id，點了才不會讓瀏覽器跳捲動位置。 #}
+<div class="dash-tabs" role="tablist">
+    <button type="button" role="tab" data-tab="users">用戶統計</button>
+    <button type="button" role="tab" data-tab="usage">桌遊使用統計</button>
+    <button type="button" role="tab" data-tab="rss">RSS 統計</button>
+    <button type="button" role="tab" data-tab="system">系統<span id="tab-badge-system" class="err-badge critical" hidden></span></button>
+</div>
+
+<div class="dash-panel" id="panel-users" role="tabpanel">
+{# ── 人 ───────────────────────────────────────────────────────── #}
+<div class="module">
+    <h2>人數統計</h2>
+    <table>
+        <tbody>
+            <tr>
+                <th></th>
+                <th>Member</th>
+                <th>Subscriber</th>
+            </tr>
+            <tr>
+                <th>總人數</th>
+                <td id="total_free"></td>
+                <td id="total_basic"></td>
+            </tr>
+        </tbody>
+    </table>
+    <h3>各頁面到訪人次（近 30 天）</h3>
+    <p id="page-visit-summary">載入中…</p>
+    <p style="color:#666;font-size:0.9em;">
+        長條＝首頁（右軸）；折線＝其餘 4 頁（左軸）。首頁量級高出一截，分軸才看得出其他頁的起伏。
+        匿名訪客不記識別碼，數字是「頁面載入次數」而非不重複訪客數；已登入會員 30 分鐘內
+        重訪同一頁只算一次；已排除明顯的爬蟲流量。
+    </p>
+    <div id="page-visit-legend" class="pv-chart-wrap pv-legend"></div>
+    <div id="page-visit-chart" class="pv-chart-wrap"></div>
+    <h2>介面語言（Member / Subscriber）</h2>
+    <table>
+        <tbody>
+            <tr>
+                <th></th>
+                <th>de</th>
+                <th>en</th>
+                <th>es</th>
+                <th>fr</th>
+                <th>ja</th>
+                <th>zh</th>
+            </tr>
+            <tr>
+                <th>人數</th>
+                <td id="tribe_lang_de"></td>
+                <td id="tribe_lang_en"></td>
+                <td id="tribe_lang_es"></td>
+                <td id="tribe_lang_fr"></td>
+                <td id="tribe_lang_ja"></td>
+                <td id="tribe_lang_zh"></td>
+            </tr>
+        </tbody>
+    </table>
+    <h3>語言切換點擊（近 30 天）</h3>
+    <p id="lang-click-summary">載入中…</p>
+    <p style="color:#666;font-size:0.9em;">
+        折線＝各語言在選單裡被點選的次數（左軸）；長條＝點開頂 bar 語言鈕的次數（右軸，
+        桌機與手機合計）。上面那張表是會員存下來的偏好，這張是實際的切換行為、含匿名訪客。
+        匿名訪客不記識別碼，數字是「點擊次數」而非不重複人數，且刻意不去重；已排除明顯的爬蟲。
+    </p>
+    <div id="lang-click-legend" class="lc-chart-wrap pv-legend"></div>
+    <div id="lang-click-chart" class="lc-chart-wrap"></div>
+</div>
+
+{# 待辦色塊只看 pending，這裡是各狀態的完整數字 #}
+<div class="module">
+    <h2>會員推薦（各狀態）</h2>
+    <table>
+        <tbody>
+            <tr>
+                <th></th>
+                <th>Pending</th>
+                <th>Approved</th>
+                <th>Rejected</th>
+            </tr>
+            <tr>
+                <th><a href="{% url 'admin:game_gamesuggestion_changelist' %}">推薦新增桌遊（搜尋頁）</a></th>
+                <td id="suggestion-pending-count"></td>
+                <td id="suggestion-approved-count"></td>
+                <td id="suggestion-rejected-count"></td>
+            </tr>
+            <tr>
+                <th><a href="{% url 'admin:game_flowchartsuggestion_changelist' %}">流程圖改善建議</a></th>
+                <td id="fc-suggestion-pending-count"></td>
+                <td id="fc-suggestion-approved-count"></td>
+                <td id="fc-suggestion-rejected-count"></td>
+            </tr>
+            {# Rss 沒有核准／退回，只有「審過了沒」：Approved 欄放的是已審數 #}
+            <tr>
+                <th><a href="{% url 'admin:feed_rss_changelist' %}?status=user">RSS 推薦（會員新增）</a></th>
+                <td id="rss-user-pending-count"></td>
+                <td id="rss-user-reviewed-count" title="已在 Rss 列表按過「標記已審」"></td>
+                <td>—</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</div>
+
+<div class="dash-panel" id="panel-usage" role="tabpanel">
+{# ── Rules ────────────────────────────────────────────────────── #}
+<div class="module">
+    <h2>Rulebook 統計</h2>
+    <table>
+        <tbody>
+            <tr>
+                <th title="有 PDF 但 whole_context 還是空的">待處理</th>
+                <th title="whole_context 非空，rulesbot 可回答">Rulesbot</th>
+                <th title="已核准公開的流程圖：入門圖（initial=true）| 變體圖（initial=false）">Flowchart (ini | variant)</th>
+                <th title="已送審、等待 reviewer 核准的流程圖">Flowchart 待審</th>
+                <th>Script（已公開）</th>
+                <th>PLATVM（非零）</th>
+                <th title="Source URL 失效：上次 sync 後新發現 | 總數。新發現 > 0 代表有變動還沒 sync 到正式站">Source URL 失效 (新 | 總)</th>
+            </tr>
+            <tr>
+                <td id="rulebook-pending-count"></td>
+                <td id="rulebook-indexed-count"></td>
+                <td id="rulebook-flowchart-translated-count"></td>
+                <td><a id="rulebook-flowchart-pending-review-count" href="{% url 'admin:game_rulebookflowchart_changelist' %}?review=pending"></a></td>
+                <td id="rulebook-script-published-count"></td>
+                <td id="game-platvm-non-zero-count"></td>
+                <td><a id="rulebook-source-broken-count" href="{% url 'admin:game_rulebook_changelist' %}?source_url_status__exact=broken"></a></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="module">
+    <h2>Rulesbot 使用數據（近 30 天）</h2>
+    <p id="rulesbot-summary">載入中…</p>
+    <p style="color:#666;font-size:0.9em;">
+        提問數只計成功送出的：失敗或被配額擋下的沒有記錄。使用者清除對話紀錄後，
+        歷史數字會跟著減少。
+    </p>
+    <h3>最多人問的遊戲</h3>
+    <table>
+        <thead>
+            <tr><th>遊戲</th><th>提問數</th></tr>
+        </thead>
+        <tbody id="rulesbot-top-body"></tbody>
+    </table>
+</div>
+
+<div class="module">
+    <h2>Flowchart 使用數據（近 30 天）</h2>
+    <p id="flowchart-summary">載入中…</p>
+    <p style="color:#666;font-size:0.9em;">
+        只記錄已登入會員（匿名訪客不留任何識別碼）。追蹤是後來才加的，
+        沒有上線前的歷史資料。
+    </p>
+    <h3>最多人展開的流程圖</h3>
+    <table>
+        <thead>
+            <tr><th>遊戲</th><th>展開次數</th></tr>
+        </thead>
+        <tbody id="flowchart-top-body"></tbody>
+    </table>
+</div>
+
+<div class="module">
+    <h2>Script 使用數據（近 30 天）</h2>
+    <p id="script-summary">載入中…</p>
+    <p style="color:#666;font-size:0.9em;">
+        只記錄已登入會員。講稿有付費牆，所以「讀到」與「被擋下」分開計算。
+        追蹤是後來才加的，沒有上線前的歷史資料。
+    </p>
+    <h3>最多人讀的講稿</h3>
+    <table>
+        <thead>
+            <tr><th>遊戲</th><th>讀取次數</th></tr>
+        </thead>
+        <tbody id="script-top-body"></tbody>
+    </table>
+
+    <h3>最多人想看卻被擋下的講稿（升級誘因最強）</h3>
+    <table>
+        <thead>
+            <tr><th>遊戲</th><th>擋下次數</th></tr>
+        </thead>
+        <tbody id="script-locked-body"></tbody>
+    </table>
+</div>
+
+{# ── 搜 ───────────────────────────────────────────────────────── #}
+<div class="module">
+    <h2>搜尋行為（近 30 天，已排除爬蟲）</h2>
+    <p id="search-summary">載入中…</p>
+
+    <h3>該補的作品：有人搜過但站上沒有</h3>
+    <table>
+        <thead>
+            <tr><th>關鍵字</th><th>次數</th><th>輸入型態</th><th>最後搜尋</th></tr>
+        </thead>
+        <tbody id="search-missing-body"></tbody>
+    </table>
+
+    <h3>掃了條碼卻找不到（可直接反查是哪一款）</h3>
+    <table>
+        <thead>
+            <tr><th>條碼</th><th>次數</th><th>最後搜尋</th></tr>
+        </thead>
+        <tbody id="search-missing-barcodes-body"></tbody>
+    </table>
+
+    <h3>熱門關鍵字（有搜到結果的）</h3>
+    <table>
+        <thead>
+            <tr><th>關鍵字</th><th>次數</th><th>最後搜尋</th></tr>
+        </thead>
+        <tbody id="search-top-keywords-body"></tbody>
+    </table>
+</div>
+</div>
+
+<div class="dash-panel" id="panel-rss" role="tabpanel">
+<div class="module">
+    <h2>RSS 統計（近 30 天）</h2>
+    <table>
+        <tbody>
+            <tr>
+                <th></th>
+                <th>RSS 來源</th>
+                <th>近月文章量</th>
+                <th>平均字符</th>
+            </tr>
+            <tr>
+                <th>Eng</th>
+                <td id="enRss"></td>
+                <td id="en30qty"></td>
+                <td id="enAvgChar"></td>
+            </tr>
+            <tr>
+                <th>德文</th>
+                <td id="deRss"></td>
+                <td id="de30qty"></td>
+                <td id="deAvgChar"></td>
+            </tr>
+            <tr>
+                <th>Français</th>
+                <td id="frRss"></td>
+                <td id="fr30qty"></td>
+                <td id="frAvgChar"></td>
+            </tr>
+            <tr>
+                <th>Español</th>
+                <td id="esRss"></td>
+                <td id="es30qty"></td>
+                <td id="esAvgChar"></td>
+            </tr>
+            <tr>
+                <th>華文</th>
+                <td id="zhRss"></td>
+                <td id="zh30qty"></td>
+                <td id="zhAvgChar"></td>
+            </tr>
+            <tr>
+                <th>日本語</th>
+                <td id="jaRss"></td>
+                <td id="ja30qty"></td>
+                <td id="jaAvgChar"></td>
+            </tr>
+            <tr>
+                <th>總/均</th>
+                <td id="allRss"></td>
+                <td id="all30qty"></td>
+                <td id="avgChar"></td>
+            </tr>
+        </tbody>
+    </table>
+    <h2>RSS 工具</h2>
+    <ul>
+        <li><a href="{% url 'feed_panel:index' %}">Feed Panel</a>：管理 Feed</li>
+        <li>
+            <a href="{% url 'admin:search_rss' %}">Search Board Game Blogs</a>：
+            搜尋新的桌遊部落格 RSS 加進資料庫
+        </li>
+        <li><a href="{% url 'admin:feed_rss_changelist' %}?review=pending">會員推薦、還沒審的 RSS</a></li>
+    </ul>
+</div>
+</div>
+
+<div class="dash-panel" id="panel-system" role="tabpanel">
+{# ── VPS ──────────────────────────────────────────────────────
+   資料來自 stats.ServerSample（django-q 每 10 分鐘採樣一次，留 14 天）。
+   紅燈門檻跟 deploy/vps/mem-snapshot.sh 同一組，定義在 stats/reports.py。 #}
+<div class="module">
+    <h2>VPS 負荷</h2>
+    <p id="server-alert">載入中…</p>
+    <table>
+        <thead>
+            <tr><th>可用 RAM</th><th>Swap 使用</th><th>Load（1 分 | 5 分）</th><th>磁碟使用</th><th>採樣時間</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td id="srv-mem"></td>
+                <td id="srv-swap"></td>
+                <td id="srv-load"></td>
+                <td id="srv-disk"></td>
+                <td id="srv-time"></td>
+            </tr>
+        </tbody>
+    </table>
+    <h3>近 7 天走勢</h3>
+    <p class="err-note">每小時一點，取該小時最差的值（可用 RAM 取最低、swap 取最高）：OOM 是瞬間的事，取平均會把尖刺抹平。</p>
+    <div id="server-legend" class="srv-chart-wrap pv-legend"></div>
+    <div id="server-chart" class="srv-chart-wrap"></div>
+    <p class="err-note">
+        出事當下的細節（哪個 process、哪個網址）不在這裡，要到 VPS 上看：
+        <code>/var/log/mem-snapshot.log</code>（RAM 吃緊時的快照）、
+        <code>journalctl -t net-watchdog</code>（網路斷線紀錄）、
+        <code>sar -r</code>（長期記憶體歷史）。
+    </p>
+</div>
+
+{# ── 錯誤 ───────────────────────────────────────────── #}
+<div class="module">
+    <h2>錯誤紀錄（近 30 天，已排除爬蟲與漏洞掃描）</h2>
+
+    {% comment %} 這一塊是唯一需要每天看的東西。分級規則全部寫在 stats/reports.py 的 _ALERT_*
+       常數旁邊——要調門檻請改那裡，不要在這裡另外過濾：前後端各有一套規則的話，
+       之後沒人說得出「紅燈到底代表什麼」。 {% endcomment %}
+    <p id="error-alert-summary">載入中…</p>
+    <table>
+        <thead>
+            <tr>
+                <th>狀況</th><th>網址</th><th>來源／說明</th><th>該做什麼</th>
+                <th>次數</th><th>其中會員</th><th>最後發生</th><th>處理</th>
+            </tr>
+        </thead>
+        <tbody id="error-alert-body"></tbody>
+    </table>
+
+    {% comment %} 下面全是查證用的原始資料。刻意收進 <details>：它每天都會長出新列，攤開來
+       放首頁的結果就是天天有一堆看起來很嚴重、實際上不用動的東西。 {% endcomment %}
+    <details class="err-raw">
+        <summary>原始清單與總量（平常不用看）</summary>
+        <p class="err-note">
+            這張表是「一天 × 一組錯誤」一列的聚合，所以同一個壞網址只要今天還有人撞到，
+            今天就會生一列新的。<strong>列數變多不代表出事</strong>——一個被搜尋引擎索引到的
+            舊網址，會每天準時貢獻一列，直到有人做轉址為止。
+        </p>
+        <p id="error-summary">載入中…</p>
+        <p id="error-by-status" class="err-note"></p>
+
+        <h3>壞連結：哪一頁把人送到 404</h3>
+        <table>
+            <thead>
+                <tr><th>來源頁面</th><th>撞到的網址</th><th>次數</th><th>其中會員</th><th>最後發生</th></tr>
+            </thead>
+            <tbody id="error-broken-links-body"></tbody>
+        </table>
+
+        <h3>無來源的 404（直接輸入或舊網址被索引，考慮做轉址）</h3>
+        <table>
+            <thead>
+                <tr><th>撞到的網址</th><th>次數</th><th>其中會員</th><th>最後發生</th></tr>
+            </thead>
+            <tbody id="error-orphan-body"></tbody>
+        </table>
+
+        <h3>伺服器錯誤（5xx，要立刻修）</h3>
+        <table>
+            <thead>
+                <tr><th>網址</th><th>例外</th><th>狀態碼</th><th>次數</th><th>其中會員</th><th>最後發生</th></tr>
+            </thead>
+            <tbody id="error-server-body"></tbody>
+        </table>
+
+        <h3>其他用戶端錯誤（400／403）</h3>
+        <p style="color:#666;font-size:0.9em;">
+            400 多半是 DisallowedHost——有人拿不在 ALLOWED_HOSTS 的網域打進這台機器；
+            403 是權限不足或 CSRF 失敗。這兩種以前只被算進總數，看不到是打哪個網址。
+        </p>
+        <table>
+            <thead>
+                <tr><th>網址</th><th>狀態碼</th><th>次數</th><th>其中會員</th><th>最後發生</th></tr>
+            </thead>
+            <tbody id="error-client-body"></tbody>
+        </table>
+        <p class="err-note">
+            要追某一條特定的壞連結、或想看爬蟲那一半的資料，去
+            <a href="{% url 'admin:stats_errorlog_changelist' %}">ErrorLog 列表</a>。
+        </p>
+    </details>
+</div>
+
+<div class="module">
+    <h2>Custom Tools</h2>
+    <ul>
+        <li>
+            <a href="{% url 'admin:game_classify_question_test' %}">問題分類測試</a>
+            <p>輸入一句規則問題，用 gemini-3.1-flash-lite 分類，並顯示消耗的 token 數（不寫 DB）。</p>
+        </li>
+    </ul>
+</div>
+</div>
+
+{% comment %}
+這段原本塞在 Admin Quick Links 的 <tbody> 裡（<tr> 之間），是無效 HTML。
+移到所有區塊之後，也保證執行時每個目標元素都已存在。
+{% endcomment %}
+<script>
+    const rssStatsUrl = "{% url 'admin_stats' %}";
+    const langs = ['en', 'de', 'fr', 'es', 'zh', 'ja'];
+
+    // 關鍵字是使用者輸入的，一律走 textContent，不要組 innerHTML
+    function fillRows(tbodyId, rows, cols, emptyText) {
+        const tbody = document.getElementById(tbodyId);
+        tbody.textContent = '';
+        if (!rows || rows.length === 0) {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = cols.length;
+            td.textContent = emptyText;
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+            return;
+        }
+        rows.forEach(row => {
+            const tr = document.createElement('tr');
+            cols.forEach(col => {
+                const td = document.createElement('td');
+                let v = row[col];
+                if (col === 'last_at' && v) {
+                    v = new Date(v).toLocaleString();
+                }
+                td.textContent = (v === null || v === undefined) ? '-' : v;
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 固定順序，對應 stats/reports.py 的 TRACKED_PAGES 與上面 <style> 裡的 --pv-* 色票。
+    // 這個順序不能循環套色——順序本身是色盲安全性的一部分，改動要連色票一起改。
+    const PAGE_ORDER = ['home', 'membership', 'game_search', 'about', 'feed_list'];
+    // 首頁人次比其餘各頁高一個數量級，共用左軸會把其他 4 條線壓成貼底的直線，
+    // 所以它獨自走長條＋右軸（跟語言點擊圖的 menu_open 同一套做法）。
+    const PAGE_BAR = 'home';
+
+    function renderPageVisits(insights) {
+        if (!insights) { return; }
+
+        const pages = PAGE_ORDER.filter(p => insights[p]);
+        const totalAll = pages.reduce((sum, p) => sum + insights[p].summary.total, 0);
+        const days = pages.length ? insights[pages[0]].summary.days : 30;
+        document.getElementById('page-visit-summary').textContent =
+            `近 ${days} 天共 ${totalAll} 人次｜` +
+            pages.map(p => `${insights[p].label} ${insights[p].summary.total}`).join('｜');
+
+        // 圖例：色票直接讀 CSS 變數，跟圖上的線／長條同一份，深色模式會一起換
+        const legend = document.getElementById('page-visit-legend');
+        legend.textContent = '';
+        pages.forEach(p => {
+            const item = document.createElement('div');
+            item.className = 'pv-legend-item';
+            const swatch = document.createElement('span');
+            swatch.className = 'pv-legend-swatch';
+            swatch.style.background = `var(--pv-${p})`;
+            const label = document.createElement('span');
+            label.textContent = `${insights[p].label}（${insights[p].summary.total}）`
+                + (p === PAGE_BAR ? '／長條・右軸' : '');
+            item.appendChild(swatch);
+            item.appendChild(label);
+            legend.appendChild(item);
+        });
+
+        const container = document.getElementById('page-visit-chart');
+        container.textContent = '';
+        if (pages.length === 0) { return; }
+
+        const daily = insights[pages[0]].daily || [];
+        if (daily.length === 0) { return; }
+
+        // 折線的頁面＝除了走長條的那一頁以外的全部
+        const linePages = pages.filter(p => p !== PAGE_BAR);
+        const barPage = pages.includes(PAGE_BAR) ? insights[PAGE_BAR] : null;
+
+        const width = 700, height = 220;
+        // padR 比原本大：右邊要留位置給第二組刻度
+        const padL = 36, padR = 40, padT = 10, padB = 24;
+        const plotW = width - padL - padR;
+        const plotH = height - padT - padB;
+
+        const maxLeft = Math.max(1, ...linePages.map(
+            p => Math.max(0, ...insights[p].daily.map(d => d.count))
+        ));
+        const maxRight = Math.max(1, ...(barPage ? barPage.daily.map(d => d.count) : [0]));
+
+        const xAt = i => padL + (daily.length === 1 ? 0 : (plotW * i) / (daily.length - 1));
+        const yLeft = v => padT + plotH - (plotH * v) / maxLeft;
+        const yRight = v => padT + plotH - (plotH * v) / maxRight;
+
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', height);
+        svg.style.maxWidth = '700px';
+        svg.style.display = 'block';
+
+        // 水平格線 + 兩側刻度：0 / 一半 / 最大值。兩個 scale 都把 [0, max] 映到同一段
+        // 像素高度，所以同一條格線可以同時當左右兩軸的刻度線。
+        [0, 0.5, 1].forEach(f => {
+            const vL = Math.round(maxLeft * f);
+            const y = yLeft(vL);
+
+            const line = document.createElementNS(svgNS, 'line');
+            line.setAttribute('x1', padL);
+            line.setAttribute('x2', width - padR);
+            line.setAttribute('y1', y);
+            line.setAttribute('y2', y);
+            line.setAttribute('stroke', 'var(--hairline-color, #e8e8e8)');
+            line.setAttribute('stroke-width', '1');
+            svg.appendChild(line);
+
+            const left = document.createElementNS(svgNS, 'text');
+            left.setAttribute('x', padL - 6);
+            left.setAttribute('y', y + 3);
+            left.setAttribute('text-anchor', 'end');
+            left.setAttribute('font-size', '10');
+            left.setAttribute('fill', 'var(--body-quiet-color, #666)');
+            left.textContent = vL;
+            svg.appendChild(left);
+
+            if (!barPage) { return; }
+            const right = document.createElementNS(svgNS, 'text');
+            right.setAttribute('x', width - padR + 6);
+            right.setAttribute('y', y + 3);
+            right.setAttribute('text-anchor', 'start');
+            right.setAttribute('font-size', '10');
+            right.setAttribute('fill', `var(--pv-${PAGE_BAR})`);
+            right.textContent = Math.round(maxRight * f);
+            svg.appendChild(right);
+        });
+
+        // x 軸日期標籤：頭、中、尾三個點，避免擠成一團
+        [0, Math.floor((daily.length - 1) / 2), daily.length - 1].forEach(i => {
+            const label = document.createElementNS(svgNS, 'text');
+            label.setAttribute('x', xAt(i));
+            label.setAttribute('y', height - 6);
+            label.setAttribute(
+                'text-anchor',
+                i === 0 ? 'start' : (i === daily.length - 1 ? 'end' : 'middle')
+            );
+            label.setAttribute('font-size', '10');
+            label.setAttribute('fill', 'var(--body-quiet-color, #666)');
+            label.textContent = daily[i].date.slice(5); // MM-DD
+            svg.appendChild(label);
+        });
+
+        // 長條先畫：SVG 沒有 z-index，後畫的蓋在上面，折線要留在最上層
+        if (barPage) {
+            const step = daily.length > 1 ? plotW / (daily.length - 1) : plotW;
+            const barW = Math.max(2, step * 0.6);
+            const baseline = padT + plotH;
+            barPage.daily.forEach((d, i) => {
+                if (d.count === 0) { return; }
+                const y = yRight(d.count);
+                const rect = document.createElementNS(svgNS, 'rect');
+                rect.setAttribute('x', xAt(i) - barW / 2);
+                rect.setAttribute('y', y);
+                rect.setAttribute('width', barW);
+                rect.setAttribute('height', Math.max(1, baseline - y));
+                rect.setAttribute('fill', `var(--pv-${PAGE_BAR})`);
+                rect.setAttribute('fill-opacity', '0.45');
+                const title = document.createElementNS(svgNS, 'title');
+                title.textContent = `${barPage.label} · ${d.date}：${d.count} 人次`;
+                rect.appendChild(title);
+                svg.appendChild(rect);
+            });
+        }
+
+        // 其餘各頁一頁一條線，顏色固定對應 --pv-<page>；每個資料點留原生 title 當 tooltip
+        linePages.forEach(p => {
+            const pDaily = insights[p].daily;
+            const color = `var(--pv-${p})`;
+
+            const pathD = pDaily
+                .map((d, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i)} ${yLeft(d.count)}`)
+                .join(' ');
+            const path = document.createElementNS(svgNS, 'path');
+            path.setAttribute('d', pathD);
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke', color);
+            path.setAttribute('stroke-width', '2');
+            svg.appendChild(path);
+
+            pDaily.forEach((d, i) => {
+                const circle = document.createElementNS(svgNS, 'circle');
+                circle.setAttribute('cx', xAt(i));
+                circle.setAttribute('cy', yLeft(d.count));
+                circle.setAttribute('r', '2');
+                circle.setAttribute('fill', color);
+                const title = document.createElementNS(svgNS, 'title');
+                title.textContent = `${insights[p].label} · ${d.date}：${d.count} 人次`;
+                circle.appendChild(title);
+                svg.appendChild(circle);
+            });
+        });
+
+        container.appendChild(svg);
+    }
+
+    // 固定順序，對應 stats/reports.py 的 LANG_CLICK_ORDER 與上面 <style> 裡的 --lc-* 色票。
+    // 同樣不能循環套色，改順序要連色票一起改。
+    const LANG_CLICK_ORDER = ['en', 'zh', 'ja', 'de', 'fr', 'es'];
+
+    function renderLanguageClicks(insights) {
+        // 正式站可能還沒部署這個欄位，代理回來的資料會沒有這個 key。
+        // 要清空，不能直接 return——否則會留著上一次（本機）的數字，看起來像正式站的。
+        if (!insights || !insights.langs) {
+            document.getElementById('lang-click-summary').textContent = '這個來源沒有提供語言點擊資料';
+            document.getElementById('lang-click-legend').textContent = '';
+            document.getElementById('lang-click-chart').textContent = '';
+            return;
+        }
+
+        const langs = LANG_CLICK_ORDER.filter(l => insights.langs[l]);
+        const menu = insights.menu_open;
+        const days = insights.days || 30;
+        const selectTotal = langs.reduce((sum, l) => sum + insights.langs[l].summary.total, 0);
+
+        document.getElementById('lang-click-summary').textContent =
+            `近 ${days} 天共點開語言選單 ${menu ? menu.summary.total : 0} 次｜選擇語言 ${selectTotal} 次｜`
+            + langs.map(l => `${insights.langs[l].label} ${insights.langs[l].summary.total}`).join('｜');
+
+        // 圖例：色票直接讀 CSS 變數，跟圖上的線／長條同一份，深色模式會一起換。
+        // 淺色模式有三格對白底不足 3:1，這些帶名稱與數字的圖例就是它們的 relief。
+        const legend = document.getElementById('lang-click-legend');
+        legend.textContent = '';
+        const legendItems = langs.map(l => ({
+            color: `var(--lc-${l})`,
+            text: `${insights.langs[l].label}（${insights.langs[l].summary.total}）`,
+        }));
+        if (menu) {
+            legendItems.push({
+                color: 'var(--lc-menu)',
+                text: `${menu.label}（${menu.summary.total}）／長條・右軸`,
+            });
+        }
+        legendItems.forEach(it => {
+            const item = document.createElement('div');
+            item.className = 'pv-legend-item';
+            const swatch = document.createElement('span');
+            swatch.className = 'pv-legend-swatch';
+            swatch.style.background = it.color;
+            const label = document.createElement('span');
+            label.textContent = it.text;
+            item.appendChild(swatch);
+            item.appendChild(label);
+            legend.appendChild(item);
+        });
+
+        const container = document.getElementById('lang-click-chart');
+        container.textContent = '';
+        if (langs.length === 0) { return; }
+
+        const daily = insights.langs[langs[0]].daily || [];
+        if (daily.length === 0) { return; }
+
+        const width = 700, height = 220;
+        // padR 比 renderPageVisits 大：右邊要留位置給第二組刻度
+        const padL = 36, padR = 40, padT = 10, padB = 24;
+        const plotW = width - padL - padR;
+        const plotH = height - padT - padB;
+
+        const maxLeft = Math.max(1, ...langs.map(
+            l => Math.max(0, ...insights.langs[l].daily.map(d => d.count))
+        ));
+        const maxRight = Math.max(1, ...(menu ? menu.daily.map(d => d.count) : [0]));
+
+        const xAt = i => padL + (daily.length === 1 ? 0 : (plotW * i) / (daily.length - 1));
+        const yLeft = v => padT + plotH - (plotH * v) / maxLeft;
+        const yRight = v => padT + plotH - (plotH * v) / maxRight;
+
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', height);
+        svg.style.maxWidth = '700px';
+        svg.style.display = 'block';
+
+        // 水平格線 + 兩側刻度：0 / 一半 / 最大值。兩個 scale 都把 [0, max] 映到同一段
+        // 像素高度，所以同一條格線可以同時當左右兩軸的刻度線。
+        [0, 0.5, 1].forEach(f => {
+            const vL = Math.round(maxLeft * f);
+            const y = yLeft(vL);
+
+            const line = document.createElementNS(svgNS, 'line');
+            line.setAttribute('x1', padL);
+            line.setAttribute('x2', width - padR);
+            line.setAttribute('y1', y);
+            line.setAttribute('y2', y);
+            line.setAttribute('stroke', 'var(--hairline-color, #e8e8e8)');
+            line.setAttribute('stroke-width', '1');
+            svg.appendChild(line);
+
+            const left = document.createElementNS(svgNS, 'text');
+            left.setAttribute('x', padL - 6);
+            left.setAttribute('y', y + 3);
+            left.setAttribute('text-anchor', 'end');
+            left.setAttribute('font-size', '10');
+            left.setAttribute('fill', 'var(--body-quiet-color, #666)');
+            left.textContent = vL;
+            svg.appendChild(left);
+
+            const right = document.createElementNS(svgNS, 'text');
+            right.setAttribute('x', width - padR + 6);
+            right.setAttribute('y', y + 3);
+            right.setAttribute('text-anchor', 'start');
+            right.setAttribute('font-size', '10');
+            right.setAttribute('fill', 'var(--lc-menu)');
+            right.textContent = Math.round(maxRight * f);
+            svg.appendChild(right);
+        });
+
+        // x 軸日期標籤：頭、中、尾三個點，避免擠成一團
+        [0, Math.floor((daily.length - 1) / 2), daily.length - 1].forEach(i => {
+            const label = document.createElementNS(svgNS, 'text');
+            label.setAttribute('x', xAt(i));
+            label.setAttribute('y', height - 6);
+            label.setAttribute(
+                'text-anchor',
+                i === 0 ? 'start' : (i === daily.length - 1 ? 'end' : 'middle')
+            );
+            label.setAttribute('font-size', '10');
+            label.setAttribute('fill', 'var(--body-quiet-color, #666)');
+            label.textContent = daily[i].date.slice(5); // MM-DD
+            svg.appendChild(label);
+        });
+
+        // 長條先畫：SVG 沒有 z-index，後畫的蓋在上面，折線要留在最上層
+        if (menu) {
+            const step = daily.length > 1 ? plotW / (daily.length - 1) : plotW;
+            const barW = Math.max(2, step * 0.6);
+            const baseline = padT + plotH;
+            menu.daily.forEach((d, i) => {
+                if (d.count === 0) { return; }
+                const y = yRight(d.count);
+                const rect = document.createElementNS(svgNS, 'rect');
+                rect.setAttribute('x', xAt(i) - barW / 2);
+                rect.setAttribute('y', y);
+                rect.setAttribute('width', barW);
+                rect.setAttribute('height', Math.max(1, baseline - y));
+                rect.setAttribute('fill', 'var(--lc-menu)');
+                rect.setAttribute('fill-opacity', '0.45');
+                const title = document.createElementNS(svgNS, 'title');
+                title.textContent = `${menu.label} · ${d.date}：${d.count} 次`;
+                rect.appendChild(title);
+                svg.appendChild(rect);
+            });
+        }
+
+        // 一種語言一條線，顏色固定對應 --lc-<code>；每個資料點留原生 title 當 tooltip
+        langs.forEach(l => {
+            const lDaily = insights.langs[l].daily;
+            const color = `var(--lc-${l})`;
+
+            const pathD = lDaily
+                .map((d, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i)} ${yLeft(d.count)}`)
+                .join(' ');
+            const path = document.createElementNS(svgNS, 'path');
+            path.setAttribute('d', pathD);
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke', color);
+            path.setAttribute('stroke-width', '2');
+            svg.appendChild(path);
+
+            lDaily.forEach((d, i) => {
+                const circle = document.createElementNS(svgNS, 'circle');
+                circle.setAttribute('cx', xAt(i));
+                circle.setAttribute('cy', yLeft(d.count));
+                circle.setAttribute('r', '2');
+                circle.setAttribute('fill', color);
+                const title = document.createElementNS(svgNS, 'title');
+                title.textContent = `${insights.langs[l].label} · ${d.date}：${d.count} 次`;
+                circle.appendChild(title);
+                svg.appendChild(circle);
+            });
+        });
+
+        container.appendChild(svg);
+    }
+
+    function renderSearchInsights(insights) {
+        if (!insights) { return; }
+        const s = insights.summary;
+        const matched = (s.matched_by || [])
+            .map(m => `${m.matched_by} ${m.total}`)
+            .join('、') || '無資料';
+        document.getElementById('search-summary').textContent =
+            `總搜尋 ${s.total} 次｜未命中 ${s.missing_total} 次 (${s.missing_rate}%)｜`
+            + `爬蟲 ${s.bot_total} 次(未計入)｜命中階段：${matched}`;
+
+        fillRows('search-missing-body',
+            insights.missing,
+            ['keyword', 'total', 'input_kind', 'last_at'],
+            '近 30 天沒有未命中的搜尋');
+        fillRows('search-missing-barcodes-body',
+            insights.missing_barcodes,
+            ['keyword', 'total', 'last_at'],
+            '近 30 天沒有掃不到的條碼');
+        fillRows('search-top-keywords-body',
+            insights.top_keywords,
+            ['keyword', 'total', 'last_at'],
+            '近 30 天沒有成功的搜尋');
+    }
+
+    function renderRulesbot(insights) {
+        if (!insights) { return; }
+        const s = insights.summary;
+        const sat = (s.satisfaction === null || s.satisfaction === undefined)
+            ? '無評分' : `${s.satisfaction}%`;
+        document.getElementById('rulesbot-summary').textContent =
+            `提問 ${s.questions} 次｜使用者 ${s.unique_users} 人｜對話 ${s.sessions} 場｜`
+            + `平均每人 ${s.avg_per_user} 次｜👍 ${s.likes} / 👎 ${s.dislikes}（滿意度 ${sat}）｜`
+            + `Token ${s.total_tokens.toLocaleString()}`;
+        fillRows('rulesbot-top-body', insights.top_editions,
+            ['edition', 'total'], '近 30 天沒有人使用 Rulesbot');
+    }
+
+    function renderFlowchart(insights) {
+        if (!insights) { return; }
+        const s = insights.summary;
+        document.getElementById('flowchart-summary').textContent =
+            `展開 ${s.opens} 次｜使用者 ${s.unique_users} 人｜`
+            + `全螢幕 ${s.fullscreen}｜列印 ${s.print}｜導覽 ${s.tour}｜翻譯 ${s.translate}`;
+        fillRows('flowchart-top-body', insights.top_editions,
+            ['edition', 'total'], '近 30 天沒有人展開流程圖');
+    }
+
+    function renderScript(insights) {
+        if (!insights) { return; }
+        const s = insights.summary;
+        document.getElementById('script-summary').textContent =
+            `讀取 ${s.opens} 次（${s.unique_users} 人）｜`
+            + `被付費牆擋下 ${s.locked} 次（${s.locked_users} 人）｜`
+            + `擋下比例 ${s.locked_rate}%`;
+        fillRows('script-top-body', insights.top_editions,
+            ['edition', 'total'], '近 30 天沒有人讀講稿');
+        fillRows('script-locked-body', insights.top_locked,
+            ['edition', 'total'], '近 30 天沒有人被擋下');
+    }
+
+    // 警示表。這裡刻意不做任何篩選，只負責畫——門檻與分級全在後端
+    // stats/reports.py 決定，前端再加一層條件就會出現「畫面上的規則」與
+    // 「後端的規則」兩套說法。
+    function renderErrorAlerts(insights) {
+        const summaryEl = document.getElementById('error-alert-summary');
+        const tbody = document.getElementById('error-alert-body');
+        tbody.textContent = '';
+
+        // alerts 是後來才加的，正式站還沒部署的話代理回來的 JSON 不會有這個 key。
+        // 必須明確講出來，不能靜靜留白——留白看起來就像「一切正常」，那是最糟的誤讀。
+        if (!insights.alerts || !insights.alert_counts) {
+            summaryEl.textContent = '這個來源的版本還沒有警示分級功能，請看下面的原始清單。';
+            summaryEl.className = 'err-note';
+            return;
+        }
+
+        const c = insights.alert_counts;
+        summaryEl.className = '';
+        if (!insights.alerts.length) {
+            summaryEl.innerHTML = '';
+            const ok = document.createElement('span');
+            ok.className = 'err-clear';
+            ok.textContent = '✅ 沒有要處理的東西。';
+            summaryEl.appendChild(ok);
+            summaryEl.appendChild(document.createTextNode(
+                '下面的原始清單每天都會長出新列，那是正常的網路噪音。'));
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = 8;
+            td.textContent = '近 30 天沒有需要處理的錯誤';
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+            return;
+        }
+
+        summaryEl.textContent =
+            `🔴 要處理 ${c.critical} 件｜🟡 值得排進待辦 ${c.warning} 件`
+            + '（其餘的都是外面的世界在敲門，不用理）'
+            + (c.acked ? `｜已標記處理 ${c.acked} 件（之後又發生會自動回來）` : '');
+
+        insights.alerts.forEach(a => {
+            const tr = document.createElement('tr');
+
+            const tdLevel = document.createElement('td');
+            const badge = document.createElement('span');
+            badge.className = 'err-badge ' + a.level;
+            badge.textContent = a.label;
+            tdLevel.appendChild(badge);
+            tr.appendChild(tdLevel);
+
+            const tdPath = document.createElement('td');
+            tdPath.className = 'err-url';
+            tdPath.textContent = a.path || '-';
+            tr.appendChild(tdPath);
+
+            // 來源與說明擠同一格：一筆警示只會有其中一種——壞連結有 referer，
+            // 伺服器錯誤有例外訊息，兩者不會同時出現。
+            const tdWhere = document.createElement('td');
+            if (a.referer) {
+                tdWhere.className = 'err-url';
+                tdWhere.textContent = a.referer;
+            } else {
+                tdWhere.className = 'err-note';
+                tdWhere.textContent = a.note || '-';
+            }
+            tr.appendChild(tdWhere);
+
+            const tdAction = document.createElement('td');
+            tdAction.className = 'err-note';
+            tdAction.textContent = a.action;
+            tr.appendChild(tdAction);
+
+            [a.total, a.member_total].forEach(v => {
+                const td = document.createElement('td');
+                td.textContent = v;
+                tr.appendChild(td);
+            });
+
+            const tdLast = document.createElement('td');
+            tdLast.textContent = a.last_at ? new Date(a.last_at).toLocaleString() : '-';
+            tr.appendChild(tdLast);
+
+            tr.appendChild(ackCell(a));
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderErrorInsights(insights) {
+        if (!insights) { return; }
+        renderErrorAlerts(insights);
+        const s = insights.summary;
+        document.getElementById('error-summary').textContent =
+            `錯誤 ${s.total} 次｜404 ${s.notfound_total} 次｜5xx ${s.server_total} 次｜`
+            + `已登入會員撞到 ${s.member_total} 次｜爬蟲撞到的 404 ${s.bot_notfound} 次(未計入)`;
+
+        fillRows('error-broken-links-body',
+            insights.broken_links,
+            ['referer', 'path', 'total', 'member_total', 'last_at'],
+            '近 30 天沒有帶來源的 404');
+        fillRows('error-orphan-body',
+            insights.orphan_404,
+            ['path', 'total', 'member_total', 'last_at'],
+            '近 30 天沒有無來源的 404');
+        fillRows('error-server-body',
+            insights.server_errors,
+            ['path', 'exception', 'status_code', 'total', 'member_total', 'last_at'],
+            '近 30 天沒有伺服器錯誤');
+
+        // by_status / client_errors 是後來才加的。正式站還沒部署的話，代理回來的
+        // JSON 不會有這兩個 key——這時要明確清空，不能直接跳過，否則會留著上一次
+        // （本機）的數字，看起來像正式站的（跟 renderLanguageClicks 同一個理由）。
+        const CLIENT_ERROR_COLS = ['path', 'status_code', 'total', 'member_total', 'last_at'];
+        const byStatusEl = document.getElementById('error-by-status');
+        if (!insights.by_status || !insights.client_errors) {
+            byStatusEl.textContent = '這個來源沒有提供狀態碼細分';
+            fillRows('error-client-body', [], CLIENT_ERROR_COLS,
+                '這個來源沒有提供 400／403 資料');
+            return;
+        }
+
+        byStatusEl.textContent = '狀態碼細分：'
+            + (insights.by_status.length
+                ? insights.by_status.map(r => `${r.status_code} ${r.total} 次`).join('｜')
+                : '無資料');
+        fillRows('error-client-body', insights.client_errors, CLIENT_ERROR_COLS,
+            '近 30 天沒有 400／403');
+    }
+
+    // ── 錯誤警示「已處理」 ──────────────────────────────────────
+    // 標記存在 stats.ErrorAlertAck。錯誤是發生在正式站的，所以只有在正式站的 admin
+    // 按才有意義：本機切到正式站來源時，按下去會寫進本機資料庫、對正式站毫無作用，
+    // 那種情況改成給連結，不給按鈕。
+    const errorAckUrl = "{% url 'admin_error_ack' %}";
+    const csrfToken = "{{ csrf_token }}";
+    const PROD_ADMIN_SYSTEM_URL = 'https://tabuney.com/power/#system';
+
+    function ackCell(a) {
+        const td = document.createElement('td');
+        if (currentSource === 'prod') {
+            const link = document.createElement('a');
+            link.href = PROD_ADMIN_SYSTEM_URL;
+            link.target = '_blank';
+            link.rel = 'noopener';
+            link.textContent = '到正式站處理';
+            td.appendChild(link);
+            return td;
+        }
+        // 正式站舊版回傳的 alert 沒有 key，那個版本也還沒有 ack 端點
+        if (!a.key) {
+            td.textContent = '-';
+            return td;
+        }
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = '已處理';
+        btn.title = '從清單移除；同一個網址之後再出錯會自動回來';
+        btn.addEventListener('click', () => {
+            btn.disabled = true;
+            fetch(errorAckUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ kind: a.kind, path: a.path, referer: a.referer || '' }),
+            })
+            .then(r => {
+                if (!r.ok) { throw new Error('HTTP ' + r.status); }
+                loadStats(currentSource, false);
+            })
+            .catch(err => {
+                btn.disabled = false;
+                document.getElementById('stats-error').textContent = '標記失敗：' + err;
+            });
+        });
+        td.appendChild(btn);
+        return td;
+    }
+
+    // ── VPS 負荷 ─────────────────────────────────────────────────
+    function renderServer(insights) {
+        const alertEl = document.getElementById('server-alert');
+        const container = document.getElementById('server-chart');
+        const legend = document.getElementById('server-legend');
+        alertEl.textContent = '';
+        alertEl.className = '';
+        container.textContent = '';
+        legend.textContent = '';
+        ['srv-mem', 'srv-swap', 'srv-load', 'srv-disk', 'srv-time'].forEach(id => {
+            document.getElementById(id).textContent = '-';
+        });
+
+        // 跟錯誤警示同一個原則：沒資料要講清楚，留白看起來會像「一切正常」
+        if (!insights) {
+            alertEl.textContent = '這個來源的版本還沒有 VPS 採樣功能。';
+            alertEl.className = 'err-note';
+            return;
+        }
+        const s = insights.latest;
+        if (!s) {
+            alertEl.textContent = '還沒有採樣資料：排程每 10 分鐘跑一次，qcluster 要在執行中。';
+            alertEl.className = 'err-note';
+            return;
+        }
+
+        document.getElementById('srv-mem').textContent =
+            `${s.mem_available_mb} / ${s.mem_total_mb} MB（${s.mem_available_pct}%）`;
+        document.getElementById('srv-swap').textContent = `${s.swap_used_mb} MB`;
+        document.getElementById('srv-load').textContent = `${s.load1} | ${s.load5}`;
+        document.getElementById('srv-disk').textContent = `${s.disk_used_pct}%`;
+        document.getElementById('srv-time').textContent = new Date(s.created_at).toLocaleString();
+
+        if (insights.alerts.length) {
+            insights.alerts.forEach(msg => {
+                const badge = document.createElement('span');
+                badge.className = 'err-badge critical';
+                badge.textContent = msg;
+                alertEl.appendChild(badge);
+                alertEl.appendChild(document.createTextNode(' '));
+            });
+        } else {
+            const ok = document.createElement('span');
+            ok.className = 'err-clear';
+            ok.textContent = '✅ 負荷正常';
+            alertEl.appendChild(ok);
+        }
+
+        const series = insights.series || [];
+        if (series.length < 2) { return; }
+
+        const SERIES = [
+            { key: 'mem_available_mb', label: '可用 RAM', color: 'var(--srv-avail)' },
+            { key: 'swap_used_mb', label: 'Swap 使用', color: 'var(--srv-swap)' },
+        ];
+        const minAvailMb = Math.round(s.mem_total_mb * insights.thresholds.mem_available_min_pct / 100);
+
+        SERIES.concat([{ label: `可用 RAM 紅線（${minAvailMb} MB）`, color: 'var(--srv-threshold)' }])
+            .forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'pv-legend-item';
+                const swatch = document.createElement('span');
+                swatch.className = 'pv-legend-swatch';
+                swatch.style.background = item.color;
+                const label = document.createElement('span');
+                label.textContent = item.label;
+                el.appendChild(swatch);
+                el.appendChild(label);
+                legend.appendChild(el);
+            });
+
+        // 兩條線都是 MB，共用一軸；上限取總 RAM 與 swap 最大值中較大者
+        const width = 700, height = 220;
+        const padL = 44, padR = 12, padT = 10, padB = 24;
+        const plotW = width - padL - padR;
+        const plotH = height - padT - padB;
+        const maxY = Math.max(s.mem_total_mb, ...series.map(d => d.swap_used_mb));
+        const xAt = i => padL + (plotW * i) / (series.length - 1);
+        const yAt = v => padT + plotH - (plotH * v) / maxY;
+
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', height);
+        svg.style.maxWidth = '700px';
+        svg.style.display = 'block';
+
+        [0, 0.5, 1].forEach(f => {
+            const v = Math.round(maxY * f);
+            const y = yAt(v);
+            const line = document.createElementNS(svgNS, 'line');
+            line.setAttribute('x1', padL);
+            line.setAttribute('x2', width - padR);
+            line.setAttribute('y1', y);
+            line.setAttribute('y2', y);
+            line.setAttribute('stroke', 'var(--hairline-color, #e8e8e8)');
+            line.setAttribute('stroke-width', '1');
+            svg.appendChild(line);
+
+            const text = document.createElementNS(svgNS, 'text');
+            text.setAttribute('x', padL - 6);
+            text.setAttribute('y', y + 3);
+            text.setAttribute('text-anchor', 'end');
+            text.setAttribute('font-size', '10');
+            text.setAttribute('fill', 'var(--body-quiet-color, #666)');
+            text.textContent = v;
+            svg.appendChild(text);
+        });
+
+        const fmt = t => {
+            const d = new Date(t);
+            return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} `
+                + `${String(d.getHours()).padStart(2, '0')}:00`;
+        };
+        [0, Math.floor((series.length - 1) / 2), series.length - 1].forEach(i => {
+            const label = document.createElementNS(svgNS, 'text');
+            label.setAttribute('x', xAt(i));
+            label.setAttribute('y', height - 6);
+            label.setAttribute(
+                'text-anchor',
+                i === 0 ? 'start' : (i === series.length - 1 ? 'end' : 'middle')
+            );
+            label.setAttribute('font-size', '10');
+            label.setAttribute('fill', 'var(--body-quiet-color, #666)');
+            label.textContent = fmt(series[i].t);
+            svg.appendChild(label);
+        });
+
+        // 可用 RAM 的紅線：線掉到它下面就是 mem-snapshot 會開始記錄的時候
+        const ty = yAt(minAvailMb);
+        const threshold = document.createElementNS(svgNS, 'line');
+        threshold.setAttribute('x1', padL);
+        threshold.setAttribute('x2', width - padR);
+        threshold.setAttribute('y1', ty);
+        threshold.setAttribute('y2', ty);
+        threshold.setAttribute('stroke', 'var(--srv-threshold)');
+        threshold.setAttribute('stroke-width', '1');
+        threshold.setAttribute('stroke-dasharray', '4 3');
+        svg.appendChild(threshold);
+
+        SERIES.forEach(sr => {
+            const path = document.createElementNS(svgNS, 'path');
+            path.setAttribute('d', series
+                .map((d, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i)} ${yAt(d[sr.key])}`)
+                .join(' '));
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke', sr.color);
+            path.setAttribute('stroke-width', '2');
+            svg.appendChild(path);
+
+            // 7 天 × 24 小時的點太密，畫出來會糊成一條粗線；改放透明的圓，
+            // 看不見但 hover 一樣有原生 title
+            series.forEach((d, i) => {
+                const circle = document.createElementNS(svgNS, 'circle');
+                circle.setAttribute('cx', xAt(i));
+                circle.setAttribute('cy', yAt(d[sr.key]));
+                circle.setAttribute('r', '3');
+                circle.setAttribute('fill', 'transparent');
+                const title = document.createElementNS(svgNS, 'title');
+                title.textContent = `${sr.label} · ${fmt(d.t)}：${d[sr.key]} MB`;
+                circle.appendChild(title);
+                svg.appendChild(circle);
+            });
+        });
+
+        container.appendChild(svg);
+    }
+
+    // ── 待辦色塊 ─────────────────────────────────────────────────
+    // value 不是數字＝這個來源沒有這個欄位（正式站還沒部署），顯示「—」而不是 0：
+    // 0 會被讀成「沒事」，那是最糟的誤讀。
+    function setTile(id, value, sub, isAlert) {
+        const tile = document.getElementById(id);
+        const has = typeof value === 'number';
+        tile.querySelector('.todo-num').textContent = has ? value : '—';
+        tile.querySelector('.todo-sub').textContent = has ? (sub || '') : '這個來源還沒有這項資料';
+        tile.classList.toggle('zero', !has || value === 0);
+        tile.classList.toggle('alert', has && value > 0 && !!isAlert);
+    }
+
+    function renderTodo(data) {
+        setTile('todo-game', (data['game_suggestion_counts'] || {})['pending']);
+        setTile('todo-flowchart', (data['flowchart_suggestion_counts'] || {})['pending']);
+        setTile('todo-rss', data['rss_user_pending_count']);
+
+        const c = (data['error_insights'] || {})['alert_counts'];
+        setTile('todo-error',
+            c ? c.critical + c.warning : undefined,
+            c ? `🔴 ${c.critical}｜🟡 ${c.warning}` + (c.acked ? `｜已處理 ${c.acked}` : '') : '',
+            c && c.critical > 0);
+
+        setTile('todo-import-search', data['edition_import_searching_count']);
+        setTile('todo-import-review', data['edition_import_review_count']);
+        setTile('todo-whole-context', data['rulebook_pending_count'], 'whole_context 空值（有 PDF）');
+        setTile('todo-flowchart-generate', data['rulebook_flowchart_to_generate_count'],
+            'whole_context 已備、還沒有入門圖');
+        setTile('todo-flowchart-check', data['rulebook_flowchart_unpublished_count'],
+            `未發布（其中待審 ${data['rulebook_flowchart_pending_review_count'] ?? '-'}）`);
+
+        // 系統分頁上的紅點：紅燈錯誤＋VPS 警示，切到別的分頁時也看得到
+        const serverAlerts = ((data['server_insights'] || {})['alerts'] || []).length;
+        const systemCount = (c ? c.critical : 0) + serverAlerts;
+        const badge = document.getElementById('tab-badge-system');
+        badge.textContent = systemCount;
+        badge.hidden = systemCount === 0;
+    }
+
+    // ── 分頁 ─────────────────────────────────────────────────────
+    const DASH_TABS = ['users', 'usage', 'rss', 'system'];
+
+    function showTab(name) {
+        if (!DASH_TABS.includes(name)) { name = DASH_TABS[0]; }
+        DASH_TABS.forEach(t => {
+            document.getElementById('panel-' + t).hidden = (t !== name);
+            document.querySelector(`.dash-tabs [data-tab="${t}"]`)
+                .setAttribute('aria-selected', t === name ? 'true' : 'false');
+        });
+    }
+
+    document.querySelectorAll('.dash-tabs [data-tab]').forEach(btn => {
+        btn.addEventListener('click', () => { location.hash = btn.dataset.tab; });
+    });
+    // 色塊上的 #system / #usage 連結也走這條
+    window.addEventListener('hashchange', () => showTab(location.hash.slice(1)));
+    showTab(location.hash.slice(1));
+
+    let currentSource = 'local';
+    // null = 還沒問過後端。canSwitch === false 代表這台自己就是正式站。
+    let canSwitch = null;
+
+    function renderSourceUI(source, note) {
+        const toggle = document.getElementById('stats-source-toggle');
+        // 正式站上「本機」就是正式站資料庫，切換沒有意義，直接不給按鈕
+        const onProdServer = canSwitch === false;
+        toggle.style.display = (canSwitch === true) ? '' : 'none';
+
+        const showingProd = onProdServer || source === 'prod';
+        document.getElementById('stats-source-label').textContent =
+            showingProd ? '🔴 正式站 (tabuney.com)' : '🖥️ 本機';
+        toggle.textContent = (source === 'prod') ? '切換回本機' : '切換到正式站';
+        // 看著正式站數字卻以為是本機是最危險的誤讀，所以整塊染色
+        document.getElementById('stats-source-module').style.background =
+            showingProd ? '#ffecec' : '';
+        document.getElementById('stats-source-note').textContent = note || '';
+    }
+
+    function loadStats(source, forceRefresh) {
+        // 這三個是累加器，一定要留在函式內：放模組層的話每切換一次就會疊加一輪
+        let total_rss = 0;
+        let total_30qty = 0;
+        let avg_char = 0;
+
+        let url = rssStatsUrl;
+        const params = [];
+        if (source === 'prod') { params.push('source=prod'); }
+        if (forceRefresh) { params.push('refresh=1'); }
+        if (params.length) { url += '?' + params.join('&'); }
+
+        document.getElementById('stats-error').textContent = '';
+        renderSourceUI(source, '載入中…');
+
+        fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (typeof data['can_switch_source'] === 'boolean') {
+                canSwitch = data['can_switch_source'];
+            }
+            if (data['stats_error']) {
+                // 保留上一次的數字，只顯示錯誤，不要讓整頁變空白
+                document.getElementById('stats-error').textContent =
+                    '讀取正式站失敗：' + data['stats_error'];
+                renderSourceUI(currentSource, '');
+                return;
+            }
+            currentSource = data['stats_source'] || source;
+            renderSourceUI(currentSource, '');
+
+            langs.forEach(lang => {
+                if (data[lang]) {
+                    //RSS & feed
+                    document.getElementById(`${lang}Rss`).innerText = data[lang].rss_count;
+                    document.getElementById(`${lang}30qty`).innerText = data[lang].article_count_last_30_days;
+                    document.getElementById(`${lang}AvgChar`).innerText = Math.round(data[lang].avg_content_length_gt_50_last_30_days);
+                    total_rss += data[lang].rss_count;
+                    total_30qty += data[lang].article_count_last_30_days;
+                    avg_char += data[lang].article_count_last_30_days * data[lang].avg_content_length_gt_50_last_30_days;
+
+                    //tribe & lang（Member/Subscriber 的介面語言）
+                    document.getElementById(`tribe_lang_${lang}`).innerText = data['tribe_counts'][lang];
+
+                } else {
+                    document.getElementById(`${lang}Rss`).innerText = '-';
+                    document.getElementById(`${lang}30qty`).innerText = '-';
+                    document.getElementById(`${lang}AvgChar`).innerText = '-';
+                }
+            });
+            document.getElementById('allRss').innerText = total_rss;
+            document.getElementById('all30qty').innerText = total_30qty;
+            document.getElementById('avgChar').innerText = Math.round(avg_char / total_30qty);
+
+            // 推薦
+            const suggestionCounts = data['game_suggestion_counts'] || {};
+            document.getElementById('suggestion-pending-count').innerText = suggestionCounts['pending'] ?? '-';
+            document.getElementById('suggestion-approved-count').innerText = suggestionCounts['approved'] ?? '-';
+            document.getElementById('suggestion-rejected-count').innerText = suggestionCounts['rejected'] ?? '-';
+            const rssPending = data['rss_user_pending_count'];
+            document.getElementById('rss-user-pending-count').innerText = rssPending ?? '-';
+            document.getElementById('rss-user-reviewed-count').innerText =
+                (rssPending === undefined) ? '-' : data['rss_user_suggestion_count'] - rssPending;
+
+            const fcSuggestionCounts = data['flowchart_suggestion_counts'] || {};
+            document.getElementById('fc-suggestion-pending-count').innerText = fcSuggestionCounts['pending'] ?? '-';
+            document.getElementById('fc-suggestion-approved-count').innerText = fcSuggestionCounts['approved'] ?? '-';
+            document.getElementById('fc-suggestion-rejected-count').innerText = fcSuggestionCounts['rejected'] ?? '-';
+
+            //人數
+            document.getElementById('total_free').innerText = data['total_free'];
+            document.getElementById('total_basic').innerText = data['total_basic'];
+            renderPageVisits(data['page_visit_insights']);
+            renderLanguageClicks(data['language_click_insights']);
+
+            // Rulebook 統計
+            document.getElementById('rulebook-indexed-count').innerText = data['rulebook_indexed_count'];
+            document.getElementById('rulebook-pending-count').innerText = data['rulebook_pending_count'];
+            document.getElementById('rulebook-flowchart-translated-count').innerText =
+                (data['rulebook_flowchart_initial_count'] ?? '-') + ' | ' + (data['rulebook_flowchart_variant_count'] ?? '-');
+            document.getElementById('rulebook-flowchart-pending-review-count').innerText = data['rulebook_flowchart_pending_review_count'] ?? '-';
+            document.getElementById('rulebook-script-published-count').innerText = data['rulebook_script_published_count'] ?? '-';
+            document.getElementById('game-platvm-non-zero-count').innerText = data['game_platvm_non_zero_count'];
+            var brokenEl = document.getElementById('rulebook-source-broken-count');
+            brokenEl.innerText = (data['rulebook_source_broken_new'] ?? '-') + ' | ' + (data['rulebook_source_broken_total'] ?? '-');
+            if (data['rulebook_source_broken_new'] > 0) { brokenEl.style.cssText = 'color:#cf1322;font-weight:700;'; }
+
+            // 功能使用報表
+            renderSearchInsights(data['search_insights']);
+            renderRulesbot(data['rulesbot_insights']);
+            renderFlowchart(data['flowchart_insights']);
+            renderScript(data['script_insights']);
+            renderErrorInsights(data['error_insights']);
+            renderServer(data['server_insights']);
+            renderTodo(data);
+        }
+        )
+        .catch(error => {
+            console.error(error);
+            document.getElementById('stats-error').textContent =
+                '讀取統計失敗：' + error;
+            renderSourceUI(currentSource, '');
+        });
+    }
+
+    document.getElementById('stats-source-toggle').addEventListener('click', () => {
+        loadStats(currentSource === 'prod' ? 'local' : 'prod', false);
+    });
+    document.getElementById('stats-refresh').addEventListener('click', () => {
+        loadStats(currentSource, true);
+    });
+
+    loadStats('local', false);
+</script>
+{% endblock %}

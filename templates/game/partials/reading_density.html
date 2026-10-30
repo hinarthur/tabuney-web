@@ -1,0 +1,16 @@
+{% load translate_tags %}
+{# Reading density（文字量）：值 badge + 多語文字，兩者皆有 tooltip。桌機／手機兩份 info-section 共用。 #}
+{% if edition.game.reading_density %}
+<span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;">
+    {% if edition.game.reading_density == 'none' %}
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="144 144 512 512" width="1.4em" height="1.4em" style="vertical-align:-0.125em" role="img"><title>{% t "game.label.reading_density" %}</title><path d="m561.94 173.29h-323.88c-35.777 0-64.77 29.004-64.77 64.773v323.88c0 35.77 28.992 64.773 64.77 64.773h323.88c35.777 0 64.781-29.004 64.781-64.773v-323.88c0-35.77-29.004-64.773-64.773-64.773z" fill="#E8DCC4" stroke="#8C7B58" stroke-width="14"/></svg>
+    {% elif edition.game.reading_density == 'labels' %}
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="144 144 512 512" width="1.4em" height="1.4em" style="vertical-align:-0.125em" role="img"><title>{% t "game.label.reading_density" %}</title><path d="m561.94 173.29h-323.88c-35.777 0-64.77 29.004-64.77 64.773v323.88c0 35.77 28.992 64.773 64.77 64.773h323.88c35.777 0 64.781-29.004 64.781-64.773v-323.88c0-35.77-29.004-64.773-64.773-64.773z" fill="#F0A030"/><circle cx="400.01" cy="400.00" r="85.36" fill="#1A1A1A"/></svg>
+    {% elif edition.game.reading_density == 'simple' %}
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="144 144 512 512" width="1.4em" height="1.4em" style="vertical-align:-0.125em" role="img"><title>{% t "game.label.reading_density" %}</title><path d="m561.94 173.29h-323.88c-35.777 0-64.77 29.004-64.77 64.773v323.88c0 35.77 28.992 64.773 64.77 64.773h323.88c35.777 0 64.781-29.004 64.781-64.773v-323.88c0-35.77-29.004-64.773-64.773-64.773z" fill="#1F9E8F"/><circle cx="518.00" cy="282.00" r="54.63" fill="#FFFFFF"/><circle cx="282.00" cy="518.00" r="54.63" fill="#FFFFFF"/></svg>
+    {% elif edition.game.reading_density == 'complex' %}
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="144 144 512 512" width="1.4em" height="1.4em" style="vertical-align:-0.125em" role="img"><title>{% t "game.label.reading_density" %}</title><path d="m561.94 173.29h-323.88c-35.777 0-64.77 29.004-64.77 64.773v323.88c0 35.77 28.992 64.773 64.77 64.773h323.88c35.777 0 64.781-29.004 64.781-64.773v-323.88c0-35.77-29.004-64.773-64.773-64.773z" fill="#9B2D63"/><circle cx="277.31" cy="261.30" r="42.68" fill="#FFFFFF"/><circle cx="400.01" cy="400.00" r="42.68" fill="#FFFFFF"/><circle cx="522.71" cy="538.70" r="42.68" fill="#FFFFFF"/></svg>
+    {% endif %}
+    <span title="{% t "game.label.reading_density" %}">{% t "game.reading_density."|add:edition.game.reading_density %}</span>
+</span>
+{% endif %}

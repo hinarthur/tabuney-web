@@ -1,0 +1,11 @@
+# =============================================================================
+# requirements.txt — 向後相容入口（預設安裝完整 local 開發相依）
+# =============================================================================
+# 套件清單已拆分為兩層以區分 local / VPS production：
+#   - requirements.base.txt : production（VPS）精簡集
+#   - requirements.dev.txt  : base + 只在 local 執行的重型套件（PDF/OCR、torch、Argos、爬蟲）
+#
+# 直接 `pip install -r requirements.txt` 會安裝完整 dev 集（= 舊行為）。
+# production 請改用 `pip install -r requirements.base.txt`。
+# =============================================================================
+-r requirements.dev.txt

@@ -1,0 +1,44 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<h1>Search Board Game Blogs</h1>
+<form method="POST" action="">
+    {% csrf_token %}
+    <button type="submit">Search for New RSS Feeds</button>
+</form>
+
+{% if results %}
+<h2>Search Results</h2>
+<table border="1">
+    <thead>
+        <tr>
+            <th>Site Name</th>
+            <th>RSS URL</th>
+            <th>Website</th>
+            <th>Language</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for result in results %}
+        <tr>
+            <td>{{ result.sitename }}</td>
+            <td><a href="{{ result.rss_url }}" target="_blank">{{ result.rss_url }}</a></td>
+            <td><a href="{{ result.website }}" target="_blank">{{ result.website }}</a></td>
+            <td>{{ result.lang }}</td>
+            <td>
+                <a
+                    href="{% url 'admin:add_rss' %}?rss_url={{ result.rss_url|urlencode }}&sitename={{ result.sitename|urlencode }}&website={{ result.website|urlencode }}&lang={{ result.lang|urlencode }}">
+                    <button>Add to Database</button>
+                </a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">No new RSS feeds found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

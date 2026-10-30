@@ -1,0 +1,803 @@
+{% extends "game/edition_detail.html" %}
+{% load static static_v %}
+{% load translate_tags %}
+
+{% block meta_description %}{% include "game/partials/edition_meta_flowchart.html" %}{% endblock meta_description %}
+{% block og_description %}{% include "game/partials/edition_meta_flowchart.html" %}{% endblock og_description %}
+{% block twitter_description %}{% include "game/partials/edition_meta_flowchart.html" %}{% endblock twitter_description %}
+
+{% block edition_head %}
+<link rel="stylesheet" href="{% static_v 'game/admin/flowchart_editor/index.css' %}">
+{% endblock edition_head %}
+
+{% block robots %}{% if flowchart_preview %}<meta name="robots" content="noindex, nofollow">{% endif %}{% endblock robots %}
+
+{% block panel %}
+{% if flowchart_preview %}
+{% comment %} 發布前草稿預覽（只有後台人員看得到，見 EditionDetailView._flowchart_preview_chart）。
+   文字不走翻譯 tag：這是給內部編輯／reviewer 的後台提示，不是公開內容。
+   語言按鈕要自己產生：站上的語言選單只帶路徑，會把 ?preview= 丟掉。 {% endcomment %}
+<div class="fc-preview-banner" style="margin:0 0 12px;padding:10px 14px;border:2px dashed #d46b08;border-radius:8px;background:rgba(250,173,20,0.12);color:var(--color-text-main);font-size:13px;line-height:1.6;">
+    <strong>草稿預覽</strong>：「{{ flowchart_preview.chart.ruleset }}」顯示的是已存檔的草稿，訪客看不到。編輯器裡未存的改動不會出現在這裡。
+    <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+        <span>語言：</span>
+        {% for code, label, url in flowchart_preview.langs %}
+        <a href="{{ url }}" style="padding:2px 10px;border-radius:9999px;text-decoration:none;border:1px solid #d46b08;{% if code == flowchart_preview.current_lang %}background:#d46b08;color:#fff;{% else %}color:#d46b08;{% endif %}">{{ label }}</a>
+        {% endfor %}
+    </div>
+    {% if flowchart_preview.missing %}
+    <div style="margin-top:6px;color:#cf1322;">⚠️ 這個語言還有 {{ flowchart_preview.missing }} 段文字沒有譯文，會以原文顯示；建議先補譯再調整節點尺寸。</div>
+    {% endif %}
+</div>
+{% endif %}
+{% include "game/partials/panel_flowchart.html" %}
+{% endblock panel %}
+
+{% block edition_tail %}
+<!-- Flowchart Icon Legend Modal -->
+<div id="fc-legend-modal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;padding:16px;">
+    <div style="background:var(--color-bg);border-radius:12px;padding:24px 24px 20px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.35);">
+        <button id="fc-legend-close" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:24px;line-height:1;cursor:pointer;color:var(--color-text-minor);">&times;</button>
+        <div style="color:var(--color-text-main);">
+            <p style="font-weight:700;font-size:14px;margin-bottom:14px;color:var(--color-primary);">{% t "game.flowchart.legend.title" %}</p>
+
+            <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;line-height:1.5;">
+                <div class="fc-legend-row">
+                    <div style="width:26px;height:16px;border-radius:9999px;background:var(--fc-oval-start-bg, #52c41a);flex-shrink:0;"></div>
+                    <div><strong>{% t "game.flowchart.legend.start.label" %}</strong><p style="color:var(--color-text-minor);margin:2px 0 0;">{% t "game.flowchart.legend.start.def" %}</p></div>
+                </div>
+                <div class="fc-legend-row">
+                    <div style="width:26px;height:16px;border-radius:9999px;background:var(--fc-oval-end-bg, #ff4d4f);flex-shrink:0;"></div>
+                    <div><strong>{% t "game.flowchart.legend.end.label" %}</strong><p style="color:var(--color-text-minor);margin:2px 0 0;">{% t "game.flowchart.legend.end.def" %}</p></div>
+                </div>
+                <div class="fc-legend-row">
+                    {% comment %} Action 節點的顏色由所屬相位決定（取自 theme.css 的 --fc-phaseN-*，見
+                       admin_frontend/src/nodes/index.tsx 的 PHASE_ACTION_THEMES）：
+                       綠＝Preparation、藍＝Game Flow、紅＝Endgame。三個色塊疊在圖例的
+                       同一格，寬度與其他列的單一色塊一致。{% endcomment %}
+                    <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0;">
+                        <div style="width:26px;height:8px;background:var(--fc-phase1-bg, #E8F4E5);border:1px solid var(--fc-phase1-border, #9CCB9F);border-radius:2px;"></div>
+                        <div style="width:26px;height:8px;background:var(--fc-phase2-bg, #E3EEFA);border:1px solid var(--fc-phase2-border, #8FB3D9);border-radius:2px;"></div>
+                        <div style="width:26px;height:8px;background:var(--fc-phase3-bg, #FBE9E7);border:1px solid var(--fc-phase3-border, #E0A9A2);border-radius:2px;"></div>
+                    </div>
+                    <div><strong>{% t "game.flowchart.legend.action.label" %}</strong><p style="color:var(--color-text-minor);margin:2px 0 0;">{% t "game.flowchart.legend.action.def" %}</p></div>
+                </div>
+                <div class="fc-legend-row">
+                    <div style="width:16px;height:16px;background:var(--fc-diamond-bg, #1677ff);transform:rotate(45deg);flex-shrink:0;margin:0 5px;"></div>
+                    <div><strong>{% t "game.flowchart.legend.decision.label" %}</strong><p style="color:var(--color-text-minor);margin:2px 0 0;">{% t "game.flowchart.legend.decision.def" %}</p></div>
+                </div>
+                <div class="fc-legend-row">
+                    <div style="width:26px;height:16px;border-radius:4px;background:var(--fc-double-bg, #722ed1);border:3px double var(--fc-double-border, #fff);box-sizing:border-box;flex-shrink:0;"></div>
+                    <div><strong>{% t "game.flowchart.legend.parallel.label" %}</strong><p style="color:var(--color-text-minor);margin:2px 0 0;">{% t "game.flowchart.legend.parallel.def" %}</p></div>
+                </div>
+                <div class="fc-legend-row">
+                    <div style="width:26px;height:16px;background:var(--fc-phase-bg, #ffc53d);border:1.5px solid var(--fc-phase-border, #d48806);border-radius:0 10px 0 10px;flex-shrink:0;"></div>
+                    <div><strong>{% t "game.flowchart.legend.phase.label" %}</strong><p style="color:var(--color-text-minor);margin:2px 0 0;">{% t "game.flowchart.legend.phase.def" %}</p></div>
+                </div>
+                <div class="fc-legend-row">
+                    <div style="width:26px;height:16px;border:1.5px dashed var(--fc-node-border, #bbb);background:var(--fc-legend-bg, #f0f0f0);border-radius:4px;flex-shrink:0;"></div>
+                    <div><strong>{% t "game.flowchart.legend.note.label" %}</strong><p style="color:var(--color-text-minor);margin:2px 0 0;">{% t "game.flowchart.legend.note.def" %}</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Flowchart 改善建議 Modal：內容由目前顯示中的 viewer pane
+     （data-fc-id / data-ruleset-label）決定。僅限登入會員送出。 -->
+<div id="fc-suggest-modal" class="fc-suggest-modal" aria-hidden="true">
+    <div class="fc-suggest-backdrop"></div>
+    <div class="fc-suggest-content" role="dialog" aria-modal="true" aria-labelledby="fc-suggest-heading">
+        <button type="button" class="fc-suggest-x fc-suggest-close" aria-label="{% t 'cancel' %}">&times;</button>
+        <h3 id="fc-suggest-heading">{% t "game.flowchart.suggest.modal.title" %}</h3>
+        <p class="fc-suggest-target"><i class="fas fa-sitemap"></i> <span id="fc-suggest-target-label"></span></p>
+        {% if request.user.is_authenticated %}
+        <p class="fc-suggest-desc">{% t "game.flowchart.suggest.modal.desc" %}</p>
+        <form id="fc-suggest-form">
+            {% csrf_token %}
+            {% t 'game.flowchart.suggest.modal.placeholder' as fc_sg_placeholder %}
+            <textarea id="fc-suggest-content" rows="6" maxlength="2000"
+                      placeholder="{{ fc_sg_placeholder|force_escape }}" required></textarea>
+            <div id="fc-suggest-counter" class="fc-suggest-counter" aria-live="polite">0 / 2000</div>
+            <div id="fc-suggest-feedback" class="fc-suggest-feedback" role="status"></div>
+            <div class="fc-suggest-actions">
+                <button type="submit" class="btn-primary">{% t "common.btn.submit" %}</button>
+                <button type="button" class="btn-secondary fc-suggest-close">{% t "cancel" %}</button>
+            </div>
+        </form>
+        {% else %}
+        <p class="fc-suggest-desc">{% t "game.flowchart.suggest.modal.login-required" %}</p>
+        <div class="fc-suggest-actions">
+            <button type="button" class="btn-primary fc-suggest-login-trigger">
+                <i class="fas fa-sign-in-alt"></i> {% t "auth.btn.google-login" %}
+            </button>
+            <button type="button" class="btn-secondary fc-suggest-close">{% t "cancel" %}</button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script src="{% static 'js/edition_track.js' %}?v=2"></script>
+<script>
+    // 分頁拆成獨立頁面後，「開啟流程圖」＝載入這一頁，不再有分頁點擊事件可掛。
+    if (window.trackFlowchart) { window.trackFlowchart('open'); }
+</script>
+
+<script>
+    // 流程圖改善建議：針對「目前顯示中的那張圖（ruleset）」留言，僅限登入會員。
+    // 未登入時 modal 內只有登入引導，沒有表單（表單本身也沒 render 出來）。
+    (function() {
+        var modal = document.getElementById('fc-suggest-modal');
+        if (!modal) return;
+        var form     = document.getElementById('fc-suggest-form');
+        var textarea = document.getElementById('fc-suggest-content');
+        var feedback = document.getElementById('fc-suggest-feedback');
+        var counter  = document.getElementById('fc-suggest-counter');
+        var targetEl = document.getElementById('fc-suggest-target-label');
+        var MAX_LEN  = 2000;  // 與後端 SUGGESTION_MAX_LENGTH 一致
+        function updateCounter() {
+            if (!counter || !textarea) return;
+            var n = textarea.value.length;
+            counter.textContent = n + ' / ' + MAX_LEN;
+            counter.classList.toggle('full', n >= MAX_LEN);
+        }
+        var currentId = null;
+        {% firstof edition.name edition.game.canonical_name as fc_sg_title %}
+        var SG_TITLE = "{{ fc_sg_title|escapejs }}";
+        // 譯文一律走 escapejs：像英文的 "We'll ..." 這種帶單引號的值，
+        // 直接插進 JS 字面值會把整段 <script> 弄成語法錯誤。
+        var SG_MSG = {
+            empty:   "{% t 'game.flowchart.suggest.error.empty' as v %}{{ v|escapejs }}",
+            success: "{% t 'game.flowchart.suggest.success' as v %}{{ v|escapejs }}",
+            login:   "{% t 'game.flowchart.suggest.modal.login-required' as v %}{{ v|escapejs }}",
+            paid:    "{% t 'game.flowchart.paid_feature' as v %}{{ v|escapejs }}",
+            generic: "{% t 'game.flowchart.suggest.error.generic' as v %}{{ v|escapejs }}"
+        };
+
+        function visibleFcPane() {
+            var panes = document.querySelectorAll('.fc-viewer-pane');
+            for (var i = 0; i < panes.length; i++) {
+                if (!panes[i].classList.contains('fc-viewer-hidden') && panes[i].offsetParent !== null) {
+                    return panes[i];
+                }
+            }
+            return null;
+        }
+        function closeModal() {
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        document.querySelectorAll('.fc-suggest-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var pane = visibleFcPane();
+                currentId = pane ? pane.getAttribute('data-fc-id') : null;
+                if (targetEl) {
+                    var label = pane ? (pane.getAttribute('data-ruleset-label') || '') : '';
+                    targetEl.textContent = label ? (SG_TITLE + ' \u203A ' + label) : SG_TITLE;
+                }
+                if (feedback) { feedback.textContent = ''; feedback.className = 'fc-suggest-feedback'; }
+                updateCounter();
+                modal.classList.add('show');
+                modal.setAttribute('aria-hidden', 'false');
+                if (textarea) textarea.focus();
+            });
+        });
+        modal.querySelectorAll('.fc-suggest-close').forEach(function(btn) {
+            btn.addEventListener('click', closeModal);
+        });
+        modal.querySelector('.fc-suggest-backdrop').addEventListener('click', closeModal);
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.classList.contains('show')) closeModal();
+        });
+
+        var loginTrigger = modal.querySelector('.fc-suggest-login-trigger');
+        if (loginTrigger) {
+            loginTrigger.addEventListener('click', function() {
+                if (window.authHandler) {
+                    window.authHandler.handleLogin();
+                } else {
+                    window.location.href = "{% url 'account_login' %}?next={{ request.path }}";
+                }
+            });
+        }
+
+        if (textarea) textarea.addEventListener('input', updateCounter);
+
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var content = (textarea.value || '').trim();
+                feedback.className = 'fc-suggest-feedback';
+                if (!content) {
+                    feedback.textContent = SG_MSG.empty;
+                    feedback.classList.add('error');
+                    return;
+                }
+                var csrfEl = form.querySelector('[name=csrfmiddlewaretoken]');
+                var submitBtn = form.querySelector('button[type=submit]');
+                if (submitBtn) submitBtn.disabled = true;
+                feedback.textContent = '';
+                fetch("{% url 'games:suggest-flowchart' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfEl ? csrfEl.value : ''
+                    },
+                    body: JSON.stringify({
+                        flowchart_id: currentId,
+                        edition_id: '{{ edition.id }}',
+                        content: content
+                    })
+                }).then(function(res) {
+                    return res.json().then(function(data) {
+                        return { ok: res.ok, status: res.status, data: data };
+                    });
+                }).then(function(r) {
+                    if (r.ok && r.data.success) {
+                        feedback.textContent = r.data.message || SG_MSG.success;
+                        feedback.classList.add('success');
+                        form.reset();
+                        updateCounter();
+                    } else if (r.status === 401) {
+                        feedback.textContent = SG_MSG.login;
+                        feedback.classList.add('error');
+                    } else if (r.status === 403) {
+                        feedback.textContent = SG_MSG.paid;
+                        feedback.classList.add('error');
+                    } else {
+                        var errs = r.data.errors
+                            ? Object.keys(r.data.errors).map(function(k) { return r.data.errors[k]; }).join(' ')
+                            : '';
+                        feedback.textContent = errs || SG_MSG.generic;
+                        feedback.classList.add('error');
+                    }
+                }).catch(function() {
+                    feedback.textContent = SG_MSG.generic;
+                    feedback.classList.add('error');
+                }).then(function() {
+                    if (submitBtn) submitBtn.disabled = false;
+                });
+            });
+        }
+    })();
+    (function() {
+        var fcLegendModal = document.getElementById('fc-legend-modal');
+        document.querySelectorAll('.fc-legend-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() { fcLegendModal.style.display = 'flex'; });
+        });
+        document.getElementById('fc-legend-close').addEventListener('click', function() {
+            fcLegendModal.style.display = 'none';
+        });
+        fcLegendModal.addEventListener('click', function(e) {
+            if (e.target === fcLegendModal) fcLegendModal.style.display = 'none';
+        });
+    })();
+</script>
+<style>
+.flowchart-tab-header { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.flowchart-actions { display:flex; align-items:center; gap:8px; margin-left:auto; }
+.flowchart-actions.with-divider { padding-left:10px; border-left:1px solid var(--color-bg-hover); }
+.flowchart-ruleset-list { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+
+/* 玩法選擇 pill：選擇型控制項 */
+.flowchart-ruleset-pill { cursor:pointer; border:1px solid var(--color-bg-hover); background:var(--color-bg); color:var(--color-text-main); border-radius:999px; padding:5px 14px; font-size:0.85em; font-weight:600; line-height:1.4; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s ease; }
+.flowchart-ruleset-pill:hover { border-color:var(--color-primary); }
+.flowchart-ruleset-pill.active { background:var(--color-primary); color:#fff; border-color:var(--color-primary); }
+.flowchart-ruleset-pill.locked { color:var(--color-text-minor); }
+
+/* 全螢幕／列印：icon-only 工具按鈕，沿用 .icon-btn 的視覺語彙，hover 顯示原生 title tooltip */
+.fc-toolbar-btn { cursor:pointer; border:1px solid var(--color-bg-hover); background:var(--color-bg-alt); color:var(--color-text-minor); border-radius:8px; padding:6px; font-size:0.95em; line-height:1; display:inline-flex; align-items:center; justify-content:center; gap:4px; min-width:32px; min-height:32px; transition:all 0.15s ease; }
+.fc-toolbar-btn:hover { border-color:var(--color-primary); color:var(--color-text-main); transform:translateY(-1px); }
+.fc-toolbar-btn.locked { color:var(--color-text-minor); opacity:0.7; }
+.fc-locked-notice { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; height:100%; color:#888; text-align:center; }
+.fc-locked-notice i { font-size:2em; }
+.fc-legend-row { display:flex; align-items:flex-start; gap:12px; }
+
+/* 流程圖文字版：可展開區塊，給不執行 JS 的爬蟲/輔助工具讀，內容與圖表一致 */
+.fc-textview { margin-top:16px; border:1px solid var(--color-bg-hover); border-radius:8px; padding:12px 16px; }
+.fc-textview-summary { cursor:pointer; font-weight:600; color:var(--color-text-main); }
+.fc-textview-note { color:var(--color-text-minor); font-size:0.9em; margin:8px 0 12px; }
+.fc-textview-phases > li { margin-bottom:12px; }
+.fc-textview h2 { font-size:1.05em; margin:0 0 6px; }
+.fc-textview-transitions { color:var(--color-text-minor); font-size:0.92em; margin:4px 0 0 1em; }
+
+/* 改善建議 modal：按工具列的建議按鈕才開啟，桌機／手機共用同一份 */
+.fc-suggest-modal { display:none; position:fixed; inset:0; z-index:2000; align-items:center; justify-content:center; padding:16px; }
+.fc-suggest-modal.show { display:flex; }
+.fc-suggest-backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.55); }
+.fc-suggest-content { position:relative; background:var(--color-bg); color:var(--color-text-main); border-radius:12px; padding:24px 24px 20px; max-width:520px; width:100%; max-height:80vh; overflow-y:auto; box-shadow:0 8px 32px rgba(0,0,0,0.35); }
+.fc-suggest-x { position:absolute; top:10px; right:14px; background:none; border:none; font-size:24px; line-height:1; cursor:pointer; color:var(--color-text-minor); }
+.fc-suggest-content h3 { margin:0 0 10px; font-size:1.1em; color:var(--color-primary); }
+.fc-suggest-target { font-size:0.9em; font-weight:600; margin:0 0 8px; }
+.fc-suggest-target i { color:var(--color-text-minor); margin-right:4px; }
+.fc-suggest-desc { color:var(--color-text-minor); font-size:0.9em; margin:0 0 12px; }
+#fc-suggest-content { width:100%; box-sizing:border-box; border:1px solid var(--color-bg-hover); border-radius:8px; background:var(--color-bg-alt); color:var(--color-text-main); padding:10px 12px; font:inherit; font-size:0.95em; resize:vertical; }
+#fc-suggest-content:focus { outline:none; border-color:var(--color-primary); }
+.fc-suggest-counter { font-size:0.8em; color:var(--color-text-minor); text-align:right; margin-top:4px; font-variant-numeric:tabular-nums; }
+.fc-suggest-counter.full { color:#ff4d4f; }
+.fc-suggest-feedback { font-size:0.9em; margin-top:8px; min-height:1.2em; }
+.fc-suggest-feedback.success { color:#52c41a; }
+.fc-suggest-feedback.error { color:#ff4d4f; }
+.fc-suggest-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:14px; }
+</style>
+{{ flowchart_viewer_configs|json_script:"fc-viewer-data" }}
+<script>
+window.FLOWCHART_VIEWER_CONFIGS = JSON.parse(
+    document.getElementById('fc-viewer-data').textContent
+);
+var FC_MEMBERSHIP_URL = "{% url 'account:membership' %}";
+
+function _setupFcRulesetSwitch(listId) {
+    var list = document.getElementById(listId);
+    if (!list) return;
+    list.querySelectorAll('.flowchart-ruleset-pill').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            if (this.classList.contains('locked')) {
+                window.location.href = FC_MEMBERSHIP_URL;
+                return;
+            }
+            var key = this.getAttribute('data-ruleset-key');
+            document.querySelectorAll('[id^="fc-viewer-"]').forEach(function(el) {
+                el.classList.add('fc-viewer-hidden');
+            });
+            var target = document.getElementById('fc-viewer-' + key);
+            if (target) target.classList.remove('fc-viewer-hidden');
+            document.querySelectorAll('[id^="fc-text-"]').forEach(function(el) {
+                el.hidden = true;
+            });
+            var textTarget = document.getElementById('fc-text-' + key);
+            if (textTarget) textTarget.hidden = false;
+            list.querySelectorAll('.flowchart-ruleset-pill').forEach(function(b) {
+                b.classList.remove('active');
+            });
+            this.classList.add('active');
+        });
+    });
+}
+_setupFcRulesetSwitch('flowchart-ruleset-list');
+
+// Flowchart 動作按鈕：Fullscreen / Print，依 tier 權限控管
+(function(){
+    function visiblePane(){
+        var panes = document.querySelectorAll('.fc-viewer-pane');
+        for (var i=0; i<panes.length; i++){
+            if (!panes[i].classList.contains('fc-viewer-hidden') && panes[i].offsetParent !== null) {
+                return panes[i];
+            }
+        }
+        return null;
+    }
+    {% firstof edition.name edition.game.canonical_name as fc_game_title %}
+    var GAME_TITLE = "{{ fc_game_title|escapejs }}";
+    function paneTitle(pane){
+        var label = pane ? (pane.getAttribute('data-ruleset-label') || '') : '';
+        return label ? (GAME_TITLE + ' - ' + label) : GAME_TITLE;
+    }
+    function escHtml(s){
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    var FC_CSS = "{% static_v 'game/admin/flowchart_editor/index.css' %}";
+    var FC_THEME_CSS = "{% static_v 'css/theme.css' %}";
+    var FC_BASE_CSS = "{% static 'css/ttoper.css' %}";
+    var FC_DETAIL_CSS = "{% static 'css/edition_detail.css' %}";
+    // 設計用 72 DPI（1 canvas px = 1 print pt）；列印 CSS px 為 96 DPI，故放大 96/72。
+    var PT2MM = 0.352778, DPI_SCALE = 96 / 72;
+    function getPageFrame(pane){
+        // 編輯時放的 A4/A5 page frame 節點（type "page" → class react-flow__node-page）
+        var el = pane.querySelector('.react-flow__node-page');
+        if (!el || !el.offsetWidth) return null;
+        var m;
+        try { m = new DOMMatrixReadOnly(getComputedStyle(el).transform); }
+        catch (e) { return null; }
+        return { x: m.e, y: m.f, w: el.offsetWidth, h: el.offsetHeight };
+    }
+    var PRINT_HEADER_MM = 8, PRINT_FOOTER_MM = 6;
+    // 印表機四周有硬體無法列印的邊界（save as PDF 沒有），版面貼齊紙張邊緣就會被裁掉。
+    // 統一內縮這個安全邊界，流程圖再等比縮小塞進剩下的範圍。
+    var PRINT_SAFE_MM = 5;
+    // 列印用的新視窗沒掛 ttoper.css，不指定字型會吃到瀏覽器預設的襯線字；
+    // 沿用站上同一組無襯線堆疊（含中日文），節點文字才和畫面上一致。
+    var PRINT_FONT = '"Segoe UI",Tahoma,Geneva,Verdana,"PingFang TC","Noto Sans TC",' +
+                     '"Microsoft JhengHei","Noto Sans JP","Hiragino Kaku Gothic Pro","Yu Gothic UI",' +
+                     '"Noto Sans SC","Microsoft YaHei",sans-serif';
+    function paneFootnote(pane){
+        // 頁面上圖表下方那行說明（.fc-flowchart-footnote），列印時當自製頁尾一起帶過去
+        var el = pane.parentNode ? pane.parentNode.querySelector('.fc-flowchart-footnote') : null;
+        return el ? (el.textContent || '').trim() : '';
+    }
+    function printPane(pane){
+        // React Flow 是 transform 定位＋overflow 裁切，純 @media print 印不出。
+        // 改為開新視窗：複製 .react-flow 元素、link 同一份 index.css 後列印。
+        // 標題（遊戲名／ruleset）直接畫進頁面內容當自製頁首，不依賴瀏覽器「頁首及頁尾」
+        // 選項——那個選項讀不到動態視窗的標題，勾選後還會另外硬塞邊界把版面擠出裁切。
+        var rf = pane.querySelector('.react-flow');
+        if (!rf){ window.print(); return; }
+        var w = window.open('', '_blank');
+        if (!w){ window.print(); return; }
+        var titleHtml = escHtml(paneTitle(pane));
+        var headerCss = '.fc-print-header{box-sizing:border-box;width:100%;height:' + PRINT_HEADER_MM +
+            'mm;padding:1.5mm 0 0;font-size:11px;color:#333;border-bottom:0.3mm solid #ccc;' +
+            'background:#fff;overflow:hidden;white-space:nowrap;}';
+        var headerHtml = '<div class="fc-print-header">' + titleHtml + '</div>';
+        var footText = paneFootnote(pane);
+        // 起始值只是估計；文字換幾行要等排版完才知道，列印前用 layoutCss() 依實測高度重算。
+        var footerMm = footText ? PRINT_FOOTER_MM : 0;
+        var footerHtml = footText ? '<div class="fc-print-footer">' + escHtml(footText) + '</div>' : '';
+        var footerCss = footText
+            ? '.fc-print-footer{box-sizing:border-box;width:100%;min-height:' + footerMm +
+              'mm;padding:1.2mm 0;font-size:9px;' +
+              'line-height:1.35;text-align:left;color:#555;border-top:0.3mm solid #ccc;background:#fff;}'
+            : '';
+        // 版面一律「紙張尺寸固定 ＋ 流程圖等比縮放」：舊做法是把頁首／頁尾的高度加到紙張上，
+        // 紙張因此超過實際 A4，save as PDF 是自訂尺寸看不出來，送到印表機就被裁掉底部。
+        var frame = getPageFrame(pane);
+        var paperW, paperH, srcW, srcH, srcScale, vpCss;
+        if (frame){
+            // 編輯時放的 A4/A5 框：紙張就取該框尺寸（72 DPI 的 1 px = 1 pt）
+            paperW = frame.w * PT2MM;
+            paperH = frame.h * PT2MM;
+            srcW = frame.w; srcH = frame.h; srcScale = DPI_SCALE;
+            vpCss = '.react-flow__viewport{transform:translate(' + (-frame.x) + 'px,' + (-frame.y) +
+                    'px) scale(1) !important;}';
+        } else {
+            // 無 page frame：印目前畫面（已自動 fitView），依長寬比挑 A4 直式／橫式
+            var rect = rf.getBoundingClientRect();
+            srcW = Math.ceil(rect.width); srcH = Math.ceil(rect.height); srcScale = 1;
+            paperW = srcW > srcH ? 297 : 210;
+            paperH = srcW > srcH ? 210 : 297;
+            vpCss = '';
+        }
+        var srcWmm = srcW * srcScale * 25.4 / 96, srcHmm = srcH * srcScale * 25.4 / 96;
+        // 可用高度＝紙張 − 上下安全邊界 − 頁首 − 頁尾，流程圖等比縮到剛好放得下
+        function layoutCss(fMm){
+            var availW = paperW - PRINT_SAFE_MM * 2;
+            var availH = paperH - PRINT_SAFE_MM * 2 - PRINT_HEADER_MM - fMm;
+            var s = Math.min(availW / srcWmm, availH / srcHmm);
+            if (!(s > 0)) s = 1;
+            return '.fc-print-box{width:' + (srcWmm * s).toFixed(2) + 'mm;height:' +
+                   (srcHmm * s).toFixed(2) + 'mm;margin:0 auto;overflow:hidden;background:#fff;}' +
+                   '.fc-print-box .react-flow{position:relative;width:' + srcW + 'px;height:' + srcH +
+                   'px;overflow:hidden;transform:scale(' + (srcScale * s).toFixed(4) +
+                   ');transform-origin:top left;}';
+        }
+        var pageCss = '@page{size:' + paperW.toFixed(2) + 'mm ' + paperH.toFixed(2) + 'mm;margin:' +
+                      PRINT_SAFE_MM + 'mm;}' +
+                      // 螢幕上的量測寬度綁成列印寬度，頁尾在兩邊才會斷在同樣的位置
+                      'body{width:' + (paperW - PRINT_SAFE_MM * 2).toFixed(2) + 'mm;margin:0 auto;}';
+        var doc = w.document;
+        doc.open();
+        doc.write(
+            // 紙張永遠是亮色：固定 data-theme="default"，並載入 theme.css 取得 --fc-print-* 與節點變數
+            '<!DOCTYPE html><html data-theme="default"><head><meta charset="utf-8">' +
+            '<title>' + titleHtml + '</title>' +
+            '<base href="' + window.location.origin + '/">' +
+            '<link rel="stylesheet" href="' + FC_THEME_CSS + '">' +
+            '<link rel="stylesheet" href="' + FC_CSS + '">' +
+            '<style>' +
+              'html,body{margin:0;padding:0;background:#fff;overflow:hidden;' +
+                'font-family:' + PRINT_FONT + ';}' +
+              '*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}' +
+              pageCss + headerCss + layoutCss(footerMm) + vpCss + footerCss +
+              '.react-flow__controls,.react-flow__attribution,.react-flow__minimap,.react-flow__panel,.react-flow__node-page,.react-flow__background{display:none !important;}' +
+            '</style>' +
+            // 空的：列印前才依實測頁尾高度填入，排在後面所以覆寫得掉上面的估計值
+            // fc-print-ink：省油墨的列印調色盤（見 admin_frontend/src/editor.css）。
+            // 只加在列印視窗，畫面上與全螢幕檢視維持原本配色。
+            '<style id="fc-print-dyn"></style></head><body class="fc-print-ink">' +
+            headerHtml +
+            '<div class="fc-print-box">' + rf.outerHTML + '</div>' +
+            footerHtml +
+            '</body></html>'
+        );
+        doc.close();
+        var printed = false;
+        var done = function(){
+            if (printed) return;
+            printed = true;
+            try {
+                var st = doc.getElementById('fc-print-dyn');
+                var f = doc.querySelector('.fc-print-footer');
+                if (st) {
+                    st.textContent = layoutCss(f ? f.getBoundingClientRect().height * 25.4 / 96 : 0);
+                }
+            } catch (e) {}
+            try { w.focus(); w.print(); } catch (e) {}
+        };
+        // 等 index.css 載入完成再列印；load 沒觸發時以保險 timeout 補上
+        w.addEventListener('load', function(){ setTimeout(done, 350); });
+        setTimeout(done, 1500);
+    }
+    function fullscreenPane(pane){
+        // 複製目前畫面的 .react-flow 到新視窗鋪滿顯示，與 printPane 同一套
+        // 「開新視窗＋複製 DOM＋掛同一份 CSS」手法，不需後端 API。
+        var rf = pane.querySelector('.react-flow');
+        if (!rf){ return; }
+        var w = window.open('', '_blank');
+        if (!w){ return; }
+        var theme = document.documentElement.getAttribute('data-theme') || 'default';
+        var footText = paneFootnote(pane);
+        var footerHtml = footText
+            ? '<p class="fc-fullscreen-footnote">' + escHtml(footText) + '</p>' : '';
+        var doc = w.document;
+        doc.open();
+        doc.write(
+            '<!DOCTYPE html><html data-theme="' + theme + '"><head><meta charset="utf-8">' +
+            '<title>' + escHtml(paneTitle(pane)) + '</title>' +
+            '<base href="' + window.location.origin + '/">' +
+            '<link rel="stylesheet" href="' + FC_THEME_CSS + '">' +
+            '<link rel="stylesheet" href="' + FC_BASE_CSS + '">' +
+            '<link rel="stylesheet" href="' + FC_CSS + '">' +
+            '<link rel="stylesheet" href="' + FC_DETAIL_CSS + '">' +
+            '<style>' +
+              'html,body{margin:0;padding:0;background:var(--color-bg,#fff);height:100%;overflow:hidden;}' +
+              // touch-action:none 才收得到雙指手勢（否則被瀏覽器的捲動／整頁縮放吃掉）
+              '.fc-fullscreen-box{position:fixed;inset:0;touch-action:none;cursor:grab;}' +
+              '.fc-fullscreen-box.fc-panning{cursor:grabbing;}' +
+              '.fc-fullscreen-box .react-flow{width:100%;height:100%;}' +
+              '.fc-fullscreen-box .react-flow__pane{cursor:inherit;}' +
+              '.fc-fs-zoom{position:fixed;top:16px;right:16px;z-index:10;' +
+                'display:flex;flex-direction:column;gap:6px;}' +
+              '.fc-fs-zoom button{width:34px;height:34px;display:flex;align-items:center;' +
+                'justify-content:center;border:1px solid var(--color-text-disabled,#ccc);' +
+                'border-radius:8px;background:var(--color-bg-alt,#fff);color:var(--color-text-main,#333);' +
+                'font-size:17px;line-height:1;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.12);}' +
+              '.fc-fs-zoom button:hover{background:var(--color-bg-hover,#eee);}' +
+              '.fc-fullscreen-footnote{position:fixed;left:0;right:0;bottom:0;margin:0;' +
+                'padding:8px 16px;text-align:left;font-size:0.78rem;line-height:1.5;' +
+                'color:var(--color-text-minor,#666);background:var(--color-bg,#fff);' +
+                'border-top:1px solid var(--color-bg-alt,#e0e0e0);}' +
+            '</style></head><body data-theme="' + theme + '">' +
+            '<div class="fc-fullscreen-box">' + rf.outerHTML + '</div>' +
+            // 新視窗沒掛 Font Awesome，縮放按鈕直接用符號，不需要翻譯字串
+            '<div class="fc-fs-zoom">' +
+              '<button type="button" data-fs-zoom="in" aria-label="Zoom in">+</button>' +
+              '<button type="button" data-fs-zoom="out" aria-label="Zoom out">-</button>' +
+              // fit 的圖示用內嵌 SVG，免得挑到系統沒有的符號字型變成豆腐字
+              '<button type="button" data-fs-zoom="fit" aria-label="Fit to screen">' +
+                '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" ' +
+                'stroke-width="1.6" stroke-linecap="round"><path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/>' +
+                '</svg></button>' +
+            '</div>' +
+            footerHtml +
+            '</body></html>'
+        );
+        doc.close();
+
+        // 靜態複製的 DOM 沒有活的 React Flow 實例可呼叫 fitView()／zoom，pan 與 zoom 都得自己算。
+        // 統一維護一組 view（平移 x,y 與縮放 k），滾輪／拖曳／雙指／按鈕都只是改這組值再套回
+        // .react-flow__viewport 的 transform。
+        var MIN_K = 0.15, MAX_K = 4;
+        var view = { x: 0, y: 0, k: 1 };
+        var userAdjusted = false;  // 使用者自己縮放過之後，就別再被 resize 的自動 fit 蓋掉
+        var box = doc.querySelector('.fc-fullscreen-box');
+        function viewSize(){
+            // 底部說明是蓋在畫布上的固定列，可視高度要先扣掉它（文字換行後高度會變，
+            // 所以每次都重新量一次），流程圖才不會被壓在字底下。
+            var vw = doc.documentElement.clientWidth, vh = doc.documentElement.clientHeight;
+            var foot = doc.querySelector('.fc-fullscreen-footnote');
+            if (foot) vh -= foot.offsetHeight;
+            return { w: vw, h: vh };
+        }
+        function applyView(){
+            var vp = doc.querySelector('.react-flow__viewport');
+            if (vp) vp.style.transform = 'translate(' + view.x + 'px,' + view.y + 'px) scale(' + view.k + ')';
+        }
+        function contentBounds(){
+            // 依各節點的 translate(x,y)（flow 座標，不受原本 viewport 縮放影響）算出內容範圍
+            var nodes = doc.querySelectorAll('.react-flow__node:not(.react-flow__node-page)');
+            if (!nodes.length) return null;
+            var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            nodes.forEach(function(n){
+                var m;
+                try { m = new DOMMatrixReadOnly(w.getComputedStyle(n).transform); }
+                catch (e) { return; }
+                var x = m.e, y = m.f, nw = n.offsetWidth, nh = n.offsetHeight;
+                if (x < minX) minX = x;
+                if (y < minY) minY = y;
+                if (x + nw > maxX) maxX = x + nw;
+                if (y + nh > maxY) maxY = y + nh;
+            });
+            if (!isFinite(minX) || maxX <= minX || maxY <= minY) return null;
+            return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+        }
+        function fitToWindow(){
+            var b = contentBounds();
+            if (!b) return;
+            var vs = viewSize();
+            var padding = 60;
+            if (vs.w <= padding * 2 || vs.h <= padding * 2) padding = 8;
+            if (vs.w <= padding * 2 || vs.h <= padding * 2) return;
+            var scale = Math.min((vs.w - padding * 2) / b.w, (vs.h - padding * 2) / b.h);
+            scale = Math.min(scale, 1.5); // 節點很少時避免放大過度
+            view.k = scale;
+            view.x = (vs.w - b.w * scale) / 2 - b.x * scale;
+            view.y = (vs.h - b.h * scale) / 2 - b.y * scale;
+            applyView();
+        }
+        function resetView(){ userAdjusted = false; fitToWindow(); }
+        function autoFit(){ if (!userAdjusted) fitToWindow(); }
+        function zoomAt(cx, cy, k){
+            // 以 (cx,cy) 為定點縮放：滑鼠／雙指中心底下的那一點維持不動
+            k = Math.min(MAX_K, Math.max(MIN_K, k));
+            if (!(k > 0) || k === view.k) return;
+            view.x = cx - (cx - view.x) * (k / view.k);
+            view.y = cy - (cy - view.y) * (k / view.k);
+            view.k = k;
+            userAdjusted = true;
+            applyView();
+        }
+        function zoomCenter(factor){
+            var vs = viewSize();
+            zoomAt(vs.w / 2, vs.h / 2, view.k * factor);
+        }
+        function localPoint(e){
+            var r = box.getBoundingClientRect();
+            return { x: e.clientX - r.left, y: e.clientY - r.top };
+        }
+        if (box){
+            box.addEventListener('wheel', function(e){
+                // preventDefault 一併擋掉 ctrl+滾輪的瀏覽器整頁縮放，改由畫布自己處理
+                e.preventDefault();
+                var dy = e.deltaY * (e.deltaMode === 1 ? 16 : (e.deltaMode === 2 ? 400 : 1));
+                var p = localPoint(e);
+                zoomAt(p.x, p.y, view.k * Math.exp(-dy * 0.0015));
+            }, { passive: false });
+            // 一根手指／滑鼠拖曳＝平移，兩根手指＝夾捏縮放，統一走 pointer events
+            var pts = {}, last = null, lastDist = 0;
+            function ptCenter(){
+                var xs = 0, ys = 0, n = 0, id;
+                for (id in pts){ xs += pts[id].x; ys += pts[id].y; n++; }
+                return n ? { x: xs / n, y: ys / n, n: n } : null;
+            }
+            function ptDist(){
+                var arr = [], id;
+                for (id in pts) arr.push(pts[id]);
+                if (arr.length < 2) return 0;
+                var dx = arr[0].x - arr[1].x, dy = arr[0].y - arr[1].y;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+            box.addEventListener('pointerdown', function(e){
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                pts[e.pointerId] = localPoint(e);
+                try { box.setPointerCapture(e.pointerId); } catch (err) {}
+                box.classList.add('fc-panning');
+                last = ptCenter();
+                lastDist = ptDist();
+            });
+            box.addEventListener('pointermove', function(e){
+                if (!(e.pointerId in pts)) return;
+                pts[e.pointerId] = localPoint(e);
+                var c = ptCenter();
+                if (!c || !last) return;
+                if (c.n >= 2){
+                    var d = ptDist();
+                    if (lastDist > 0 && d > 0) zoomAt(c.x, c.y, view.k * (d / lastDist));
+                    lastDist = d;
+                }
+                view.x += c.x - last.x;
+                view.y += c.y - last.y;
+                userAdjusted = true;
+                last = c;
+                applyView();
+            });
+            function endPointer(e){
+                if (!(e.pointerId in pts)) return;
+                delete pts[e.pointerId];
+                last = ptCenter();
+                lastDist = ptDist();
+                if (!last) box.classList.remove('fc-panning');
+            }
+            box.addEventListener('pointerup', endPointer);
+            box.addEventListener('pointercancel', endPointer);
+            box.addEventListener('dblclick', resetView);  // 雙擊＝回到全部顯示
+        }
+        doc.addEventListener('click', function(e){
+            var btn = e.target && e.target.closest ? e.target.closest('[data-fs-zoom]') : null;
+            if (!btn) return;
+            var act = btn.getAttribute('data-fs-zoom');
+            if (act === 'in') zoomCenter(1.25);
+            else if (act === 'out') zoomCenter(0.8);
+            else resetView();
+        });
+        doc.addEventListener('keydown', function(e){
+            if (e.key === '+' || e.key === '=') zoomCenter(1.25);
+            else if (e.key === '-' || e.key === '_') zoomCenter(0.8);
+            else if (e.key === '0') resetView();
+        });
+        w.addEventListener('load', function(){ setTimeout(autoFit, 350); });
+        setTimeout(autoFit, 800);
+        w.addEventListener('resize', autoFit);
+    }
+    var FC_TOUR_JS = "{% static_v 'game/admin/flowchart_editor/index.js' %}";
+    // 導覽面板的補充說明按鈕用 Font Awesome 圖示，但 FA 是 base.html 的 CDN
+    // link、不在新視窗裡。從父頁面現有的 link 抓 href 帶過去，才不用把網址
+    // （含版本號）在兩個地方各寫一次。
+    var _faLink = document.querySelector('link[href*="font-awesome"]');
+    var FC_FA_CSS = _faLink ? _faLink.href : '';
+    // React bundle 沒有 i18n，導覽面板的字串在這裡先算好，隨 config 送進新視窗。
+    {% t 'game.flowchart.tour.first' as fc_tour_first %}
+    {% t 'game.flowchart.tour.prev' as fc_tour_prev %}
+    {% t 'game.flowchart.tour.next' as fc_tour_next %}
+    {% t 'game.flowchart.tour.last' as fc_tour_last %}
+    {% t 'game.flowchart.tour.choose' as fc_tour_choose %}
+    {% t 'game.flowchart.tour.notes' as fc_tour_notes %}
+    {% t 'game.flowchart.tour.branch_unnamed' as fc_tour_unnamed %}
+    var FC_TOUR_LABELS = {
+        first:          "{{ fc_tour_first|escapejs }}",
+        prev:           "{{ fc_tour_prev|escapejs }}",
+        next:           "{{ fc_tour_next|escapejs }}",
+        last:           "{{ fc_tour_last|escapejs }}",
+        choose:         "{{ fc_tour_choose|escapejs }}",
+        notes:          "{{ fc_tour_notes|escapejs }}",
+        branch_unnamed: "{{ fc_tour_unnamed|escapejs }}"
+    };
+    function tourPane(pane){
+        // 導覽跟 print/fullscreen 不同：需要反覆 pan/zoom 與逐節點切換模糊，
+        // 靜態複製的 DOM 沒有活的 React Flow 實例可用，所以這裡改成在新視窗
+        // 重新掛載同一份 bundle（main.tsx 看到 FLOWCHART_TOUR_CONFIG 就渲染
+        // FlowchartTour）。pane 的 id 就是 viewer config 的 mountId。
+        var cfg = null;
+        var configs = window.FLOWCHART_VIEWER_CONFIGS || [];
+        for (var i = 0; i < configs.length; i++){
+            if (configs[i].mountId === pane.id){ cfg = configs[i]; break; }
+        }
+        if (!cfg || !cfg.reactFlowData){ return; }
+        var w = window.open('', '_blank');
+        if (!w){ return; }
+        var theme = document.documentElement.getAttribute('data-theme') || 'default';
+        var titleHtml = escHtml(paneTitle(pane));
+        // </ 會提早關掉 script 標籤，節點文字裡出現任何 HTML 片段都會炸掉整份文件
+        var payload = JSON.stringify({
+            reactFlowData: cfg.reactFlowData,
+            title: paneTitle(pane),
+            labels: FC_TOUR_LABELS
+        }).replace(/<\//g, '<\\/');
+        var doc = w.document;
+        doc.open();
+        doc.write(
+            '<!DOCTYPE html><html data-theme="' + theme + '"><head><meta charset="utf-8">' +
+            '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+            '<title>' + titleHtml + '</title>' +
+            '<base href="' + window.location.origin + '/">' +
+            (FC_FA_CSS ? '<link rel="stylesheet" href="' + FC_FA_CSS + '" crossorigin="anonymous" referrerpolicy="no-referrer">' : '') +
+            '<link rel="stylesheet" href="' + FC_THEME_CSS + '">' +
+            '<link rel="stylesheet" href="' + FC_BASE_CSS + '">' +
+            '<link rel="stylesheet" href="' + FC_CSS + '">' +
+            '<link rel="stylesheet" href="' + FC_DETAIL_CSS + '">' +
+            '<style>' +
+              'html,body{margin:0;padding:0;background:var(--color-bg,#fff);height:100%;overflow:hidden;}' +
+            '</style></head><body data-theme="' + theme + '">' +
+            '<div id="flowchart-tour-root"></div>' +
+            '<script type="application/json" id="fc-tour-data">' + payload + '<\/script>' +
+            '<script>window.FLOWCHART_TOUR_CONFIG = JSON.parse(' +
+              'document.getElementById("fc-tour-data").textContent);<\/script>' +
+            '<script type="module" src="' + FC_TOUR_JS + '"><\/script>' +
+            '</body></html>'
+        );
+        doc.close();
+    }
+    document.querySelectorAll('.fc-toolbar-btn[data-fc-action]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            if (btn.classList.contains('locked')){ window.location.href = FC_MEMBERSHIP_URL; return; }
+            var action = btn.getAttribute('data-fc-action');
+            // 全螢幕／列印是流程圖的高意圖動作，全都純前端完成，
+            // 不回報的話伺服器完全看不到有沒有人在用。
+            if (window.trackFlowchart) { window.trackFlowchart(action); }
+            if (action === 'print'){
+                var pane = visiblePane();
+                if (pane) printPane(pane); else window.print();
+            } else if (action === 'fullscreen'){
+                var fsPane = visiblePane();
+                if (fsPane) fullscreenPane(fsPane);
+            } else if (action === 'tour'){
+                var tourTarget = visiblePane();
+                if (tourTarget) tourPane(tourTarget);
+            }
+        });
+    });
+})();
+</script>
+
+<script type="module" src="{% static_v 'game/admin/flowchart_editor/index.js' %}"></script>
+{% endblock edition_tail %}

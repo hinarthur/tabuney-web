@@ -1,0 +1,93 @@
+{% load static %}
+{% load translate_tags %}
+{% comment %} Rulesbot 面板。一份 DOM 通吃所有視窗寬度。
+
+   以前桌機與手機各有一份逐字複製，差異只有一層 .chat-status（純 flex 包層，拿掉後視覺相同）與 id 的 -mobile 後綴——後綴存在的唯一理由就是同一頁有兩份。 {% endcomment %}
+            <div class="tab-section-intro">
+                <p>{% t "game.chat.h2_desc" %}</p>
+            </div>
+            <div class="chat-container">
+                <div class="chat-header chat-header-controls-only">
+                    <div class="chat-controls">
+                        <span class="status-indicator">
+                            {% if chat_status == 'matched' %}
+                                <span class="status-dots">🟢</span>
+                                <!-- <span class="status-text">96% {% t "chat.status.accuracy" %}</span> -->
+                            {% elif chat_status == 'linked' %}
+                                <span class="status-dots">🔶</span>
+                                <!-- <span class="status-text">79% {% t "chat.status.accuracy" %}</span> -->
+                            {% else %}
+                                <span class="status-dots">🚫</span>
+                                <!-- <span class="status-text">0% {% t "chat.status.accuracy" %}</span> -->
+                            {% endif %}
+                        </span>
+                        {% if user.is_staff and whole_context_available %}
+                        <span class="chat-mode-toggle" title="Staff only：Auto 依問題分類自動選模型（與一般用戶相同）；其餘為手動覆寫">
+                            <label><input type="radio" name="chat-mode" id="chat-mode-auto" value="auto" checked> Auto</label>
+                            <label><input type="radio" name="chat-mode" id="chat-mode-rag" value="rag"> RAG</label>
+                            <label><input type="radio" name="chat-mode" id="chat-mode-whole-gemini" value="whole-gemini"> Gemini</label>
+                            <label><input type="radio" name="chat-mode" id="chat-mode-whole-claude" value="whole-claude"> Claude</label>
+                        </span>
+                        {% endif %}
+                        {% include "game/partials/rulebook_source_btn.html" with btn_class="icon-btn" %}
+                        <button id="clear-chat-btn" class="icon-btn clear-chat-btn" title="{% t 'game.chat.clear_history' %}"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                </div>
+                
+                <div id="chat-window">
+                    <div class="chat-bubble chat-bubble-bot">
+                        {% if chat_status == 'matched' %}
+                            {% t "chat.opening.prefix" %}{{ edition.name }}{% t "chat.opening.suffix" %}
+                        {% elif chat_status == 'linked' %}
+                            {% t "chat.opening.alternative1" %}{{ edition.name }}{% t "chat.opening.alternative2" %}<a href="{{ edition_alt.get_absolute_url }}">{{ edition_alt.name }}</a>{% t "chat.opening.alternative3" %}
+                        {% else %}
+                            {% t "chat.opening.notready1" %}{{ edition.name }}{% t "chat.opening.notready2" %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if chat_status != 'not_ready' %}
+                    {% if user.is_authenticated %}
+                    <div class="chat-input-area" style="flex-wrap: wrap;">
+                        {% comment %}
+                        配額列。判準由 _rulesbot_context() 的 chat_unlimited_here 提供，
+                        與 get_chat_limits() 同源——以前這裡直接比對 current_tier !=
+                        'subscriber'，會把 admin tier 誤判成有配額，而且完全看不到
+                        per-edition 永久解鎖（解鎖含該版本的無限查問）。
+                        {% endcomment %}
+                        {% if not chat_unlimited_here %}
+                        <div id="chat-limit-info" class="chat-limit-info" style="width: 100%; font-size: 0.85em; margin-bottom: 8px; text-align: right; min-height: 18px;"></div>
+                        {% endif %}
+                        <input type="text" id="user-input" placeholder="{% t 'game.chat.placeholder' %}" style="flex: 1;">
+                        <button id="send-btn">🗪</button>
+                    </div>
+                    {% else %}
+                    <div class="chat-login-prompt">
+                        <p>{% t "game.chat.login_required" %}</p>
+                        <button type="button" class="login-btn chat-login-trigger">
+                            <i class="fas fa-sign-in-alt"></i> {% t "auth.btn.google-login" %}
+                        </button>
+                    </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <!-- Affiliate Ad -->
+            {% comment %}
+            {% if affiliate %}
+            <a href="{{ affiliate.url }}" class="affiliate-ad" target="_blank" rel="noopener">
+                {% if affiliate.artwork.image %}
+                <img src="{{ affiliate.artwork.image.url }}" alt="{{ affiliate.name }}" class="ad-image">
+                {% elif default_affiliate_artwork.image %}
+                <img src="{{ default_affiliate_artwork.image.url }}" alt="{{ default_affiliate_artwork.title }}" class="ad-image">
+                {% endif %}
+
+                <div class="ad-content">
+                    <div class="ad-text">{% t "affiliate.invite.similar" %}</div>
+                    <div class="ad-button">
+                        {% if cta %}{{ cta.text }}{% else %}Explore{% endif %}
+                    </div>
+                </div>
+            </a>
+            {% endif %}
+            {% endcomment %}

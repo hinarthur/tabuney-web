@@ -1,0 +1,47 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Copy flowchart(s) to edition{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  {{ form.media }}
+{% endblock %}
+
+{% block content %}
+<h1>Copy {{ queryset|length }} flowchart(s) to an edition</h1>
+
+<p>以下流程圖將被複製。若目標 edition 尚無 rulebook,會自動建立一筆空白的
+placeholder rulebook(無 PDF,status=pending)。</p>
+
+<ul>
+  {% for obj in queryset %}
+    <li>{{ obj.rulebook.title }} — ruleset "{{ obj.ruleset }}" ({{ obj.detail }})</li>
+  {% endfor %}
+</ul>
+
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="copy_to_edition">
+  {% for obj in queryset %}
+    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}">
+  {% endfor %}
+
+  <fieldset class="module aligned">
+    <div class="form-row">
+      <label for="id_target_edition">Target Edition <span class="required">*</span></label>
+      {{ form.target_edition }}
+      {% if form.target_edition.errors %}
+        <ul class="errorlist">{% for e in form.target_edition.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+      {% endif %}
+    </div>
+  </fieldset>
+
+  <div style="margin-top: 20px;">
+    <input type="submit" name="apply_copy" value="Confirm copy" class="default"
+      style="background:#417690; color:white; padding:8px 16px; border:none; cursor:pointer; font-size:14px;">
+    &nbsp;
+    <a href="{% url 'admin:game_rulebookflowchart_changelist' %}" class="button cancel-link">Cancel</a>
+  </div>
+</form>
+{% endblock %}

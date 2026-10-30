@@ -1,0 +1,62 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a>
+  &rsaquo; <a href="{% url 'admin:game_flowcharttexttranslation_changelist' %}">Flowchart texts</a>
+  &rsaquo; <a href="{{ picker_url }}">按流程圖批次翻譯</a>
+  &rsaquo; {{ chart.ruleset }}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<div class="module" style="padding:10px 14px; margin-bottom:14px;">
+  <table>
+    <tr><th style="text-align:left;">遊戲／版本</th><td>{{ game_name }}</td></tr>
+    <tr><th style="text-align:left;">Rulebook</th><td>{{ rulebook.title }}（來源語言 {{ rulebook_lang }}）</td></tr>
+    <tr><th style="text-align:left;">Ruleset</th><td>{{ chart.ruleset }}</td></tr>
+    <tr><th style="text-align:left;">這張圖</th><td>共 {{ total_texts }} 段文字，<strong>{{ pending_count }} 段待翻譯</strong>{% if only_lang %}（只顯示缺 {{ only_lang }} 的）{% endif %}</td></tr>
+  </table>
+  <p style="margin:8px 0 0; color:#666; font-size:12px;">
+    譯文裡的人名、卡牌名、配件名等專有詞請保留原文。留空的欄位不會動到既有譯文；已有的譯文預填在欄位裡，改了才會寫入。
+    看的是草稿；要在公開頁看實際排版，請到流程圖頁用「預覽」。
+  </p>
+  <p style="margin:8px 0 0;">
+    篩選：
+    <a href="?">全部缺漏</a>
+    {% for code, label in langs %}｜<a href="?lang={{ code }}">缺 {{ code }}</a>{% endfor %}
+  </p>
+</div>
+
+{% if items %}
+<form method="post">
+  {% csrf_token %}
+  {% for item in items %}
+  <div class="module" style="margin-bottom:12px; padding:10px 14px;">
+    <div style="margin-bottom:6px;">
+      <strong>{{ item.text }}</strong>
+      <span style="color:#888; font-size:12px;">（原文 {{ item.source_lang }}{% if not item.has_row %}・尚未建立列，儲存時自動建立{% endif %}）</span>
+    </div>
+    {% if item.usages %}
+    <div style="color:#888; font-size:12px; margin-bottom:6px;">出現位置：{{ item.usages|join:"　／　" }}</div>
+    {% endif %}
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:8px;">
+      {% for f in item.fields %}
+      <label style="display:block;">
+        <span style="font-size:12px; color:{% if f.missing %}#cf1322{% else %}#666{% endif %};">{{ f.label }}{% if f.missing %} · 缺{% endif %}</span>
+        <textarea name="{{ f.name }}" rows="2" style="width:100%; box-sizing:border-box;{% if f.missing %} border-color:#cf1322;{% endif %}">{{ f.value }}</textarea>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+  <input type="submit" value="儲存" class="default">
+</form>
+{% else %}
+<p style="color:#389e0d;">這張圖{% if only_lang %}沒有缺 {{ only_lang }} 的文字{% else %}所有文字都已有完整譯文{% endif %}。</p>
+{% endif %}
+{% endblock %}

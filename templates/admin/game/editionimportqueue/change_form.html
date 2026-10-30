@@ -1,0 +1,11 @@
+{% extends "admin/change_form.html" %}
+
+{% block submit_buttons_bottom %}
+{% if original and original.status != 'approved' %}
+<div class="submit-row">
+  {% if perms.game.approve_editionimportqueue %}<input type="submit" name="_approve" value="寫入DB" style="background:#2e8b57;color:#fff;">{% endif %}
+  <input type="submit" name="_skip" value="skip">
+</div>
+{% endif %}
+{{ block.super }}
+{% endblock %}

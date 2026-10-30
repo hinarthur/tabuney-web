@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load translate_tags %}
+{# title 與頁面 h1 共用同一個 slogan key，六種語言自動對齊 #}
+{% block title %}{% t "seo.index.title" %} - Tabuney{% endblock title %}
+{% block meta_description %}{% t "seo.index.description" %}{% endblock meta_description %}
+{# og:title 不帶 " - Tabuney"，base.html 的 og:site_name 已經有品牌名 #}
+{% block og_title %}{% t "seo.index.title" %}{% endblock og_title %}
+{% block og_description %}{% t "seo.index.description" %}{% endblock og_description %}
+{% block twitter_title %}{% t "seo.index.title" %}{% endblock twitter_title %}
+{% block twitter_description %}{% t "seo.index.description" %}{% endblock twitter_description %}
+
+{% block extrahead %}
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="{% static 'css/index.css' %}?v=28">
+{% endblock extrahead %}
+
+{% block content %}
+{% t "game.flowchart.tour.choose" as cap_branch %}
+<section class="main-header" aria-labelledby="hero-title">
+    <div class="hero-inner">
+        <div class="hero-copy">
+            <p class="eyebrow">{% t "home.hero.eyebrow" %}</p>
+            <h1 class="main-title" id="hero-title">{% t "home.hero.title_1" %}<span>{% t "home.hero.title_2" %}</span></h1>
+            <p class="hero-lead">{% t "home.hero.lead" %}</p>
+            <form method="get" action="{% url 'games:search' %}" class="home-search-form" role="search">
+                <div class="input-wrapper">
+                    <i class="fas fa-search search-icon" aria-hidden="true"></i>
+                    <input type="text" name="q"
+                           aria-label="{% t "game.placeholder.search-game" %}"
+                           placeholder="{% t "game.placeholder.search-game" %}"
+                           class="home-search-input">
+                </div>
+                <button type="submit" class="action-btn home-search-btn">{% t "home.button.search_game" %}</button>
+            </form>
+            <ul class="hero-features">
+                <li><i class="fas fa-sitemap" aria-hidden="true"></i>{% t "home.hero.feature_flowcharts" %}</li>
+                <li><i class="fas fa-comments" aria-hidden="true"></i>{% t "home.hero.feature_rulesbot" %}</li>
+                <li><i class="fa-solid fa-bullhorn" aria-hidden="true"></i>{% t "home.hero.feature_scripts" %}</li>
+            </ul>
+        </div>
+
+        <div class="hero-visual" id="heroVisual"
+             data-caption-branch="{{ cap_branch|force_escape }}">
+            <div class="hero-rays" aria-hidden="true">✳</div>
+            <div class="hero-full-card">
+                <div class="hero-tag">{% t "home.hero.tag_full" %}</div>
+                <div class="hero-full-content">
+                    {# 由 home_hero.js 依在地化的真實流程圖資料畫成內嵌 SVG（文字可框選、隨主題換色、隨語言換字） #}
+                    <svg class="hero-flow" id="heroFullSvg" role="img" aria-label="{% t 'home.hero.tag_full' %}"></svg>
+                </div>
+            </div>
+            {% if hero_flow %}
+            {{ hero_flow|json_script:"heroFlowData" }}
+            <div class="hero-step-card">
+                <div class="hero-tag">{% t "home.hero.tag_step" %}</div>
+                <div class="hero-step-stage">
+                    <svg viewBox="0 0 420 255" role="img" aria-label="Step Flow">
+                        <defs>
+                            <pattern id="heroHatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                                <path class="hatch" d="M0 0V9" stroke-opacity=".14" stroke-width="2"/>
+                            </pattern>
+                        </defs>
+                        <g id="heroStepShape"></g>
+                        <g id="heroStepText"></g>
+                    </svg>
+                </div>
+                <div class="hero-step-toolbar">
+                    <div class="hero-branches" id="heroBranches"></div>
+                    <div class="hero-nav-buttons">
+                        <button type="button" id="heroFirst" aria-label="{% t 'game.flowchart.tour.first' %}" title="{% t 'game.flowchart.tour.first' %}">⏮</button>
+                        <button type="button" id="heroPrev" aria-label="{% t 'game.flowchart.tour.prev' %}" title="{% t 'game.flowchart.tour.prev' %}">◀</button>
+                        <button type="button" id="heroNext" aria-label="{% t 'game.flowchart.tour.next' %}" title="{% t 'game.flowchart.tour.next' %}">▶</button>
+                        <button type="button" id="heroLast" aria-label="{% t 'game.flowchart.tour.last' %}" title="{% t 'game.flowchart.tour.last' %}">⏭</button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            <svg class="hero-note-arrow" viewBox="0 0 150 120" fill="none" aria-hidden="true">
+                <path d="M128 6 C126 36 114 50 92 66 S54 90 26 100" stroke="currentColor" stroke-width="3.8" stroke-linecap="round"/>
+                <path d="M38.9 84.8 L26 100 L45.7 103.6" stroke="currentColor" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="hero-note" aria-hidden="true">{% t "home.hero.note_1" %}<br>{% t "home.hero.note_2" %}</div>
+        </div>
+    </div>
+</section>
+<section class="home-guides" aria-labelledby="guides-title">
+    <div class="guides-head">
+        <div>
+            <h2 id="guides-title">{% t "home.guides.title" %}</h2>
+            <p class="guides-sub">{% t "home.guides.subtitle" %}</p>
+        </div>
+    </div>
+    <div class="guides-grid">
+        {% for edition in guide_editions %}
+        <a class="guide-card" href="{{ edition.get_absolute_url }}flowchart/">
+            <div class="guide-cover"><img src="{{ edition.thumbnail.url }}" alt="" loading="lazy"></div>
+            <h3 class="guide-name">{{ edition.game.canonical_name }}</h3>
+            {% if edition.game.min_players or edition.game.max_players %}
+            <p class="guide-meta"><i class="fas fa-users" aria-hidden="true"></i>{% if edition.game.min_players and edition.game.max_players and edition.game.min_players != edition.game.max_players %}{{ edition.game.min_players }}-{{ edition.game.max_players }}{% else %}{{ edition.game.max_players|default:edition.game.min_players }}{% endif %}</p>
+            {% endif %}
+            {% if edition.game.min_playtime or edition.game.max_playtime %}
+            <p class="guide-meta"><i class="far fa-clock" aria-hidden="true"></i>{% if edition.game.min_playtime and edition.game.max_playtime and edition.game.min_playtime != edition.game.max_playtime %}{{ edition.game.min_playtime }}-{{ edition.game.max_playtime }}{% else %}{{ edition.game.max_playtime|default:edition.game.min_playtime }}{% endif %} min</p>
+            {% endif %}
+        </a>
+        {% endfor %}
+        <div class="browse-card">
+            <span class="browse-card__icon"><i class="fas fa-dice-d6" aria-hidden="true"></i></span>
+            <h3 class="browse-card__title">{% t "home.guides.find_title" %}</h3>
+            <p class="browse-card__description">{% t "home.guides.find_desc" %}</p>
+            <a class="browse-card__button" href="{% url 'games:search' %}">{% t "home.guides.find_button" %} <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+        </div>
+    </div>
+</section>
+
+<section class="home-overview" aria-labelledby="overview-title">
+    <div class="overview-text">
+        <p class="eyebrow">{% t "home.overview.eyebrow" %}</p>
+        <h2 id="overview-title">{% t "home.overview.title" %}</h2>
+        <p>{% t "home.overview.desc" %}</p>
+    </div>
+    <div class="overview-visual">
+        <div class="overview-art" aria-hidden="true">
+            <div class="ov-lane ov-lane--1">
+                <div class="ov-head">{% t "home.overview.art.setup" %}</div>
+                <span class="ov-arrow"></span>
+                <div class="ov-node">{% t "home.overview.art.prepare" %}</div>
+                <span class="ov-arrow"></span>
+                <div class="ov-node">{% t "home.overview.art.deal" %}</div>
+                <span class="ov-arrow"></span>
+                <div class="ov-node">{% t "home.overview.art.starter" %}</div>
+            </div>
+            <div class="ov-lane ov-lane--2">
+                <div class="ov-head">{% t "home.overview.art.gameplay" %}</div>
+                <span class="ov-arrow"></span>
+                <div class="ov-node">{% t "home.overview.art.turn" %}</div>
+                <span class="ov-arrow"></span>
+                <div class="ov-diamond"><span>{% t "home.overview.art.choose" %}</span></div>
+                <span class="ov-arrow"></span>
+                <div class="ov-node">{% t "home.overview.art.resolve" %}</div>
+            </div>
+            <div class="ov-lane ov-lane--3">
+                <div class="ov-head">{% t "home.overview.art.endgame" %}</div>
+                <span class="ov-arrow"></span>
+                <div class="ov-node">{% t "home.overview.art.trigger" %}</div>
+                <span class="ov-arrow"></span>
+                <div class="ov-node">{% t "home.overview.art.scoring" %}</div>
+                <span class="ov-arrow"></span>
+                <div class="ov-node">{% t "home.overview.art.winner" %}</div>
+            </div>
+        </div>
+        <svg class="overview-arrow" viewBox="0 0 100 80" fill="none" aria-hidden="true">
+            <path d="M84 6 C86 30 66 50 22 62" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            <path d="M33.2 50.6 L22 62 L37.5 66.1" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="overview-note" aria-hidden="true">{% t "home.overview.note" %}</div>
+    </div>
+</section>
+
+<section class="home-learn" aria-labelledby="learn-title">
+    <h2 id="learn-title">{% t "home.learn.title" %}</h2>
+    <div class="learn-grid">
+        <div class="learn-card">
+            <span class="learn-icon"><i class="fas fa-comments" aria-hidden="true"></i></span>
+            <div>
+                <h3>{% t "home.learn.rulesbot_title" %}</h3>
+                <p>{% t "home.learn.rulesbot_desc" %}</p>
+            </div>
+        </div>
+        <div class="learn-card">
+            <span class="learn-icon"><i class="fa-solid fa-bullhorn" aria-hidden="true"></i></span>
+            <div>
+                <h3>{% t "home.learn.script_title" %}</h3>
+                <p>{% t "home.learn.script_desc" %}</p>
+            </div>
+        </div>
+        <div class="learn-card">
+            <span class="learn-icon"><i class="fa-solid fa-chart-pie" aria-hidden="true"></i></span>
+            <div>
+                <h3>{% t "home.learn.competency_title" %}</h3>
+                <p>{% t "home.learn.competency_desc" %}</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="home-world" aria-labelledby="world-title">
+    <div class="guides-head">
+        <div>
+            <h2 id="world-title">{% t "home.world.title" %}</h2>
+            <p class="guides-sub">{% t "home.world.subtitle" %}</p>
+        </div>
+        <a class="guides-all" href="{% url 'feed:list' %}">{% t "home.world.more" %} <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+    </div>
+    <div class="world-grid">
+        {% for work in news_works %}
+        <a class="world-card" href="{% url 'feed:detail' work.pk %}">
+            <div class="world-img"><img src="{{ work.image }}" alt="" loading="lazy" referrerpolicy="no-referrer"></div>
+            <div class="world-body">
+                {% if work.publishdate %}<time class="world-date" datetime="{{ work.publishdate|date:'Y-m-d' }}">{{ work.publishdate|date:"M j, Y" }}</time>{% endif %}
+                <h3>{{ work.title }}</h3>
+                <p>{{ work.preview }}</p>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="home-cta" aria-labelledby="cta-title">
+    <h2 id="cta-title">{% t "home.cta.title" %}</h2>
+    <p class="cta-desc">{% t "home.cta.desc" %}</p>
+    <form method="get" action="{% url 'games:search' %}" class="home-search-form" role="search">
+        <div class="input-wrapper">
+            <i class="fas fa-search search-icon" aria-hidden="true"></i>
+            <input type="text" name="q"
+                   aria-label="{% t "game.placeholder.search-game" %}"
+                   placeholder="{% t "game.placeholder.search-game" %}"
+                   class="home-search-input">
+        </div>
+        <button type="submit" class="action-btn home-search-btn">{% t "home.button.search_game" %}</button>
+    </form>
+    <svg class="cta-arrow" viewBox="0 0 100 80" fill="none" aria-hidden="true">
+        <path d="M16 6 C14 30 34 50 78 62" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        <path d="M66.8 50.6 L78 62 L62.5 66.1" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div class="cta-note" aria-hidden="true">{% t "home.cta.note" %}</div>
+</section>
+{% endblock content %}
+
+{% block extrascript %}
+<script src="{% static 'js/home_hero.js' %}?v=7" defer></script>
+{% endblock extrascript %}
+
+{% block footer %}
+<!-- Custom footer content can go here -->
+{% endblock footer %}

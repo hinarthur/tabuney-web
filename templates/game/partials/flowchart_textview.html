@@ -1,0 +1,54 @@
+{% load translate_tags %}
+{% if fc.outline %}
+<details class="fc-textview" id="fc-text-{{ fc.key }}"{% if not forloop.first %} hidden{% endif %}>
+    <summary class="fc-textview-summary">
+        <i class="fas fa-list-ul"></i> {% t "game.flowchart.textview.title" %}
+    </summary>
+    <p class="fc-textview-note">{% t "game.flowchart.textview.desc" %}</p>
+    {% if fc.outline.legends %}
+    <h2>{% t "game.flowchart.textview.legends" %}</h2>
+    <dl class="fc-textview-legends">
+        {% for lg in fc.outline.legends %}
+        <dt style="font-weight: bold; margin-top: 1em;">{{ lg.title }}</dt>
+        <dd style="margin: 0.25em 0 0 1.5em;">{{ lg.content|linebreaksbr }}</dd>
+        {% endfor %}
+    </dl>
+    {% endif %}
+    <ol class="fc-textview-phases" style="list-style: none; padding-left: 0;">
+        {% for phase in fc.outline.phases %}
+        <li class="fc-textview-phase">
+            {% comment %} 階段是這一頁內容的最上層分節。分頁名稱移進 h1 之後
+               面板裡已經沒有 h2，這裡用 h2 才不會從 h1 直接跳到 h3。
+               （Django 的 {# #} 只到行尾，跨行要用 comment 標籤。） {% endcomment %}
+            <h2>{{ forloop.counter }}. {{ phase.label }}</h2>
+            <ol class="fc-textview-steps" style="list-style: none; padding-left: 0;">
+                {% for step in phase.steps %}
+                <li>
+                    <strong>{{ forloop.parentloop.counter }}.{{ forloop.counter }} {{ step.label }}</strong>
+                    {% if step.transitions %}
+                    <ul class="fc-textview-transitions" style="padding-left: 1.5em; margin-top: 0.25em;">
+                        {% for tr in step.transitions %}
+                        <li>{% if tr.label %}{{ tr.label }} → {% endif %}{{ tr.target_label }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ol>
+        </li>
+        {% endfor %}
+    </ol>
+    {% if fc.outline.loose_steps %}
+    <ul class="fc-textview-steps" style="padding-left: 1.5em;">
+        {% for step in fc.outline.loose_steps %}<li><strong>{{ step.label }}</strong>
+            {% if step.transitions %}
+            <ul class="fc-textview-transitions" style="padding-left: 1.5em; margin-top: 0.25em;">
+                {% for tr in step.transitions %}
+                <li>{% if tr.label %}{{ tr.label }} → {% endif %}{{ tr.target_label }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}</li>{% endfor %}
+    </ul>
+    {% endif %}
+</details>
+{% endif %}

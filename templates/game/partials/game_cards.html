@@ -1,0 +1,107 @@
+{% load translate_tags %}
+{% for edition in results %}
+<div class="game-card{% if edition.search_is_unlocked %} has-access-ribbon{% endif %}">
+    {% comment %}
+    Edition Access 絲帶：從卡片容器頂端懸垂下來（.edition-access-ribbon 是絕對
+    定位，靠 .game-card 的 position:relative 定位）。
+
+    這裡只顯示狀態、不可點——取得版本專享的入口只有 edition info 分頁那一處，
+    因為免費名額不可逆，不該在滑動的搜尋清單裡誤觸就用掉。匿名訪客的
+    search_is_unlocked 一律是 False，整段不輸出。
+    {% endcomment %}
+    {% if edition.search_is_unlocked %}
+    <span class="edition-access-ribbon" title="{% t "game.unlock.star" %}">
+        {% include "game/partials/edition_access_icon.html" with access_solid=1 access_size="1.9em" %}
+    </span>
+    {% endif %}
+
+    <div class="game-thumbnail">
+        <a href="{{ edition.get_absolute_url }}info/">
+            {% if edition.thumbnail %}
+                <img src="{{ edition.thumbnail.url }}" alt="{{ edition.name }}" loading="lazy">
+            {% else %}
+                <i class="fas fa-image placeholder-icon"></i>
+            {% endif %}
+        </a>
+        {# 登入者自己的收藏／喜好；匿名訪客的 member_status/rating 都是 None，不會輸出 #}
+        {% include "partials/interaction_badge.html" with status=edition.member_status rating=edition.member_rating css_class="thumb-badge" %}
+    </div>
+
+    <div class="game-info">
+        <h3 class="game-title">
+            <a href="{{ edition.get_absolute_url }}info/" class="game-title-link">{{ edition.name }}</a>
+            {% if edition.release_year %}
+                <span class="release-year">({{ edition.release_year }})</span>
+            {% endif %}
+        </h3>
+
+        <div class="edition-meta">
+            <div class="game-stats">
+                {% if edition.game.min_players or edition.game.max_players %}
+                <span title="Players"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="1.4em" height="1.4em" style="vertical-align:-0.125em"><path d="M6.4,10.7c1.6,0,2.9-1.3,2.9-2.9S8,4.9,6.4,4.9S3.5,6.2,3.5,7.8S4.8,10.7,6.4,10.7z M5.9,11.6c-1.3,0-2.4,1.1-2.4,2.4v4.8c0,0.1,0,0.2,0,0.3c0,0.1,0,0.1,0,0.2c0,1.1,0.9,1.9,1.9,1.9h1.9v1.9h4.8v-3.3c0-0.1,0-0.2,0-0.3c0-0.1,0-0.1,0-0.2c0-1.1-0.9-1.9-1.9-1.9H8.3V14C8.3,12.7,7.2,11.6,5.9,11.6L5.9,11.6z M21.6,10.7c-1.6,0-2.9-1.3-2.9-2.9s1.3-2.9,2.9-2.9s2.9,1.3,2.9,2.9S23.2,10.7,21.6,10.7L21.6,10.7z M22.1,11.6c1.3,0,2.4,1.1,2.4,2.4v4.8c0,0.1,0,0.2,0,0.3c0,0.1,0,0.1,0,0.2c0,1.1-0.9,1.9-1.9,1.9h-1.9v1.9h-4.8v-3.3c0-0.1,0-0.2,0-0.3c0-0.1,0-0.1,0-0.2c0-1.1,0.9-1.9,1.9-1.9h1.9V14C19.7,12.7,20.8,11.6,22.1,11.6z M18.5,13.6h-9v2.2h9V13.6z" fill="#0E8EDD"/></svg>
+                    {% if edition.game.min_players == edition.game.max_players %}
+                        {{ edition.game.min_players }}
+                    {% else %}
+                        {{ edition.game.min_players }}-{{ edition.game.max_players }}
+                    {% endif %}
+                </span>
+                {% endif %}
+
+                {% if edition.game.min_playtime or edition.game.max_playtime %}
+                <span title="Playtime"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="1.4em" height="1.4em" style="vertical-align:-0.125em"><path d="M14,3.3c-2.1,0-4.2,0.6-5.9,1.8C6.3,6.3,5,8,4.1,9.9c-0.8,1.9-1,4.1-0.6,6.2s1.4,4,2.9,5.5s3.4,2.5,5.5,2.9s4.2,0.2,6.2-0.6c1.9-0.8,3.6-2.2,4.8-3.9c1.2-1.8,1.8-3.8,1.8-5.9c0-2.8-1.1-5.5-3.1-7.5C19.5,4.5,16.8,3.3,14,3.3z M18.1,17.5c0,0.1-0.1,0.1-0.2,0.2c-0.1,0-0.2,0.1-0.2,0.1c-0.1,0-0.2,0-0.3,0c-0.1,0-0.2,0-0.2-0.1L13.3,15V9.2c0-0.2,0.1-0.3,0.2-0.5s0.3-0.2,0.5-0.2s0.3,0.1,0.5,0.2s0.2,0.3,0.2,0.5v5.1l3.3,2.3c0.1,0,0.1,0.1,0.2,0.2c0,0.1,0.1,0.2,0.1,0.2c0,0.1,0,0.2,0,0.3C18.2,17.3,18.2,17.4,18.1,17.5z M17.9,7.5c-0.9-0.6-2-0.9-3.1-1s-2.2,0-3.2,0.3s-2,0.9-2.8,1.7C8,9.2,7.4,10.1,7,11.1c-0.4,1-0.6,2.1-0.6,3.2s0.3,2.2,0.8,3.1c0.5,1,1.2,1.8,2.1,2.5s1.9,1.2,2.9,1.4l-0.2,1c-1.2-0.3-2.4-0.8-3.4-1.6S6.8,19.1,6.3,18c-0.6-1.1-0.9-2.3-1-3.6s0.2-2.5,0.6-3.7S7.1,8.5,8,7.6s2-1.5,3.2-1.9s2.5-0.5,3.7-0.4s2.4,0.6,3.5,1.2L17.9,7.5L17.9,7.5z" fill="#0E8EDD"/></svg>
+                    {% if edition.game.min_playtime == edition.game.max_playtime %}
+                        {{ edition.game.min_playtime }}m
+                    {% else %}
+                        {{ edition.game.min_playtime }}-{{ edition.game.max_playtime }}m
+                    {% endif %}
+                </span>
+                {% endif %}
+
+                {% if edition.age %}
+                <span title="Age"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="1.4em" height="1.4em" style="vertical-align:-0.125em"><path d="M9,4C7.9,4,7,4.9,7,6s0.9,2,2,2s2-0.9,2-2S10.1,4,9,4z M7,9c-1.1,0-2,0.9-2,2v5c0,0.6,0.4,1,1,1h1v7h5V13.6l2.5,4.4H17l1-1.3V24h4v-5c0.6,0,1-0.4,1-1v-2c0-1.1-0.9-2-2-2h-2.5c-0.6,0-1.1,0.3-1.5,0.7c-0.3,0.4-0.7,0.9-1,1.3h-0.3L12,9.7C11.8,9.4,11.2,9,10.5,9H7z M20,10c-0.8,0-1.5,0.7-1.5,1.5S19.2,13,20,13s1.5-0.7,1.5-1.5S20.8,10,20,10z" fill="#0E8EDD"/></svg> {{ edition.age }}+</span>
+                {% endif %}
+
+                {# 與 edition_detail 的 info-section 共用同一份 partial，圖示與文字才不會走鐘 #}
+                {% include "game/partials/reading_density.html" %}
+                {% include "game/partials/color_vision_friendly.html" %}
+
+            </div>
+
+            {% if edition.barcode %}
+            <div class="barcode-info">
+                <i class="fas fa-barcode"></i> {{ edition.barcode }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% comment %}
+    一個 badge 都沒有時整個容器就別輸出 —— 空的 grid 仍會佔掉固定 64px + gap，
+    窄屏上那是 .game-info 很需要的寬度。
+    {% endcomment %}
+    {% if edition.search_has_skills or edition.search_chat_status == "matched" or edition.search_chat_status == "linked" or edition.search_has_flowchart or edition.search_has_script %}
+    <div class="game-badges">
+        {% if edition.search_has_skills %}
+        <a href="{{ edition.get_absolute_url }}" class="game-badge badge-skills" title="{% t "game.info.title" %}">
+            <i class="fa-solid fa-chart-pie"></i> {% t "game.info.title" %}
+        </a>
+        {% endif %}
+        {% if edition.search_has_flowchart %}
+        <a href="{{ edition.get_absolute_url }}flowchart/" class="game-badge badge-flowchart" title="{% t "game.flowchart.title" %}">
+            <i class="fas fa-sitemap"></i> {% t "game.flowchart.title" %}
+        </a>
+        {% endif %}
+        {% if edition.search_chat_status == "matched" or edition.search_chat_status == "linked" %}
+        <a href="{{ edition.get_absolute_url }}chat/" class="game-badge {% if edition.search_chat_status == "matched" %}badge-chat-matched{% else %}badge-chat-linked{% endif %}" title="Rulesbot">
+            <i class="fas fa-comments"></i> Rulesbot
+        </a>
+        {% endif %}
+        {% if edition.search_has_script %}
+        <a href="{{ edition.get_absolute_url }}script/" class="game-badge badge-script" title="{% t "game.script.title" %}">
+            <i class="fa-solid fa-bullhorn"></i> {% t "game.script.title" %}
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endfor %}

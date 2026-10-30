@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load translate_tags %}
+
+{% comment %} 四個分頁（rulesbot / flowchart / script / info）的共用外殼。
+
+   每個分頁是一個真正獨立的頁面：view 只建構該分頁的 context、只渲染該分頁的
+   面板，其餘三個分頁的內容完全不進 DOM。四個網址因此輸出各自不同的內容，
+   而不是同一份 HTML 換一個 active class（見 EditionDetailView.TAB_CONFIG）。
+
+   標題後綴由 view 給的 tab_h2_key 決定（{% t %} 是 simple_tag，key 吃得下變數），
+   描述則由各 leaf 自行 override，因為四個分頁的描述結構不同。 {% endcomment %}
+
+{% block title %}{% firstof edition.name edition.game.canonical_name %}{% if edition.release_year %} ({{ edition.release_year }}){% endif %} {% t tab_h2_key %} - Tabuney{% endblock title %}
+
+{% comment %} 預設描述＝以 edition.summary 為主，那段本來就是在描述遊戲本身，
+   最適合 info 分頁，所以 info 直接沿用不 override。rulesbot / flowchart /
+   script 三頁各自蓋掉這三個 block（見各自的 leaf template），四個網址的
+   description 才真的互不相同。
+
+   {% t %} 回傳 mark_safe，進到 content="..." 屬性要自己 force_escape。 {% endcomment %}
+{% block meta_description %}{% include "game/partials/edition_meta_default.html" %}{% endblock meta_description %}
+{% block og_description %}{% include "game/partials/edition_meta_default.html" %}{% endblock og_description %}
+{% block twitter_description %}{% include "game/partials/edition_meta_default.html" %}{% endblock twitter_description %}
+
+{% block og_type %}article{% endblock og_type %}
+{% block og_title %}{% firstof edition.name edition.game.canonical_name %}{% if edition.release_year %} ({{ edition.release_year }}){% endif %} {% t tab_h2_key %}{% endblock og_title %}
+{% block og_image %}{% if edition.thumbnail %}{{ SITE_URL }}{{ edition.thumbnail.url }}{% else %}{{ SITE_URL }}{% static 'img/favicon/apple-icon-180x180.png' %}{% endif %}{% endblock og_image %}
+
+{% block twitter_title %}{% firstof edition.name edition.game.canonical_name %}{% if edition.release_year %} ({{ edition.release_year }}){% endif %} {% t tab_h2_key %}{% endblock twitter_title %}
+{% block twitter_image %}{% if edition.thumbnail %}{{ SITE_URL }}{{ edition.thumbnail.url }}{% else %}{{ SITE_URL }}{% static 'img/favicon/apple-icon-180x180.png' %}{% endif %}{% endblock twitter_image %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/edition_detail.css' %}?v=37">
+{% block edition_head %}{% endblock edition_head %}
+{% endblock extrahead %}
+
+{% block content %}
+<div class="container edition-container">
+
+    {% comment %} 桌機與手機兩套版型共用同一個 h1，避免同一頁出現兩個 h1。
+
+       分頁名稱（規則問答／玩法流程圖／導覽稿／遊戲資訊）接在版本名之後，讓四個
+       分頁的 h1 各自唯一 —— 四頁的 h1 都只有遊戲名的話，等於四個網址對外宣告同
+       一個主標題。原本承載這段文字的是各分頁面板裡的 h2，已經移除；分頁的說明
+       文字（.tab-section-intro 的 p）留在原處。 {% endcomment %}
+    <div class="edition-title-bar">
+        <h1 class="chat-title">📖 {{ edition.name }}
+            {% if edition.release_year %} ({{ edition.release_year }}){% endif %}
+            · {% t tab_h2_key %}
+        </h1>
+        {% comment %} Edition Access 的 CTA。刻意不放進 script 分頁：Edition Access
+           不含 GM 講稿，在那一頁擺這顆按鈕等於暗示買了就能看講稿。 {% endcomment %}
+        {% if initial_tab != 'script' %}
+        {% if initial_tab == 'info' %}{% include "game/partials/edition_access_cta.html" with cta_modal=1 %}{% else %}{% include "game/partials/edition_access_cta.html" %}{% endif %}
+        {% endif %}
+    </div>
+
+    {% comment %} 單一版型：一份分頁列、一份面板，寬窄視窗的差異全部交給
+       edition_detail.css 的 media query。
+
+       以前這裡是桌機（.edition-layout/.main-tab-content）與手機
+       （.edition-tabs/.tab-content）兩套完整 DOM，用 media query 顯示其中一套。
+       那讓每一頁的分頁列與面板在原始碼裡都出現兩次——爬蟲看到兩份一樣的內容、
+       每個 id 各兩個，flowchart 那份 react_flow_json 更是整份輸出兩次。
+
+       wrapper 的 class / data 屬性 / active 保留原樣：edition_detail.css 的
+       .main-tab-content.active 與 .main-tab-content[data-main-tab="info"]
+       .info-card 仍然綁在上面，edition_track.js 的 trackScript() 也是。 {% endcomment %}
+    <div class="edition-main">
+        {% include "game/partials/edition_tab_strip.html" %}
+        <div class="main-tab-content active" data-main-tab="{{ initial_tab }}">
+{% block panel %}{% endblock panel %}
+        </div><!-- end panel -->
+    </div><!-- end edition-main -->
+
+</div>
+
+<script>
+    // Edition Access 的動作表單：送出前二次確認。免費名額不可逆（只有在該版本
+    // 還沒有任何已發布流程圖時才退得回），付費那條更是直接進 Stripe。
+    //
+    // 確認文案走 data-confirm 屬性而不是 inline 的 onsubmit="confirm('…')"：
+    // 譯文裡只要有一個單引號就會把整段 inline JS 打斷，六種語言遲早會有。
+    //
+    // 這段放在外層 shell 而不是某一頁：表單同時出現在 info 分頁的完整區塊與
+    // 三個分頁共用的標題列 CTA。
+    //
+    // 用事件委派掛在 document 上，不能逐個表單綁定：info 分頁的 modal 在後面的
+    // edition_tail 區塊，這段 script 執行時它還不存在，逐個綁會漏掉 modal 裡的
+    // 表單，結果就是不經確認直接送出（包括直接進 Stripe 付款）。
+    document.addEventListener('submit', function(e) {
+        var form = e.target.closest ? e.target.closest('.edition-unlock-form[data-confirm]') : null;
+        if (form && !window.confirm(form.dataset.confirm)) e.preventDefault();
+    });
+
+    // 未登入時的 CTA：接上全站的 Google 登入流程（與 rulesbot 分頁同一個做法）
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.edition-access-cta-login')) return;
+        if (window.authHandler) {
+            window.authHandler.handleLogin();
+        } else {
+            window.location.href = "{% url 'account_login' %}?next={{ request.path }}";
+        }
+    });
+</script>
+
+<script>
+    // Pass edition context to interaction.js / edition_track.js BEFORE loading them
+    window.editionInteraction = {
+        editionId: '{{ edition.id }}',
+        updateUrl: '{% url "update-interaction" %}',
+        csrfToken: '{{ csrf_token }}',
+        isAuthenticated: {% if user.is_authenticated %}true{% else %}false{% endif %},
+        collectionTitle: '{% t "game.collection.title" %}'
+    };
+</script>
+
+{% block edition_tail %}{% endblock edition_tail %}
+{% endblock content %}

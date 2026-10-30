@@ -1,0 +1,209 @@
+/* ============================================================
+   主題變數（亮 / 暗）— 全站唯一定義處
+   - 主題由 <html data-theme="default|dark"> 決定（見 base.html、theme.js）
+   - 元件 CSS 只引用這裡的變數，不要再寫 :root[data-theme="dark"] .元件 的覆寫
+   - 新增主題：複製下面一組區塊、改 data-theme 名稱，並加進 theme.js 的允許清單
+   ============================================================ */
+/* ===== Default Theme (Light Mode) ===== */
+:root[data-theme="default"] {
+    --color-primary: #0E8ED0;
+    --color-primary-light: #7FDEDE;
+    --color-secondary: #FFD900;
+    --color-bg: #ECEFF1;
+    --color-bg-alt: #E6E8F0;
+    --color-bg-hover: #D6EBF7; 
+    --color-text-main: #374151;
+    --color-text-minor: #6B7280;
+    --color-text-disabled: #A0A0A0;
+    --color-text-negative: #808080;
+    --color-link: var(--color-primary);
+    --color-link-hover: var(--color-primary-light);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+    --overlay-hover: rgba(0, 0, 0, 0.04);
+    --toast-bg: rgba(0, 0, 0, 0.8);
+    --toast-text: white;
+    --hamburger-line: #222;
+    --btn-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --btn-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.15);
+    --emoji-bg: #f0f0f0;
+    --emoji-border: #ddd;
+    --popup-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    --color-bg-popup: #ffffff;
+    --color-price-note: #B77500;
+    --border-popup: var(--color-text-disabled);
+    --shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --border-subtle: rgba(0, 0, 0, 0.12);
+    --border-card: rgba(0, 0, 0, 0.05);
+    --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+    --shadow-card-hover: 0 20px 40px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.08);
+
+    /* Landing（about） */
+    --landing-bg: #f7fbff;
+    --landing-bg-soft: #eef6ff;
+    --landing-bg-deep: #e0ecfb;
+    --landing-gradient-1: #dbe8fa;
+    --landing-gradient-2: #c5dcf5;
+    --landing-text: #182131;
+    --landing-text-soft: #5a6b82;
+    --landing-text-on-dark: #182131;
+    --landing-accent: #0E8ED0;
+    --landing-accent-soft: #25a4a4;
+    --landing-accent-warm: #d9ad00;
+    --landing-line: rgba(14, 142, 208, 0.18);
+    --landing-glow: rgba(14, 142, 208, 0.14);
+    --landing-glow-soft: rgba(127, 222, 222, 0.18);
+    --landing-surface: rgba(255, 255, 255, 0.45);
+
+    /* FAQ */
+    --faq-bg: var(--landing-bg);
+    --faq-text: var(--landing-text);
+    --faq-text-soft: var(--landing-text-soft);
+    --faq-accent: var(--landing-accent);
+    --faq-border: var(--landing-line);
+    --faq-item-bg: #ffffff;
+
+    /* Flowchart：亮色值，與 admin_frontend 內 var(--fc-*, fallback) 的 fallback 一致 */
+    --fc-editor-bg: #fff;
+    --fc-editor-text: #333;
+    --fc-action-bg: #ffffff;
+    --fc-action-text: #333;
+    --fc-node-border: #bbb;
+    --fc-phase-bg: #ffc53d;
+    --fc-phase-text: #3d2600;
+    --fc-phase-border: #d48806;
+    --fc-legend-bg: #f0f0f0;
+    --fc-legend-title: #444;
+    --fc-legend-content: #666;
+    --fc-text-color: #333;
+    --fc-oval-start-bg: #52c41a;
+    --fc-oval-end-bg: #ff4d4f;
+    --fc-oval-text: #fff;
+    --fc-diamond-bg: #1677ff;
+    --fc-diamond-text: #fff;
+    --fc-double-bg: #722ed1;
+    --fc-double-text: #fff;
+    --fc-edge-stroke: #555;
+    --fc-edge-yes: #52c41a;
+    --fc-edge-no: #ff4d4f;
+    --fc-edge-label-bg: rgba(255,255,255,0.85);
+}
+
+/* ===== Dark Theme ===== */
+:root[data-theme="dark"] {
+    --color-primary: #4BA8D9;
+    --color-primary-light: #5BB8E8;
+    --color-secondary: #FFE44D;
+    --color-bg: #1A1F2E;
+    --color-bg-alt: #222835;
+    --color-bg-hover: #374151; 
+    --color-text-main: #E5E7EB;
+    --color-text-minor: #D1D5DB;
+    --color-text-disabled: #9CA3AF;
+    --color-text-negative: #A0A0A0;
+    --color-link: var(--color-primary);
+    --color-link-hover: var(--color-primary-light);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --overlay-hover: rgba(255, 255, 255, 0.04);
+    --toast-bg: rgba(255, 255, 255, 0.9);
+    --toast-text: black;
+    --hamburger-line: #ffffff;
+    --btn-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --btn-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --emoji-bg: #444;
+    --emoji-border: #666;
+    --popup-shadow: 0 4px 12px rgba(255, 255, 255, 0.5);
+    --color-bg-popup: var(--color-bg-alt);
+    --color-price-note: #F5A623;
+    --border-popup: var(--color-text-minor);
+    --shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --border-subtle: rgba(255, 255, 255, 0.15);
+    --border-card: rgba(255, 255, 255, 0.05);
+    --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.2);
+    --shadow-card-hover: 0 20px 40px rgba(0, 0, 0, 0.4), 0 8px 16px rgba(0, 0, 0, 0.3);
+
+    /* Landing（about） */
+    --landing-bg: #0a111d;
+    --landing-bg-soft: #111b2d;
+    --landing-bg-deep: #060b14;
+    --landing-gradient-1: #12203a;
+    --landing-gradient-2: #182b4d;
+    --landing-text: #e8eefc;
+    --landing-text-soft: #a9b8cc;
+    --landing-text-on-dark: #f5f8ff;
+    --landing-accent: #5BB8E8;
+    --landing-accent-soft: #7FDEDE;
+    --landing-accent-warm: #FFE44D;
+    --landing-line: rgba(127, 222, 222, 0.18);
+    --landing-glow: rgba(91, 184, 232, 0.16);
+    --landing-glow-soft: rgba(127, 222, 222, 0.18);
+    --landing-surface: rgba(255, 255, 255, 0.04);
+
+    /* FAQ */
+    --faq-bg: var(--landing-bg);
+    --faq-text: var(--landing-text);
+    --faq-text-soft: var(--landing-text-soft);
+    --faq-accent: var(--landing-accent);
+    --faq-border: var(--landing-line);
+    --faq-item-bg: var(--landing-bg-soft);
+
+    /* Flowchart：暗色值 */
+    /* Custom node defaults */
+    /* 圖表底色刻意跟頁面底色錯開：light 模式是白底襯在 #ECEFF1 的頁面上，邊界自然
+       看得出來；dark 若沿用 --color-bg 就跟頁面同一個值，拿掉背景網點後整塊圖範圍
+       就消失了。改用卡片用的 --color-bg-alt，並在 pane 上補一條細框。 */
+    --fc-editor-bg: var(--color-bg-alt);
+    --fc-editor-text: var(--color-text-main);
+    --fc-action-bg: #3d4558;
+    --fc-action-text: var(--color-text-main);
+    --fc-node-border: var(--color-text-disabled);
+    /* Phase 用琥珀色暖色塊：現有色系（起訖綠紅、判斷藍、並行紫、action 藍灰）
+       全是冷色或紅色，暖黃是唯一不會跟它們混淆的色相 */
+    --fc-phase-bg: #8a5a12;
+    --fc-phase-text: #ffe8bf;
+    --fc-phase-border: #d99a2b;
+    --fc-legend-bg: #2a2d24;
+    --fc-legend-title: var(--color-text-main);
+    --fc-legend-content: var(--color-text-minor);
+    --fc-text-color: var(--color-text-main);
+    /* Per-type node colors (darkened from light-mode defaults) */
+    --fc-oval-start-bg: #448f3a;
+    --fc-oval-end-bg: #cf5a5a;
+    --fc-oval-text: #e0e6e5;
+    --fc-diamond-bg: #2b59a7;
+    --fc-diamond-text: #e7e6dd;
+    --fc-double-bg: #3a1a6e;
+    --fc-double-text: #d4c0f0;
+    /* Edge / arrow colors */
+    --fc-edge-stroke: var(--color-text-main);
+    --fc-edge-yes: #73d13d;
+    --fc-edge-no: #ff7875;
+    --fc-edge-label-bg: rgba(26, 31, 46, 0.85);
+}
+
+/* React Flow 函式庫自己在 .react-flow 上宣告 --xy-* 預設值，從 :root 繼承會被它蓋掉，
+   所以這組要直接掛在 .react-flow 上（specificity 比函式庫高）。亮色沿用函式庫預設值。 */
+:root[data-theme="dark"] .react-flow {
+    --xy-background-color-default: var(--color-bg-alt);
+    --xy-background-pattern-dots-color-default: #4a4f62;
+    --xy-background-pattern-lines-color-default: #3a3f52;
+    --xy-background-pattern-cross-color-default: #3a3f52;
+    --xy-node-color-default: var(--color-text-main);
+    --xy-node-border-default: 1px solid var(--color-text-disabled);
+    --xy-node-background-color-default: var(--color-bg-alt);
+    --xy-node-boxshadow-hover-default: 0 1px 4px 1px rgba(255,255,255,.08);
+    --xy-node-boxshadow-selected-default: 0 0 0 .5px var(--color-primary);
+    --xy-handle-background-color-default: var(--color-text-disabled);
+    --xy-handle-border-color-default: var(--color-bg);
+    --xy-edge-stroke-default: #555;
+    --xy-edge-stroke-selected-default: var(--color-primary-light);
+    --xy-controls-button-background-color-default: var(--color-bg-alt);
+    --xy-controls-button-background-color-hover-default: var(--color-bg-hover);
+    --xy-controls-button-color-default: var(--color-text-main);
+    --xy-controls-button-border-color-default: var(--color-text-disabled);
+    --xy-edge-label-background-color-default: var(--color-bg);
+    --xy-edge-label-color-default: var(--color-text-main);
+    --xy-minimap-background-color-default: var(--color-bg-alt);
+    --xy-minimap-mask-background-color-default: rgba(26,31,46,.6);
+    --xy-minimap-node-background-color-default: var(--color-text-disabled);
+    --xy-attribution-background-color-default: rgba(26,31,46,.5);
+}

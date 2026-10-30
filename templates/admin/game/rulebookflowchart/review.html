@@ -1,0 +1,134 @@
+{% extends "admin/base_site.html" %}
+{% load static static_v %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a>
+  &rsaquo; <a href="{% url 'admin:game_rulebookflowchart_changelist' %}">Flowcharts</a>
+  &rsaquo; <a href="{% url 'admin:game_rulebookflowchart_change' original.pk %}">{{ original }}</a>
+  &rsaquo; 審核
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<p>
+  <strong>目前狀態：{{ state_label }}</strong>
+  最後編輯：{% if original.content_edited_by %}{{ original.content_edited_by.get_username }}{% else %}系統生成{% endif %}
+  {% if original.content_edited_at %}（{{ original.content_edited_at|date:"Y-m-d H:i" }}）{% endif %}
+  {% if publication and publication.is_live %}
+    　公開版：{{ publication.approved_by_name|default:"—" }} 於 {{ publication.approved_at|date:"Y-m-d H:i" }} 核准
+  {% endif %}
+</p>
+
+{% if same_as_live %}
+  <p style="color:#389e0d;">草稿與公開版完全相同，沒有需要核准的修改。</p>
+{% endif %}
+{% if preview_urls %}
+<p style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+  <span>在公開頁預覽草稿（核准前檢查各語言的節點尺寸與排版）：</span>
+  {% for code, label, url in preview_urls %}
+    <a class="button" href="{{ url }}" target="_blank" rel="noopener" style="padding:2px 10px;">{{ label }}</a>
+  {% endfor %}
+</p>
+{% endif %}
+{% if is_empty %}
+  <p style="color:#cf1322;">草稿是空的，不能發布。</p>
+{% endif %}
+
+<div style="display:grid; grid-template-columns: {% if has_live %}1fr 1fr{% else %}1fr{% endif %}; gap:16px;">
+  <div class="module">
+    <h2>草稿（核准後上線的內容）</h2>
+    <div id="fc-review-draft" style="height:600px;"></div>
+  </div>
+  {% if has_live %}
+  <div class="module">
+    <h2>目前公開版</h2>
+    <div id="fc-review-live" style="height:600px;"></div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="module" style="margin-top:16px;">
+  <h2>文字差異（{% if has_live %}相對於公開版{% else %}首次發布，全部為新增{% endif %}）</h2>
+  {% if diff.added or diff.removed %}
+  <table style="width:100%; font-size:12px;">
+    {% for t in diff.removed %}
+      <tr><td style="color:#cf1322; white-space:nowrap; width:1%;">－ 刪除</td><td style="color:#cf1322;">{{ t }}</td></tr>
+    {% endfor %}
+    {% for t in diff.added %}
+      <tr><td style="color:#389e0d; white-space:nowrap; width:1%;">＋ 新增</td><td style="color:#389e0d;">{{ t }}</td></tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p style="padding:8px 12px;">節點與連線的文字沒有變動{% if has_live and not same_as_live %}（只有排版、尺寸或結構改動，請看上方圖面）{% endif %}。</p>
+  {% endif %}
+</div>
+
+{% if not translation_done %}
+<p style="color:#d46b08; margin-top:16px;">⚠️ 草稿裡有文字還沒有譯文，核准後公開頁會以原文顯示這些文字（不影響核准）。</p>
+{% endif %}
+
+<div class="module" style="margin-top:16px;">
+  <h2>審核決定</h2>
+  <form method="post" style="padding:8px 12px;">
+    {% csrf_token %}
+    <input type="hidden" name="expected_hash" value="{{ original.content_hash }}">
+    <p><textarea name="comment" rows="3" style="width:100%;" placeholder="審核意見（選填）"></textarea></p>
+    <p style="display:flex; gap:8px;">
+      {% if not same_as_live and not is_empty %}
+        <button type="submit" name="decision" value="approve" class="button default">✅ 核准並發布</button>
+        <button type="submit" name="decision" value="reject" class="button">↩ 退回</button>
+      {% endif %}
+      {% if has_live %}
+        <button type="submit" name="decision" value="unpublish" class="button"
+                onclick="return confirm('確定要下架？公開頁將不再顯示這張流程圖。');">🚫 下架</button>
+      {% endif %}
+    </p>
+  </form>
+</div>
+
+<div class="module" style="margin-top:16px;">
+  <h2>審核歷史</h2>
+  {% if reviews %}
+  <table style="width:100%; font-size:12px;">
+    <tr><th>時間</th><th>動作</th><th>操作者</th><th>當時最後編輯者</th><th>意見</th></tr>
+    {% for r in reviews %}
+    <tr>
+      <td style="white-space:nowrap;">{{ r.created_at|date:"Y-m-d H:i" }}</td>
+      <td style="white-space:nowrap;">{{ r.get_action_display }}</td>
+      <td>{{ r.actor.get_username|default:"—" }}</td>
+      <td>{{ r.last_editor.get_username|default:"系統／未知" }}</td>
+      <td>{{ r.comment }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p style="padding:8px 12px;">尚無紀錄。</p>
+  {% endif %}
+</div>
+
+{{ viewer_configs|json_script:"fc-review-viewers" }}
+<script>
+window.FLOWCHART_VIEWER_CONFIGS = JSON.parse(document.getElementById('fc-review-viewers').textContent);
+</script>
+<link rel="stylesheet" href="{% static_v 'css/theme.css' %}">
+<script>
+/* Django admin's theme.js rewrites <html data-theme> to auto/light/dark; theme.css only
+   knows default/dark, so map anything else to "default" and keep it that way. */
+(function () {
+  var root = document.documentElement;
+  function sync() {
+    var t = root.getAttribute('data-theme');
+    if (t !== 'default' && t !== 'dark') root.setAttribute('data-theme', 'default');
+  }
+  sync();
+  new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>
+<link rel="stylesheet" href="{% static_v 'game/admin/flowchart_editor/index.css' %}">
+<script type="module" src="{% static_v 'game/admin/flowchart_editor/index.js' %}"></script>
+{% endblock %}

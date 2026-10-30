@@ -1,0 +1,10 @@
+{% load translate_tags %}
+{% comment %}
+   Edition Access 單品的價格標示：原價劃掉 + 現價 + 「早鳥支持價」註記。
+
+   價格字串來自 settings.EDITION_ACCESS_LIST_PRICE / EDITION_ACCESS_CURRENT_PRICE，
+   由 view 放進 context（info 分頁走 _add_unlock_context，會員頁走 MembershipView）。
+   實際收多少是 Stripe price ID 說了算，這裡只是印字——改價時兩邊都要動。
+
+   兩個價格相同時（＝早鳥結束）自動收起劃線與註記，不需要再改模板。
+{% endcomment %}<span class="edition-access-price">{% if edition_access_list_price != edition_access_current_price %}<s class="edition-access-price-was">{{ edition_access_list_price }}</s> {% endif %}<strong class="edition-access-price-now">{{ edition_access_current_price }}</strong>{% if edition_access_list_price != edition_access_current_price %} <em class="edition-access-price-note">{% t "game.unlock.price.early_supporter" %}</em>{% endif %}</span>

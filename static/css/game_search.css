@@ -1,0 +1,587 @@
+/* Game Search Page Styles */
+
+.search-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.search-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.search-title {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    color: var(--color-text-main);
+}
+
+.search-description {
+    color: var(--color-text-minor);
+    font-size: 1.1rem;
+    text-align: left;
+}
+
+.search-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 40px;
+}
+
+.input-wrapper {
+    position: relative;
+    flex: 1;
+}
+
+.search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-minor);
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding-left: 45px;
+}
+
+.search-btn {
+    height: auto;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.search-results-title {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--color-bg-hover);
+    padding-bottom: 10px;
+    color: var(--color-text-main);
+}
+
+.game-list {
+    display: grid;
+    gap: 20px;
+}
+
+.game-card {
+    background: var(--color-bg-alt);
+    border: 1px solid var(--color-bg-hover);
+    border-radius: 12px;
+    padding: 20px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    gap: 20px;
+    /* Edition Access 絲帶靠這個定位 */
+    position: relative;
+}
+
+/* Edition Access（版本專享）絲帶：從卡片頂緣懸垂下來。
+   刻意讓書籤頂端蓋住卡片邊框（top:-1px 對齊 1px 的 border），視覺上才像一片
+   插在卡片上的標籤，而不是一個貼在角落的圖示。不佔文件流，所以不會擠掉窄屏
+   上 .game-info 的寬度——這正是不把它放進 .game-badges 的原因：那個容器有
+   max-width:160px 且刻意限在 4 顆。 */
+.edition-access-ribbon {
+    position: absolute;
+    top: -1px;
+    right: 16px;
+    z-index: 2;
+    line-height: 0;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
+}
+
+/* 寬版的 .game-badges 靠齊卡片右上角，正好被絲帶壓到第一顆 pill。
+   只有掛了絲帶的卡片要讓出這段高度，所以用 modifier class 而不是全體加 padding。 */
+.game-card.has-access-ribbon .game-badges {
+    padding-top: 20px;
+}
+
+.game-thumbnail {
+    flex-shrink: 0;
+    width: 100px;
+    height: 100px;
+    background: var(--color-bg);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-bg-hover);
+    /* overflow 交給裡面的 <a>：圓角照樣把圖裁乾淨，但收藏標記才能浮出縮圖外緣 */
+    overflow: visible;
+    position: relative;
+}
+
+/* 登入者自己的收藏／喜好標記（外觀在 ttoper.css 的 .interaction-badge）。
+   跟收藏頁同一個做法：壓在縮圖左下角、約四成浮在圖外。縮圖只有 84-100px，
+   尺寸跟著縮一號，位移也照比例收（收藏頁是 -12px 配 30px 高的標記）。 */
+.thumb-badge {
+    position: absolute;
+    bottom: -9px;
+    left: -9px;
+    z-index: 2;
+    padding: 3px 6px;
+    border-width: 2px;
+    font-size: 0.8rem;
+}
+
+.game-thumbnail a {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+.game-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.placeholder-icon {
+    font-size: 2rem;
+    color: var(--color-text-minor);
+    opacity: 0.3;
+}
+
+/* min-width:0 是關鍵：flex 子元素預設 min-width:auto，遊戲名一長就會把
+   整張卡片撐破，在窄屏造成整頁左右捲動 */
+.game-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.game-title {
+    margin: 0 0 5px 0;
+    font-size: 1.3rem;
+    overflow-wrap: break-word;
+}
+
+.game-title-link {
+    text-decoration: none;
+    color: var(--color-primary);
+}
+
+.edition-meta {
+    font-size: 0.95rem;
+    color: var(--color-text-minor);
+    margin-bottom: 15px;
+}
+
+.edition-meta-item {
+    margin-bottom: 4px;
+}
+
+.game-stats {
+    margin-bottom: 4px;
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.barcode-info {
+    margin-top: 4px;
+    font-size: 0.85rem;
+    color: var(--color-text-minor);
+    opacity: 0.8;
+    overflow-wrap: break-word;
+}
+
+.no-results {
+    text-align: center;
+    padding: 40px;
+    color: var(--color-text-minor);
+    background: var(--color-bg-alt);
+    border-radius: 12px;
+}
+
+.no-results-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.release-year {
+    font-weight: normal;
+    font-size: 0.7em;
+}
+
+/* Edition badges: real links (icon + label) straight into the matching tab
+   on the edition detail page — Rulesbot / Flowchart / Script / Info, in that
+   order. Max 4, wrap onto a second line rather than shrink illegibly. */
+.game-badges {
+    flex-shrink: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-content: flex-start;
+    gap: 6px;
+    max-width: 160px;
+}
+
+.game-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 14px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-decoration: none;
+    opacity: 0.85;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.game-badge:hover {
+    opacity: 1;
+    transform: translateY(-1px);
+}
+
+.badge-chat-matched {
+    background: rgba(82, 196, 26, 0.15);
+    color: #52c41a;
+}
+
+.badge-chat-linked {
+    background: rgba(22, 119, 255, 0.12);
+    color: #1677ff;
+}
+
+.badge-flowchart {
+    background: rgba(114, 46, 209, 0.12);
+    color: #722ed1;
+}
+
+.badge-skills {
+    background: rgba(255, 94, 102, 0.12);
+    color: #ff5e66;
+}
+
+.badge-script {
+    background: rgba(250, 140, 22, 0.12);
+    color: #fa8c16;
+}
+
+/* ===== 窄屏 ===== */
+
+/* 平板/小視窗：先把縮圖與內距收一點，讓 .game-info 有呼吸空間 */
+@media (max-width: 768px) {
+    .search-container {
+        padding: 24px 16px;
+    }
+
+    .search-title {
+        font-size: 2rem;
+    }
+
+    .game-card {
+        gap: 16px;
+        padding: 16px;
+    }
+
+    .game-thumbnail {
+        width: 84px;
+        height: 84px;
+    }
+
+    .game-stats {
+        gap: 10px;
+    }
+}
+
+/* 手機（約 425px 以下）：縮圖與數值並排、badges 收到數值下方，
+   遊戲名整寬掉到卡片底部，卡片就不會被三欄硬擠到超出畫面寬度 */
+@media (max-width: 560px) {
+    .search-container {
+        padding: 20px 12px;
+    }
+
+    .search-title {
+        font-size: 1.75rem;
+    }
+
+    .search-description {
+        font-size: 1rem;
+    }
+
+    /* 輸入框與按鈕並排時，按鈕會把輸入框壓到剩幾十 px，改成上下排 */
+    .search-form {
+        flex-direction: column;
+        margin-bottom: 28px;
+    }
+
+    .game-list {
+        gap: 14px;
+    }
+
+    /* 三欄並排在手機上一定爆版，改成兩列的 grid：
+         第一列 縮圖 ｜ 數值（含 reading density）
+         第二列  ——  ｜ badges
+         第三列 遊戲名＋年份 橫跨整寬
+       標題與 meta 本來包在 .game-info 裡，靠 display:contents 把它們提升成
+       卡片自己的 grid item，才有辦法讓標題單獨掉到最下面一列。 */
+    .game-card {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: start;
+        column-gap: 14px;
+        /* 列距改用 margin 而不是 row-gap：badges 是選擇性輸出的，
+           沒有它時第二列會空掉，row-gap 仍會留下一道多餘的空隙 */
+        row-gap: 0;
+        padding: 14px;
+    }
+
+    .game-info {
+        display: contents;
+    }
+
+    /* 遊戲名整寬掉到卡片最上面一列，縮圖／數值／badges 依序往下遞補 */
+    .game-title {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        font-size: 1.15rem;
+        margin: 0 0 12px;
+    }
+
+    /* 跨兩列：第二列的高度就只由數值本身決定，badges 才會緊接在
+       reading density 下面，而不是被縮圖的高度硬推到圖的下緣之後 */
+    .game-thumbnail {
+        width: 100px;
+        height: 100px;
+        grid-column: 1;
+        grid-row: 2 / 4;
+    }
+
+    .edition-meta {
+        grid-column: 2;
+        grid-row: 2;
+        margin-bottom: 0;
+    }
+
+    /* 移到縮圖右側、reading density 下方，改為由左往右一排（不再需要 rtl 反填） */
+    .game-badges {
+        grid-column: 2;
+        grid-row: 3;
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        justify-self: start;
+        max-width: none;
+    }
+
+    /* badges 這時已經不在右上角了，換成整寬的遊戲名跟絲帶搶位子：
+       讓出的是標題第一行的右端，不是 badges 的高度 */
+    .game-card.has-access-ribbon .game-badges {
+        padding-top: 0;
+    }
+
+    .game-card.has-access-ribbon .game-title {
+        padding-right: 30px;
+    }
+}
+
+#scroll-sentinel {
+    height: 1px;
+}
+
+#load-more-spinner {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+    color: var(--color-text-minor);
+    font-size: 1.3rem;
+}
+
+.open-suggest-game-modal {
+    margin-top: 16px;
+}
+
+/* ===== Suggest a Game Modal ===== */
+
+.suggest-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+}
+
+.suggest-modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.suggest-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.suggest-modal-content {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: var(--color-bg-alt);
+    color: var(--color-text-main);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+}
+
+.suggest-modal-content h2 {
+    margin-bottom: 0.5rem;
+}
+
+.suggest-form-field {
+    margin-bottom: 1rem;
+}
+
+.suggest-form-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+}
+
+/* 明確蓋掉全域 input 樣式：全域規則的 background-color 用 --color-bg-alt，
+   跟這個 modal 自己的背景色是同一個變數，在 light mode 下兩者幾乎同色、
+   邊框（--color-bg-hover）跟背景亮度也太接近，欄位在視覺上會完全消失。
+   這裡改用跟 modal 背景不同的 --color-bg，並把邊框換成對比度更高的
+   --color-text-minor（textarea 原本連全域樣式都沒吃到，這裡一併補上）。 */
+.suggest-form-field input,
+.suggest-form-field textarea {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--color-text-main);
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-text-minor);
+    border-radius: 6px;
+}
+
+.suggest-form-field input:focus,
+.suggest-form-field textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.required-mark {
+    color: #ff4d4f;
+}
+
+.suggest-form-field input,
+.suggest-form-field textarea {
+    width: 100%;
+}
+
+.suggest-game-feedback {
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+    min-height: 1.2em;
+}
+
+.suggest-game-feedback.success {
+    color: #52c41a;
+}
+
+.suggest-game-feedback.error {
+    color: #ff4d4f;
+}
+
+.suggest-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.suggest-login-desc {
+    font-size: 0.9rem;
+    color: var(--color-text-minor);
+    margin-bottom: 1rem;
+}
+
+.suggest-login-btn {
+    margin-bottom: 1rem;
+}
+
+/* ---- 搜尋框即時建議 ---------------------------------------------------- */
+
+/* .input-wrapper 已經是 position:relative，下拉直接掛在它底下對齊輸入框 */
+.autocomplete-list {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 50;
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    background: var(--color-bg-alt);
+    border: 1px solid var(--color-bg-hover);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    max-height: 380px;
+    overflow-y: auto;
+}
+
+/* UA 預設的 [hidden] 是 display:none，但上面那條 position 規則權重更高，
+   會把它蓋掉變成一直顯示，所以要明寫回來 */
+.autocomplete-list[hidden] {
+    display: none;
+}
+
+.autocomplete-item > a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--color-text-main);
+}
+
+/* 鍵盤選取與滑鼠移入共用同一個狀態，兩種操作看到的高亮才一致 */
+.autocomplete-item.is-active > a,
+.autocomplete-item > a:hover {
+    background: var(--color-bg-hover);
+}
+
+.autocomplete-thumb {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    border-radius: 6px;
+}
+
+/* 沒有縮圖時仍佔掉同樣的 40px，清單左緣才不會一列一列參差 */
+.autocomplete-thumb-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-hover);
+    color: var(--color-text-minor);
+}
+
+.autocomplete-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

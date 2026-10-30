@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load translate_tags %}
+
+{% block title %}{% t "game.mycollection.title" %} - Tabuney{% endblock title %}
+{% block meta_description %}{% t "seo.collection.description" %}{% endblock meta_description %}
+{# og:title 不帶 " - Tabuney"，base.html 的 og:site_name 已經有品牌名 #}
+{% block og_title %}{% t "game.mycollection.title" %}{% endblock og_title %}
+{% block og_description %}{% t "seo.collection.description" %}{% endblock og_description %}
+{% block twitter_title %}{% t "game.mycollection.title" %}{% endblock twitter_title %}
+{% block twitter_description %}{% t "seo.collection.description" %}{% endblock twitter_description %}
+
+{% block robots %}<meta name="robots" content="noindex,nofollow">{% endblock robots %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/collection.css' %}?v=7">
+{% endblock extrahead %}
+
+{% block content %}
+<div class="collection-layout">
+    <!-- Main Content -->
+    <div class="collection-main">
+        <div class="collection-header">
+            <h1 class="collection-title">{% t "game.mycollection.title" %}</h1>
+            <button id="sidebar-toggle" class="hamburger" aria-label="Toggle filters" aria-expanded="false">
+                <span class="hamburger-inner"></span>
+            </button>
+        </div>
+
+        <!-- Edition Grid -->
+        {% if interactions %}
+        <div class="edition-grid">
+            {% for interaction in interactions %}
+            <a href="{{ interaction.edition.get_absolute_url }}" class="edition-card" title="{{ interaction.edition.name }}">
+                {% comment %}
+                Edition Access 絲帶，從卡片頂緣懸垂下來（與搜尋頁同一個做法）。
+                .edition-card 本來就是 position:relative + overflow:visible，
+                .card-badges 在左下角，右上角是空的。
+
+                on-artwork 這個 class 是給投影用的：這裡的絲帶直接壓在任意顏色的
+                封面美術圖上，需要比搜尋頁更強的分離（雙層描邊在 icon partial 裡）。
+                {% endcomment %}
+                {% if interaction.edition.id in unlocked_edition_ids %}
+                <span class="edition-access-ribbon on-artwork" title="{% t "game.unlock.star" %}">
+                    {% include "game/partials/edition_access_icon.html" with access_solid=1 access_size="2em" %}
+                </span>
+                {% endif %}
+                <div class="edition-thumbnail">
+                    {% if interaction.edition.thumbnail %}
+                    <img src="{{ interaction.edition.thumbnail.url }}" alt="{{ interaction.edition.name }}" loading="lazy">
+                    {% else %}
+                    <i class="fas fa-image placeholder-icon"></i>
+                    {% endif %}
+                    <div class="edition-name-overlay">{{ interaction.edition.name }}</div>
+                </div>
+                {% include "partials/interaction_badge.html" with status=interaction.status rating=interaction.rating css_class="card-badges" %}
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-results">
+            <i class="fas fa-box-open no-results-icon"></i>
+            <p>No editions found in your collection.</p>
+            <p>Try adjusting your filters or add some games to your collection!</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="collection-sidebar">
+        <div class="sidebar-section">
+            <h3 class="sidebar-title">{% t "game.mycollection.status" %}</h3>
+            <div class="filter-group-vertical">
+                <div class="filter-item {% if 'past' in status_filter %}active{% endif %}" data-filter-type="status" data-filter-value="past">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>{% t "game.collection.past" %}</span>
+                </div>
+                <div class="filter-item {% if 'owned' in status_filter %}active{% endif %}" data-filter-type="status" data-filter-value="owned">
+                    <i class="fa-solid fa-toolbox"></i>
+                    <span>{% t "game.collection.owned" %}</span>
+                </div>
+                <div class="filter-item {% if 'wish' in status_filter %}active{% endif %}" data-filter-type="status" data-filter-value="wish">
+                    <i class="fa-regular fa-star"></i>
+                    <span>{% t "game.collection.wish" %}</span>
+                </div>
+            </div>
+
+            <h3 class="sidebar-title">{% t "game.mycollection.preference" %}</h3>
+            <div class="filter-group-vertical">
+                <div class="filter-item {% if 'amazing' in rating_filter %}active{% endif %}" data-filter-type="rating" data-filter-value="amazing">
+                    <span class="rating-emoji">💘</span>
+                    <span>{% t "game.preference.amazing" %}</span>
+                </div>
+                <div class="filter-item {% if 'nice' in rating_filter %}active{% endif %}" data-filter-type="rating" data-filter-value="nice">
+                    <span class="rating-emoji">👍</span>
+                    <span>{% t "game.preference.nice" %}</span>
+                </div>
+                <div class="filter-item {% if 'nah' in rating_filter %}active{% endif %}" data-filter-type="rating" data-filter-value="nah">
+                    <span class="rating-emoji">😕</span>
+                    <span>{% t "game.preference.nah" %}</span>
+                </div>
+                <div class="filter-item {% if 'nightmare' in rating_filter %}active{% endif %}" data-filter-type="rating" data-filter-value="nightmare">
+                    <span class="rating-emoji">💀</span>
+                    <span>{% t "game.preference.nightmare" %}</span>
+                </div>
+            </div>
+
+            {% comment %}
+            Edition Access 不是篩選條件，是額外的收錄來源：勾選時（預設）有版本
+            專享的版本一律列出來，即使它沒有任何收藏狀態或喜好。所以它與上面
+            兩組是 OR 的關係，只有一個選項、沒有相反的那一項。
+            {% endcomment %}
+            <h3 class="sidebar-title">{% t "game.unlock.star" %}</h3>
+            <div class="filter-group-vertical">
+                <div class="filter-item {% if access_included %}active{% endif %}" data-filter-type="access" data-filter-value="1">
+                    {% include "game/partials/edition_access_icon.html" with access_size="1.3em" %}
+                    <span>{% t "game.mycollection.access_only" %}</span>
+                </div>
+            </div>
+
+            <!-- <h3 class="sidebar-title">{% t "common.title.sorting" %}</h3>
+            <div class="sort-group-vertical">
+                <select id="sort-select" class="sort-select" onchange="applyFilters()">
+                    {% for value, label in sort_options %}
+                    <option value="{{ value }}" {% if sort_by == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div> -->
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extrascript %}
+<script>
+function applyFilters() {
+    const activeStatusItems = document.querySelectorAll('.filter-item.active[data-filter-type="status"]');
+    const statusValues = Array.from(activeStatusItems).map(item => item.dataset.filterValue);
+
+    const activeRatingItems = document.querySelectorAll('.filter-item.active[data-filter-type="rating"]');
+    const ratingValues = Array.from(activeRatingItems).map(item => item.dataset.filterValue);
+
+    // Edition Access 預設是勾選的，所以一定要送出明確的 1/0：跟 status/rating
+    // 那樣「沒勾就不送這個參數」的話，取消勾選會跟第一次進頁面長得一模一樣，
+    // 結果就是關不掉。
+    const accessOn = !!document.querySelector('.filter-item.active[data-filter-type="access"]');
+
+    const sortSelect = document.getElementById('sort-select');
+    const sortValue = sortSelect ? sortSelect.value : 'recent';
+
+    const params = new URLSearchParams();
+    statusValues.forEach(value => params.append('status', value));
+    ratingValues.forEach(value => params.append('rating', value));
+    params.set('access', accessOn ? '1' : '0');
+    params.set('sort', sortValue);
+
+    window.location.href = '{% url "collection:index" %}?' + params.toString();
+}
+
+// Sidebar toggle functionality
+document.addEventListener('DOMContentLoaded', () => {
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebar = document.querySelector('.collection-sidebar');
+
+    if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', () => {
+            const isExpanded = sidebarToggle.getAttribute('aria-expanded') === 'true';
+            sidebarToggle.setAttribute('aria-expanded', !isExpanded);
+            sidebar.classList.toggle('sidebar-open');
+        });
+
+        // Close sidebar when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+                sidebarToggle.setAttribute('aria-expanded', 'false');
+                sidebar.classList.remove('sidebar-open');
+            }
+        });
+    }
+
+    // Filter item click handlers
+    const filterItems = document.querySelectorAll('.filter-item');
+    filterItems.forEach(item => {
+        item.addEventListener('click', () => {
+            item.classList.toggle('active');
+            applyFilters();
+        });
+    });
+});
+</script>
+{% endblock extrascript %}

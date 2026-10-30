@@ -1,0 +1,4 @@
+{% load translate_tags %}{% comment %}Rulesbot 分頁的 meta description。
+
+{% t %} 回傳 mark_safe，而這段會被塞進 content="..." 屬性，所以每個譯文都要
+force_escape，否則譯文裡一個雙引號就能把屬性截斷。{% endcomment %}{% t "seo.game.chat.desc.prefix" as d_pre %}{% t "seo.game.chat.desc.suffix" as d_suf %}{{ d_pre|force_escape }}{% firstof edition.name edition.game.canonical_name %}{{ d_suf|force_escape }}

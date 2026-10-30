@@ -1,0 +1,175 @@
+/* ─────────────────────────────────────────────────────────────
+   iOS-Style Toggle Switches for Django Admin Checkboxes
+   ───────────────────────────────────────────────────────────── */
+
+/* Hide default checkbox but keep it accessible */
+.action-checkbox input[type="checkbox"] {
+    opacity: 0;
+    position: absolute;
+    width: 0;
+    height: 0;
+}
+
+/* Container for the toggle switch - compact height to match button */
+.action-checkbox {
+    position: relative;
+    display: inline-block;
+    width: 30px;
+    height: 20px;
+    cursor: pointer;
+}
+
+/* The toggle track (background) */
+.action-checkbox::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    border-radius: 20px;
+    transition: background-color 0.3s ease;
+}
+
+/* The toggle knob (circle) - compact to fit height */
+.action-checkbox::after {
+    content: "";
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 18px;
+    height: 18px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Checked state - track */
+.action-checkbox:has(input[type="checkbox"]:checked)::before,
+.action-checkbox.selected::before {
+    background-color: #417690;
+}
+
+/* Checked state - knob position (40 - 18 - 2 = 20px) */
+.action-checkbox:has(input[type="checkbox"]:checked)::after,
+.action-checkbox.selected::after {
+    transform: translateX(10px);
+}
+
+/* Hover effects */
+.action-checkbox:hover::before {
+    background-color: #b3b3b3;
+}
+
+.action-checkbox:has(input[type="checkbox"]:checked):hover::before,
+.action-checkbox.selected:hover::before {
+    background-color: #356a7d;
+}
+
+/* Focus state for accessibility */
+.action-checkbox:focus-within::before {
+    box-shadow: 0 0 0 3px rgba(65, 118, 144, 0.3);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Header "Select All" Checkbox - Same compact size
+   ───────────────────────────────────────────────────────────── */
+
+#action-toggle.action-checkbox,
+th .action-checkbox {
+    width: 40px;
+    height: 20px;
+}
+
+#action-toggle.action-checkbox::after,
+th .action-checkbox::after {
+    width: 18px;
+    height: 18px;
+}
+
+/* #action-toggle.action-checkbox:has(input[type="checkbox"]:checked)::after,
+#action-toggle.action-checkbox.selected::after,
+th .action-checkbox:has(input[type="checkbox"]:checked)::after,
+th .action-checkbox.selected::after {
+    transform: translateX(20px);
+} */
+
+/* ─────────────────────────────────────────────────────────────
+   Alternative: Style the actual input visually if label approach
+   has issues with Django's JS selection handling
+   ───────────────────────────────────────────────────────────── */
+
+/* Ensure original checkbox has larger hit area */
+.action-checkbox input[type="checkbox"] {
+    width: 40px;
+    height: 20px;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 10;
+}
+
+/* Table cell alignment - vertically centered */
+td.action-checkbox {
+    text-align: center;
+    vertical-align: middle !important;
+    padding: 0;
+    line-height: normal;
+}
+
+th.action-checkbox-column {
+    text-align: center;
+    vertical-align: middle !important;
+    padding: 0;
+}
+
+/* Ensure toggle switch is vertically centered within cell */
+td.action-checkbox .action-checkbox {
+    vertical-align: middle;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Animation keyframes for smooth transitions
+   ───────────────────────────────────────────────────────────── */
+
+@keyframes toggleSlide {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(20px);
+    }
+}
+
+@keyframes toggleSlideBack {
+    from {
+        transform: translateX(20px);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Align action-select dropdown with action-checkbox column
+   ───────────────────────────────────────────────────────────── */
+
+/* Reset actions container margins */
+.actions {
+    margin-left: 0;
+    padding-left: 0;
+}
+
+/* Target the action-select class specifically - align with checkbox column */
+.actions .action-select,
+.action-select {
+    margin-left: -20px !important;
+    padding-left: 0 !important;
+}
+
+/* Ensure label alignment */
+.actions label {
+    margin-left: 0;
+    padding-left: 0;
+}

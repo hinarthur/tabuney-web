@@ -1,0 +1,37 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a> &rsaquo;
+  <a href="{% url 'admin:game_editionimportqueue_changelist' %}">Edition import queue</a> &rsaquo; 批量新增
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <p>一行一個桌遊名，全部建成「待search」。空行與佇列裡已有的名稱（不分大小寫）會略過；名稱已是既有 Game 時會先問你要略過還是改名。</p>
+  <form method="post">
+    {% csrf_token %}
+    {% if conflicts %}
+    <div style="padding:8px 12px;margin:12px 0;border-radius:4px;background:rgba(224,168,0,.15)">
+      <b>⚠ 以下名稱已存在於 Game，請選擇處理方式：</b>
+      <table style="margin-top:8px">
+        {% for c in conflicts %}
+        <tr>
+          <td><b>{{ c.orig }}</b>{% if c.renamed %}<br><span style="color:#c62828">改名後「{{ c.name }}」仍已存在</span>{% endif %}</td>
+          <td>
+            <input type="hidden" name="orig_{{ forloop.counter }}" value="{{ c.orig }}">
+            <label><input type="radio" name="choice_{{ forloop.counter }}" value="skip" checked> 略過</label>
+            <label><input type="radio" name="choice_{{ forloop.counter }}" value="rename"> 改名為</label>
+            <input type="text" name="rename_{{ forloop.counter }}" value="{{ c.name }}" maxlength="200" size="40">
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% endif %}
+    <textarea name="names" rows="20" spellcheck="false" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:13px" placeholder="Catan&#10;Carcassonne&#10;Azul"{% if not conflicts %} autofocus{% endif %}>{{ names }}</textarea>
+    <div style="margin:12px 0"><button type="submit" class="default">{% if conflicts %}套用處理並新增{% else %}新增{% endif %}</button></div>
+  </form>
+</div>
+{% endblock %}

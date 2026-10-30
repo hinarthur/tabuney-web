@@ -1,0 +1,125 @@
+
+.faq-page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 80px 20px 60px;
+    color: var(--faq-text);
+}
+
+.faq-page h1 {
+    margin-bottom: 20px;
+}
+
+.faq-jumpnav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 40px;
+}
+
+.faq-jumpnav a {
+    display: inline-block;
+    padding: 6px 16px;
+    border: 1px solid var(--faq-border);
+    border-radius: 999px;
+    color: var(--faq-accent);
+    text-decoration: none;
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.faq-jumpnav a:hover {
+    background: var(--faq-border);
+}
+
+.faq-category {
+    scroll-margin-top: 90px;
+    margin-bottom: 36px;
+}
+
+.faq-category h2 {
+    font-size: 1.1em;
+    color: var(--faq-accent);
+    margin-bottom: 14px;
+}
+
+.faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.faq-item {
+    background: var(--faq-item-bg);
+    border: 1px solid var(--faq-border);
+    border-radius: 10px;
+    padding: 4px 20px;
+}
+
+.faq-item summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 16px 28px 16px 0;
+    font-weight: 600;
+    position: relative;
+}
+
+.faq-item summary::-webkit-details-marker {
+    display: none;
+}
+
+.faq-item summary::after {
+    content: "+";
+    position: absolute;
+    right: 0;
+    top: 14px;
+    font-weight: 400;
+    color: var(--faq-accent);
+    font-size: 1.2em;
+}
+
+.faq-item[open] summary::after {
+    content: "\2212";
+}
+
+.faq-item p {
+    margin: 0 0 16px;
+    color: var(--faq-text-soft);
+    line-height: 1.6;
+    text-align: justify;
+}
+
+.faq-table-wrapper {
+    overflow-x: auto;
+    margin: 0 0 16px;
+}
+
+.faq-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+}
+
+.faq-table th,
+.faq-table td {
+    border: 1px solid var(--faq-border);
+    padding: 10px 14px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.faq-table th {
+    color: var(--faq-accent);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.faq-table td:first-child {
+    color: var(--faq-text);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.faq-table td {
+    color: var(--faq-text-soft);
+}

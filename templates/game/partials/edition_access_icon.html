@@ -1,0 +1,31 @@
+{% comment %}
+   Edition Access（版本專享）圖示：書籤外形 + 中央一顆五角星。
+   搜尋卡片、收藏頁、edition info 分頁、圖例、會員頁共用同一份，圖示與語意才
+   不會走鐘——這與 reading_density.html / color_vision_friendly.html 是同一種
+   用法。免費名額與 US$1 加購共用同一顆，刻意不做視覺區分。
+
+   書籤輪廓比照 fa-regular fa-bookmark 的外形（上方直角、底部 V 形凹口），但
+   自己畫而不是用 Font Awesome：FA 沒有「書籤中間放一顆星」這個字符，兩個
+   <i> 疊在一起對不準也不好控制大小。
+
+   svg 的 fill / stroke 寫成屬性而非 class：一頁可能 inline 好幾份，class 會互撞。
+   要改色只要改這一個檔案。
+
+   ── 實心版（access_solid）的雙層描邊 ────────────────────────────────
+   實心版是掛在卡片上的絲帶，底下可能是任意顏色的封面美術圖，所以一定要兩層
+   描邊，缺一層就有一整類封面看不清楚：
+     白色外框  → 深色與同色系封面（金色書籤在金／橘封面上會整個糊掉）
+     深色細邊  → 白色與淺色封面（白框在白封面上等於不存在）
+   paint-order="stroke" 讓白框畫在填色底下，只有外側那一半露出來，成為乾淨的
+   白邊而不是把圖示整個蓋掉。深色細邊是第二條 path，正好壓在交界上。
+   （單獨用白框或單獨用深色邊都試過，各有一類封面不合格。）
+
+   參數（皆選填）：
+     access_size  — 尺寸，預設 1.4em（與同排的其他小圖示一致）
+     access_color — 主色，預設金色 #F5A623（淺色與深色主題都清楚）。尚未取得
+                    版本專享時傳 var(--color-text-minor) 轉成灰色。
+     access_solid — 給值就用實心版（主色書籤 + 白星 + 雙層描邊），用在卡片上
+                    懸垂的絲帶；預設是外框版（透明底、主色描邊與主色星），
+                    用在文字行內。
+     access_title — 無障礙名稱；沒給就不輸出 <title>，由外層的 title 屬性負責
+{% endcomment %}<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="{{ access_size|default:"1.4em" }}" height="{{ access_size|default:"1.4em" }}" fill="none" style="vertical-align:-0.2em" role="img">{% if access_title %}<title>{{ access_title }}</title>{% endif %}{% if access_solid %}<path d="M6.5 3h11a1 1 0 0 1 1 1v17l-6.5-3.8L5.5 21V4a1 1 0 0 1 1-1z" fill="{{ access_color|default:"#F5A623" }}" stroke="#FFFFFF" stroke-width="4.2" stroke-linejoin="round" paint-order="stroke"/><path d="M6.5 3h11a1 1 0 0 1 1 1v17l-6.5-3.8L5.5 21V4a1 1 0 0 1 1-1z" fill="none" stroke="#1C274C" stroke-width="1.1" stroke-linejoin="round"/><path d="M12 6.2 13 8.62 15.61 8.83 13.62 10.53 14.23 13.07 12 11.7 9.77 13.07 10.38 10.53 8.39 8.83 11 8.62Z" fill="#FFFFFF"/>{% else %}<path d="M6.5 3h11a1 1 0 0 1 1 1v17l-6.5-3.8L5.5 21V4a1 1 0 0 1 1-1z" fill="none" stroke="{{ access_color|default:"#F5A623" }}" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 6.2 13 8.62 15.61 8.83 13.62 10.53 14.23 13.07 12 11.7 9.77 13.07 10.38 10.53 8.39 8.83 11 8.62Z" fill="{{ access_color|default:"#F5A623" }}"/>{% endif %}</svg>

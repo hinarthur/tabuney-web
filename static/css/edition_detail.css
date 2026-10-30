@@ -1,0 +1,1491 @@
+/* Edition Detail Page Styles */
+
+/* Container */
+.edition-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Tab strip (Rulesbot | Flowchart | Guide | Info).
+
+   One DOM for every viewport. There used to be two full copies of the strip and
+   of every panel — a desktop set and a mobile set — with a media query showing
+   one and hiding the other. That doubled the markup crawlers see (two of every
+   id, the flowchart JSON emitted twice) for what is only a spacing and sizing
+   difference, so the copies are gone and the difference lives here. */
+.edition-main-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--color-bg-hover);
+    margin-bottom: 16px;
+}
+
+.main-tab-btn {
+    padding: 8px 16px;
+    background: none;
+    border: none;
+    color: var(--color-text-minor);
+    font-weight: 600;
+    font-size: 0.9em;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+    /* .main-tab-btn is an <a> (real link, for crawlable internal navigation +
+       back/forward support) styled to look like the <button> it used to be —
+       reset the link defaults a <button> never had. */
+    text-decoration: none;
+}
+
+.main-tab-btn.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+/* Narrow viewports: tabs split the width evenly and get a touch-sized hit area,
+   which is what the old mobile-only .tab-buttons/.tab-btn pair did. */
+@media (max-width: 768px) {
+    .edition-main-tabs {
+        margin-bottom: 20px;
+    }
+
+    .main-tab-btn {
+        flex: 1;
+        padding: 12px;
+        font-size: 1em;
+        margin-bottom: 0;
+        text-align: center;
+    }
+}
+
+/* Info Legend Modal Tabs */
+.legend-tab-btn {
+    flex: 1;
+    padding: 8px 4px;
+    background: none;
+    border: none;
+    color: var(--color-text-minor);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.legend-tab-btn.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+.legend-tab-panel {
+    display: none;
+}
+
+.legend-tab-panel.active {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Chat Container */
+.chat-container {
+    background: var(--color-bg-alt);
+    border-radius: 12px;
+    border: 1px solid var(--color-bg-hover);
+    display: flex;
+    flex-direction: column;
+    height: 600px;
+}
+
+.chat-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--color-bg-hover);
+    background: var(--color-bg);
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.chat-header-controls-only {
+    justify-content: flex-end;
+}
+
+/* Title shown above the tabs so it stays visible regardless of which tab is active */
+/* 標題列：h1 佔滿剩餘寬度（.chat-title 本來就有 flex:1），Edition Access 的
+   CTA 靠右。窄螢幕時 CTA 整顆掉到下一行，不跟標題擠成兩欄。 */
+.edition-title-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    margin-bottom: 16px;
+}
+
+/* ── Edition Access CTA（rulesbot / flowchart / info 三個分頁的右上角）───── */
+.edition-access-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 14px;
+    border: none;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+    background: var(--color-primary);
+    color: #fff;
+    transition: opacity 0.15s ease;
+}
+
+.edition-access-cta:hover {
+    opacity: 0.88;
+}
+
+/* 名額數 / 價格：同一顆按鈕裡的次要資訊 */
+.edition-access-cta small {
+    font-size: 0.78em;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+.edition-access-cta small s {
+    opacity: 0.75;
+}
+
+/* 已取得：不是按鈕，是一塊安靜的標記。使用者在流程圖頁看到功能全開時，
+   這行字說明了為什麼。 */
+.edition-access-cta.is-owned {
+    background: none;
+    padding: 0;
+    cursor: default;
+    color: var(--color-text-minor);
+    font-weight: 600;
+}
+
+.edition-access-cta.is-owned.edition-access-cta-open {
+    cursor: pointer;
+}
+
+.edition-access-cta-form {
+    margin: 0;
+}
+
+.chat-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--color-text-main);
+    flex: 1;
+}
+
+/* Chat Controls */
+.chat-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: 6px;
+    gap: 10px;
+    max-width: 100%;
+}
+
+/* Staff-only RAG/Gemini/Claude mode radio group. Wraps onto multiple lines
+   instead of overflowing the chat card on narrow viewports. */
+.chat-mode-toggle {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 8px;
+    font-size: 0.75em;
+    opacity: 0.8;
+    max-width: 100%;
+}
+
+.chat-mode-toggle label {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+/* Icon Buttons - Consistent styling for trash_can, toolbox, etc. */
+.icon-btn {
+    background: var(--color-bg-alt);
+    border: 1px solid var(--color-bg-hover);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 8px 12px;
+    border-radius: 8px;
+    color: var(--color-text-minor);
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    min-height: 36px;
+    box-shadow: var(--btn-shadow);
+    font-style: normal !important;
+}
+
+.icon-btn i,
+.icon-btn .fa-solid,
+.icon-btn .fas,
+.icon-btn .fa {
+    font-style: normal !important;
+}
+
+.icon-btn:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-main);
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+    box-shadow: var(--btn-shadow-hover);
+}
+
+.icon-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode adjustments */
+/* Glow effects for trash_can and toolbox buttons in dark mode */
+:where(:root[data-theme="dark"]) .clear-chat-btn,
+:where(:root[data-theme="dark"]) .status-toggle-btn {
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+:where(:root[data-theme="dark"]) .clear-chat-btn:hover,
+:where(:root[data-theme="dark"]) .status-toggle-btn:hover {
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.4), 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Mobile adjustments for better touch targets */
+@media (max-width: 768px) {
+    .icon-btn {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 10px 14px;
+        font-size: 1.2rem;
+    }
+    
+    .status-toggle-btn {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 10px 14px;
+        font-size: 1.2rem;
+    }
+    
+    .clear-chat-btn {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 10px;
+        font-size: 1.2rem;
+    }
+}
+
+.clear-chat-btn {
+    /* Inherit from icon-btn for consistency */
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 5px;
+    border-radius: 4px;
+    color: var(--color-text-minor);
+    transition: all 0.2s ease;
+}
+
+.clear-chat-btn:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-main);
+}
+
+/* Chat Status Indicator */
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--color-text-main);
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
+
+.status-dots {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.status-text {
+    white-space: nowrap;
+}
+
+/* Desktop: Always show text */
+@media (min-width: 769px) {
+    .status-text {
+        display: inline;
+    }
+}
+
+/* Mobile/Narrow: Show as tooltip on tap */
+@media (max-width: 768px) {
+    .status-text {
+        display: none;
+    }
+    
+    .status-indicator.show-tooltip .status-text {
+        display: block;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 8px;
+        background: var(--color-bg);
+        color: var(--color-text-main);
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--color-bg-hover);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 100;
+        animation: tooltipFadeIn 0.2s ease;
+    }
+    
+    .status-indicator.show-tooltip .status-text::before {
+        content: '';
+        position: absolute;
+        bottom: 100%;
+        right: 12px;
+        border: 6px solid transparent;
+        border-bottom-color: var(--color-bg-hover);
+    }
+    
+    .status-indicator.show-tooltip .status-text::after {
+        content: '';
+        position: absolute;
+        bottom: 100%;
+        right: 13px;
+        border: 5px solid transparent;
+        border-bottom-color: var(--color-bg);
+    }
+}
+
+@keyframes tooltipFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.chat-subtitle {
+    font-size: 0.85rem;
+    color: var(--color-text-minor);
+    margin-top: 4px;
+}
+
+#chat-window {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.chat-bubble {
+    padding: 12px 16px;
+    border-radius: 12px;
+    max-width: 80%;
+    word-wrap: break-word;
+    line-height: 1.5;
+}
+
+.chat-bubble-user {
+    background: var(--color-primary);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+}
+
+.chat-bubble-bot {
+    background: var(--color-bg);
+    color: var(--color-text-main);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    border: 1px solid var(--color-bg-hover);
+}
+
+.model-icon {
+    font-size: 1.4rem;
+    margin-right: 12px;
+    float: left;
+    line-height: 1.4;
+    margin-bottom: 5px;
+}
+
+.bot-content::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+#loading {
+    padding: 12px;
+    text-align: center;
+    color: var(--color-text-minor);
+    font-size: 0.9rem;
+}
+
+.chat-input-area {
+    padding: 15px 20px;
+    border-top: 1px solid var(--color-bg-hover);
+    background: var(--color-bg);
+    border-radius: 0 0 12px 12px;
+    display: flex;
+    gap: 10px;
+}
+
+#user-input {
+    flex: 1;
+    padding: 10px 15px;
+    border-radius: 20px;
+    border: 1px solid var(--color-bg-hover);
+    background: var(--color-bg-alt);
+    color: var(--color-text-main);
+    font-size: 0.95rem;
+}
+
+#user-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+#send-btn {
+    font-size: 1.5rem;
+    padding: 5px 15px;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+#send-btn:hover {
+    opacity: 0.9;
+}
+
+/* Info Card */
+.info-card {
+    background: var(--color-bg-alt);
+    border-radius: 12px;
+    border: 1px solid var(--color-bg-hover);
+    overflow: hidden;
+}
+
+.info-image {
+    width: 100%;
+    max-height: 250px;
+    object-fit: contain;
+    /* Matches .info-card's own background — the polar chart's canvas is
+       transparent, so it shows the card background through it. Using a
+       different tone here made the thumbnail and chart areas look mismatched. */
+    background: var(--color-bg-alt);
+}
+
+.info-content {
+    padding: 20px;
+}
+
+.info-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: var(--color-text-main);
+}
+
+.info-subtitle {
+    font-size: 0.95rem;
+    color: var(--color-text-minor);
+    margin-bottom: 15px;
+}
+
+.info-section {
+    margin-bottom: 20px;
+}
+
+/* Summary sits below the info-card, not inside it — needs its own top gap
+   since it no longer inherits .info-content's padding. */
+.info-summary-outside {
+    margin-top: 20px;
+}
+
+/* 人數／時間／年齡／文字量：欄寬不夠時是「整項」掉到下一行，
+   icon 與它的數值永遠黏在同一行（nowrap），不會 icon 一行、數字一行。 */
+.info-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 15px;
+    margin-bottom: 12px;
+    font-weight: 600;
+    color: var(--color-text-main);
+}
+
+.info-stats > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+/* ── 永久解鎖區塊（info 分頁的星星 + 選取／加購按鈕）────────────────────
+   顏色一律走主題變數：深色主題（:root[data-theme="dark"]）底下也要讀得到。
+   星星本身的金色寫死在 partial 的 fill 屬性裡，兩種主題都清楚。 */
+.edition-unlock-box {
+    border: 1px solid var(--color-bg-hover);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 4px;
+}
+
+.edition-unlock-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.edition-unlock-text {
+    font-weight: 600;
+    color: var(--color-text-main);
+}
+
+.edition-unlock-on {
+    color: #F5A623;
+}
+
+.edition-unlock-note {
+    margin: 8px 0 0;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: var(--color-text-minor);
+    text-align: justify;
+}
+
+.edition-unlock-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin-top: 10px;
+}
+
+.edition-unlock-btn {
+    border: none;
+    border-radius: 999px;
+    padding: 7px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.edition-unlock-btn:hover {
+    opacity: 0.88;
+}
+
+/* 退回名額是低調動作，不該和「解鎖」長得一樣搶眼 */
+.edition-unlock-btn-plain {
+    background: none;
+    color: var(--color-text-minor);
+    border: 1px solid var(--color-bg-hover);
+}
+
+.edition-unlock-quota {
+    font-size: 0.85rem;
+    color: var(--color-text-minor);
+}
+
+.info-section-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text-minor);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.info-item {
+    background: var(--color-bg);
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--color-bg-hover);
+}
+
+.info-label {
+    font-size: 0.75rem;
+    color: var(--color-text-minor);
+    margin-bottom: 2px;
+}
+
+.info-value {
+    font-weight: 600;
+    color: var(--color-text-main);
+    font-size: 0.9rem;
+}
+
+.no-rulebook-message {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--color-text-minor);
+    background: var(--color-bg-alt);
+    border-radius: 12px;
+    border: 1px solid var(--color-bg-hover);
+}
+
+.no-rulebook-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+/* Figure thumbnails */
+.thumb-img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid var(--color-bg-hover);
+    transition: all 0.2s;
+}
+
+.thumb-img:hover {
+    border-color: var(--color-primary);
+    transform: scale(1.05);
+}
+
+/* Lightbox */
+#lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+#lightbox.active {
+    display: flex;
+}
+
+#lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+#lightbox-close:hover {
+    opacity: 1;
+}
+
+#lightbox-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+#lightbox-caption {
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: white;
+    font-size: 0.9rem;
+    padding: 0 20px;
+}
+
+/* Chat Login Prompt */
+.chat-login-prompt {
+    padding: 20px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    margin-top: 10px;
+}
+
+.chat-login-prompt p {
+    color: var(--color-text-minor);
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+}
+
+.chat-login-prompt .login-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--color-primary);
+    color: white;
+    padding: 8px 20px;
+    border-radius: 20px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.chat-login-prompt .login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    opacity: 0.9;
+}
+
+/* Affiliate Ad */
+.affiliate-ad {
+    margin-top: 20px;
+    background: var(--color-bg-alt);
+    border-radius: 12px;
+    border: 1px solid var(--color-bg-hover);
+    padding: 20px;
+    display: grid;
+    grid-template-areas: "image content";
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 20px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+}
+
+.affiliate-ad:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border-color: var(--color-primary);
+}
+
+.ad-image {
+    grid-area: image;
+    height: 180px;
+    object-fit: contain;
+    border-radius: 8px;
+    /* background: white;
+    padding: 5px; */
+}
+
+.ad-content {
+    grid-area: content;
+    display: flex;
+    flex-direction: column;
+}
+
+.ad-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-text-main);
+    margin-bottom: 12px;
+}
+
+.ad-button {
+    display: inline-block;
+    padding: 8px 16px;
+    background: var(--color-primary);
+    color: white;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: opacity 0.2s;
+    width: fit-content;
+}
+
+.ad-button:hover {
+    opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+    .affiliate-ad {
+        grid-template-areas: 
+            "image"
+            "text"
+            "button";
+        grid-template-columns: 1fr;
+        padding: 20px;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .ad-content {
+        display: contents;
+    }
+    
+    .ad-text {
+        grid-area: text;
+        font-size: 1.1rem;
+        margin-bottom: 5px;
+        text-align: center;
+    }
+    
+    .ad-image {
+        grid-area: image;
+        height: 180px;
+        width: 100%;
+        margin: 0 auto;
+    }
+    
+    .ad-button {
+        grid-area: button;
+        justify-self: center;
+        margin-top: 5px;
+        font-size: 0.9rem;
+        padding: 8px 16px;
+    }
+}
+
+/* Feedback System */
+.feedback-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+    /* border-top removed per request */
+}
+
+.feedback-buttons {
+    display: flex;
+    gap: 0px;
+    align-items: center;
+    justify-content: flex-end; /* Align right */
+}
+
+.feedback-invite {
+    font-size: 0.8rem;
+    color: var(--color-text-minor);
+    margin-right: 4px;
+}
+
+.feedback-btn {
+    background: none; /* No box */
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: grayscale(1);
+    opacity: 0.6;
+    position: relative;
+}
+
+.feedback-btn:hover {
+    transform: scale(1.3);
+    filter: grayscale(0);
+    opacity: 1;
+}
+
+/* Custom Tooltip */
+.feedback-btn::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 45%;
+    right: 0;
+    background: var(--color-bg);
+    color: var(--color-text-main);
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    border: 1px solid var(--color-bg-hover);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+    margin-bottom: 8px;
+}
+
+.feedback-btn:hover::after {
+    opacity: 1;
+    transform: translateY(-5px);
+}
+
+.feedback-btn.active {
+    filter: grayscale(0);
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.feedback-btn.active[data-value="1"] {
+    text-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+}
+
+.feedback-btn.active[data-value="-1"] {
+    text-shadow: 0 0 10px rgba(220, 53, 69, 0.5);
+}
+
+.feedback-text-area {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.feedback-text-area.visible {
+    display: flex;
+}
+
+.feedback-input {
+    width: 100%;
+    background: var(--color-bg);
+    border: 1px solid var(--color-bg-hover);
+    color: var(--color-text-main);
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 0.85rem;
+    resize: none;
+    min-height: 60px;
+}
+
+.feedback-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.feedback-submit {
+    align-self: flex-end;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.feedback-submit:hover {
+    opacity: 0.9;
+}
+
+.feedback-thanks {
+    font-size: 0.8rem;
+    color: var(--color-text-minor);
+}
+
+/* Interaction Header */
+.interaction-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-bg-hover);
+    position: relative;
+    min-height: 50px;
+}
+
+/* Status Selector */
+.status-selector {
+    position: relative;
+}
+
+.status-toggle-btn {
+    /* Match clear-chat-btn styling exactly */
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 5px;
+    border-radius: 4px;
+    color: var(--color-text-minor);
+    transition: all 0.2s ease;
+}
+
+.status-toggle-btn:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-main);
+}
+
+.status-toggle-btn i {
+    transition: transform 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    visibility: visible;
+}
+
+.status-toggle-btn i.animate-change {
+    animation: status-icon-pulse 0.25s ease;
+}
+
+@keyframes status-icon-pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.15);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Colored status icons */
+.status-toggle-btn .fa-clock-rotate-left {
+    color: #48bb78; /* green */
+}
+
+.status-toggle-btn .fa-toolbox {
+    color: #4299e1; /* blue */
+}
+
+.status-toggle-btn .fa-star {
+    color: #ed8936; /* orange */
+}
+
+.status-toggle-btn .fa-box-open {
+    color: var(--color-text-minor);
+}
+
+/* Prevent icon flickering by hiding during class changes */
+.status-toggle-btn i {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Ensure Font Awesome icons are always visible */
+.status-toggle-btn i[class*="fa-"] {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Mobile adjustments for status-toggle-btn */
+@media (max-width: 768px) {
+    .status-toggle-btn {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 10px;
+        font-size: 1.2rem;
+    }
+}
+
+.status-options {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 160px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-bg-hover);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 110;
+    margin-top: 5px;
+}
+
+.status-options.show {
+    display: block;
+}
+
+.status-option {
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 0.9rem;
+    color: var(--color-text-main);
+}
+
+.status-option:hover {
+    background: var(--color-bg-hover);
+}
+
+.status-option.active {
+    background: color-mix(in srgb, var(--color-primary), transparent 90%);
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.reset-option {
+    border-top: 1px solid var(--color-bg-hover);
+    color: var(--color-text-minor);
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+/* Rating Bar */
+.rating-bar-container {
+    flex: 1;
+    margin-left: 25px;
+    margin-right: 10px;
+    padding-top: 5px;
+    width: 100%;
+}
+
+.rating-bar {
+    position: relative;
+    height: 4px;
+    background: transparent;
+    border-radius: 2px;
+    width: 100%;
+}
+
+.rating-track {
+    position: absolute;
+    height: 100%;
+    background: var(--color-primary);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+/* Add horizontal axis line between emoji endpoints */
+.rating-bar::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    transform: translateY(-50%);
+    width: calc(100% - 28px);
+    height: 1px;
+    background: #666;
+    opacity: 0.5;
+    z-index: 0;
+}
+
+.rating-emojis {
+    position: absolute;
+    top: -12px;
+    left: 0;
+    width: 100%;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rating-emoji {
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: transform 0.2s, filter 0.2s;
+    filter: grayscale(1);
+    user-select: none;
+    background: var(--emoji-bg);
+    border: 2px solid var(--emoji-border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    position: absolute;
+}
+
+.rating-emoji[data-rating="nightmare"] {
+    left: 0;
+}
+
+.rating-emoji[data-rating="nah"] {
+    left: calc(37.5% - 14px);
+}
+
+.rating-emoji[data-rating="nice"] {
+    left: calc(62.5% - 14px);
+}
+
+.rating-emoji[data-rating="amazing"] {
+    left: calc(100% - 28px);
+}
+
+.rating-emoji:hover {
+    filter: grayscale(0) opacity(1);
+    z-index: 10;
+    transform: scale(1.4);
+}
+
+.rating-emoji.active {
+    filter: grayscale(0) opacity(1);
+    transform: scale(1.2);
+    box-shadow: 0 0 10px var(--color-primary);
+}
+
+/* Toast */
+.interaction-toast {
+    position: fixed;
+    top: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    background: var(--color-primary);
+    color: white;
+    padding: 9px 22px;
+    border-radius: 20px;
+    font-size: 1.0rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 2s ease;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 120;
+    box-shadow: var(--popup-shadow);
+}
+
+.interaction-toast.show {
+    opacity: 1;
+    transition: opacity 0s;
+}
+
+/* The single panel wrapper. Every page renders exactly one panel and the view
+   marks it active, so this is really just "the panel" — the class name and the
+   .active are kept because .main-tab-content[data-main-tab="info"] below still
+   keys off them, and so does trackScript() in edition_track.js. */
+.main-tab-content {
+    display: none;
+}
+
+.main-tab-content.active {
+    display: block;
+}
+
+/* Info card: thumbnail and polar chart side by side on wide viewports, stacked
+   on narrow ones. One DOM for both — on narrow viewports .info-card-columns
+   collapses with display:contents so its children become flex items of the card
+   itself and can be reordered around the stats block (image, stats, chart),
+   which is the order the old mobile-only copy of this panel hard-coded. */
+@media (min-width: 769px) {
+    /* Info tab's card was sized for a 350px sidebar; without the sidebar
+       constraining it, cap its width so it doesn't stretch full-bleed.
+       Wider than a single-column card since it now holds two columns
+       side by side (collection/thumbnail left, polar chart right). */
+    .main-tab-content[data-main-tab="info"] .info-card {
+        max-width: 680px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .info-card-columns {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 20px;
+    }
+    .info-card-col-left,
+    .info-card-col-right {
+        flex: 1 1 260px;
+        min-width: 240px;
+    }
+    .info-card-col-right {
+        padding: 16px 20px 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .info-card {
+        display: flex;
+        flex-direction: column;
+    }
+    .info-card-columns {
+        display: contents;
+    }
+    .interaction-header {
+        order: 1;
+    }
+    .info-card-col-left {
+        order: 2;
+    }
+    /* Stats sit between the thumbnail and the chart, as they did before. */
+    .info-card > .info-content {
+        order: 3;
+    }
+    .info-card-col-right {
+        order: 4;
+        /* The chart used to live inside .info-content and inherit its padding;
+           as a direct child of the card it needs its own. */
+        padding: 0 20px 20px;
+    }
+}
+
+/* Flowchart viewer panes */
+/* Pane 高度以前是兩份 DOM 各自寫死的 inline style（桌機 600 / 手機 500）。
+   DOM 統一後改由這裡決定，數值維持不變。 */
+.fc-viewer-pane { display: block; height: 600px; }
+@media (max-width: 768px) {
+    .fc-viewer-pane { height: 500px; }
+}
+.fc-viewer-hidden { display: none !important; }
+
+/* 圖表下方的固定說明（免責聲明），列印時由 printPane() 另外畫成頁尾 */
+.fc-flowchart-footnote {
+    margin: 6px 0 12px;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    text-align: left;
+    color: var(--color-text-minor);
+}
+
+/* GM Script tab */
+.script-pane {
+    padding: 16px 4px;
+}
+.script-pane h2 {
+    margin: 0 0 12px;
+    color: var(--color-text-main);
+}
+
+/* Tagline shown at the top of each tab page. The heading that used to sit above
+   it is gone — that text is now part of the page's single h1 (see the shell
+   template edition_detail.html), so each tab page has a unique h1. */
+.tab-section-intro {
+    margin: 0 0 12px;
+}
+.tab-section-intro p {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--color-text-minor);
+    line-height: 1.5;
+}
+.script-meta {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 16px;
+    padding: 4px 14px;
+    border-radius: 8px;
+    background: var(--color-bg);
+    font-size: 0.9em;
+}
+.script-meta-item {
+    vertical-align: top;
+}
+.script-meta-label {
+    padding: 6px 12px 6px 0;
+    width: 1%;
+    white-space: nowrap;
+    text-align: left;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+.script-meta-value {
+    padding: 6px 0;
+    line-height: 1.5;
+    color: var(--color-text-minor);
+}
+.script-text {
+    line-height: 1.7;
+    color: var(--color-text-main);
+    text-align: justify;
+}
+.script-text p {
+    margin: 0 0 1.6em;
+}
+.script-text p:last-child {
+    margin-bottom: 0;
+}
+.script-locked-notice {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 60px 20px;
+    color: var(--color-text-minor);
+    text-align: center;
+}
+.script-locked-notice i {
+    font-size: 2em;
+}
+
+/* GM Script teaser (free guest / non-qualifying member preview).
+   The .script-meta table here is NOT the real persona data — it is a generic,
+   edition-independent explainer pulled from the translation table
+   (game.script.teaser.*), so crawlers and answer engines read real sentences
+   instead of the masked gibberish this used to show. Label and value both blur,
+   so the block still reads as a paywall. Below it, the opening of the real
+   script is shown unmasked and faded out — that is the actual teaser. */
+.script-meta-blurred .script-meta-label,
+.script-meta-blurred .script-meta-value {
+    filter: blur(4px);
+    user-select: none;
+}
+.script-meta-blurred .script-meta-label {
+    /* 解鎖後那張表的 label 是「主持人設定」這種短詞，所以 nowrap + width:1%；
+       這裡的標題是一整句，若不改成可換行會把第一欄撑到整張表寬。 */
+    white-space: normal;
+    width: 28%;
+}
+/* 真實講稿開頭三段的逐段處理：首段 blur、第二段原樣顯示（沒有 class）、
+   第三段向下淡出。class 下在 <p> 而不是包層 div，三段才能共用
+   .script-text p 的段間距，不用再逐層調 margin。 */
+.script-text .script-line-blur {
+    filter: blur(4px);
+    user-select: none;
+}
+.script-text .script-line-fade {
+    -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+}
+.script-teaser .script-locked-notice {
+    padding: 12px 20px 40px;
+}
+
+/* Flowchart detail dropdown (desktop + mobile) */
+.flowchart-tab-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+}
+.flowchart-detail-select {
+    padding: 4px 10px;
+    border: 1px solid var(--color-bg-hover);
+    border-radius: 6px;
+    background: var(--color-bg);
+    color: var(--color-text-main);
+    font-size: 0.85em;
+    cursor: pointer;
+}
+
+
+/* ===== Flowchart Viewer：暗色專屬樣式 =====
+   --fc-* / --xy-* 變數已搬到 theme.css。以下是變數表達不了的暗色專屬規則。 */
+/* 圖表區塊的界線：dark 模式下圖表底色與頁面底色差距小，補一條細框讓範圍明確。
+   light 模式白底對灰底本來就分得出來，不加框以免多一條線。 */
+:root[data-theme="dark"] .fc-viewer-pane {
+    border: 1px solid var(--color-bg-hover);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+:root[data-theme="dark"] .react-flow__edge-label {
+    background: rgba(26, 31, 46, 0.9);
+}
+
+/* 多份規則書時，來源標註前的文件代號（Ref 1 / Ref 2）。完整書名放在 title
+   屬性裡，桌機 hover 可見；手機沒有 hover，所以 JS 另外在下方列出對照表。 */
+.source-doc-ref {
+    border-bottom: 1px dotted currentColor;
+    cursor: help;
+}

@@ -1,0 +1,44 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a>
+  &rsaquo; <a href="{% url 'admin:game_flowcharttexttranslation_changelist' %}">Flowchart texts</a>
+  &rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+<p>
+  這裡只列「還有文字缺譯文」的流程圖（看的是草稿）。文字以內容跨圖共用，變體圖沒改的文字已經有完整譯文，
+  所以待翻譯的段數通常很少。點進去就是那一張圖的待翻譯清單。
+  {% if show_all %}
+    <a href="?{% if rulebook_id %}rulebook={{ rulebook_id }}{% endif %}">只看有待翻譯的</a>
+  {% else %}
+    <a href="?all=1{% if rulebook_id %}&rulebook={{ rulebook_id }}{% endif %}">顯示全部流程圖</a>
+  {% endif %}
+</p>
+
+{% if rows %}
+<table style="width:100%;">
+  <thead><tr><th>遊戲／版本</th><th>Rulebook</th><th>語言</th><th>Ruleset</th><th>待翻譯</th><th></th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ r.chart.rulebook.edition.name|default:r.chart.rulebook.edition.game.canonical_name }}</td>
+      <td>{{ r.chart.rulebook.title }}</td>
+      <td>{{ r.chart.rulebook.language.language|default:"en" }}</td>
+      <td>{{ r.chart.ruleset }}</td>
+      <td>{% if r.pending %}<strong style="color:#cf1322;">{{ r.pending }} 段</strong>{% else %}<span style="color:#389e0d;">完成</span>{% endif %}</td>
+      <td><a href="{{ r.url }}">開啟</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p style="color:#389e0d;">所有流程圖的文字都已有完整譯文。</p>
+{% endif %}
+{% endblock %}

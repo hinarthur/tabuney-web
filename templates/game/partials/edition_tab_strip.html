@@ -1,0 +1,25 @@
+{% load translate_tags %}
+{% comment %} 分頁列。一份 DOM 通吃所有視窗寬度——寬窄視窗的差異（等分寬度、觸控
+   尺寸）由 edition_detail.css 的 media query 處理，不再各渲染一份。
+
+   href 沿用 get_absolute_url 字串串接（已含當前語言前綴），不用 url tag：
+   分頁後綴只是網址尾巴，多一組 kwargs 只是多一個出錯面。
+   預設分頁是 info（無後綴網址）；Rulesbot 是 chat/。 {% endcomment %}
+<div class="edition-main-tabs">
+    <a class="main-tab-btn{% if initial_tab == 'info' %} active{% endif %}" data-main-tab="info" href="{{ edition.get_absolute_url }}">
+        <i class="fas fa-info-circle"></i> {% t "game.info.title" %}
+    </a>
+    {% if has_flowchart %}
+    <a class="main-tab-btn{% if initial_tab == 'flowchart' %} active{% endif %}" data-main-tab="flowchart" href="{{ edition.get_absolute_url }}flowchart/">
+        <i class="fas fa-sitemap"></i> {% t "game.flowchart.title" %}
+    </a>
+    {% endif %}
+    <a class="main-tab-btn{% if initial_tab == 'chat' %} active{% endif %}" data-main-tab="chat" href="{{ edition.get_absolute_url }}chat/">
+        <i class="fas fa-comments"></i> Rulesbot
+    </a>
+    {% if has_script %}
+    <a class="main-tab-btn{% if initial_tab == 'script' %} active{% endif %}" data-main-tab="script" href="{{ edition.get_absolute_url }}script/">
+        <i class="fa-solid fa-bullhorn"></i> {% t "game.script.title" %}
+    </a>
+    {% endif %}
+</div>

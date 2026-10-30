@@ -1,0 +1,5 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# 避免對 Python 檔案進行 CRLF -> LF 轉換
+*.py text eol=lf

@@ -1,0 +1,6 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+  <li><a href="{% url 'admin:game_flowcharttexttranslation_translate' %}" class="addlink">按流程圖批次翻譯</a></li>
+  {{ block.super }}
+{% endblock %}

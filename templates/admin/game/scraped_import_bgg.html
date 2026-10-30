@@ -1,0 +1,135 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}匯入 BGG Data{% endblock %}
+
+{% block content %}
+<h1>匯入 BGG Data</h1>
+<p>
+  僅補填 DB 中現有 Game 的空白欄位（bgg_id、categories、mechanisms、players、playtime）。<br>
+  若 Game 只有一筆 Edition，可選擇替換縮圖。絕不建立新 Edition。
+</p>
+<p>即將處理以下 <strong>{{ products|length }}</strong> 筆資料，請確認後按「確認匯入」。</p>
+
+<form method="post">
+  {% csrf_token %}
+
+  <h2 style="margin-top:20px;">待處理清單</h2>
+  <table style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr style="background:#f8f8f8; text-align:left;">
+        <th style="padding:8px; border:1px solid #ddd;">#</th>
+        <th style="padding:8px; border:1px solid #ddd;">Game</th>
+        <th style="padding:8px; border:1px solid #ddd;">名稱</th>
+        <th style="padding:8px; border:1px solid #ddd;">Thumbnail</th>
+        <th style="padding:8px; border:1px solid #ddd;">Players</th>
+        <th style="padding:8px; border:1px solid #ddd;">Playtime</th>
+        <th style="padding:8px; border:1px solid #ddd;">Age</th>
+        <th style="padding:8px; border:1px solid #ddd;">Designer</th>
+        <th style="padding:8px; border:1px solid #ddd;">Artist</th>
+        <th style="padding:8px; border:1px solid #ddd;">BGG ID</th>
+        <th style="padding:8px; border:1px solid #ddd;">Rank</th>
+        <th style="padding:8px; border:1px solid #ddd;">Family Rank</th>
+        <th style="padding:8px; border:1px solid #ddd;">Party Rank</th>
+        <th style="padding:8px; border:1px solid #ddd;">Categories</th>
+        <th style="padding:8px; border:1px solid #ddd;">Mechanisms</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in products %}
+      <tr style="border-bottom:1px solid #eee;">
+        <td style="padding:8px; border:1px solid #ddd;">{{ forloop.counter }}</td>
+        <td style="padding:8px; border:1px solid #ddd; text-align:center;">
+          {% if p.game_exists %}⚠️{% else %}—{% endif %}
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          <input type="text" name="name_{{ p.obj.id }}" value="{{ p.nd.name|default_if_none:'' }}" style="width:200px;">
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          {% if p.existing_edition %}
+            {# game 只有一筆 edition：顯示兩個 thumbnail 讓使用者選 #}
+            <div style="display:flex; gap:10px; align-items:flex-start;">
+              <label style="text-align:center; cursor:pointer;">
+                <div style="font-size:10px; color:#666; margin-bottom:3px;">DB</div>
+                {% if p.existing_edition.thumbnail %}
+                <a href="{{ p.existing_edition.thumbnail.url }}" target="_blank" onclick="event.stopPropagation()">
+                  <img src="{{ p.existing_edition.thumbnail.url }}" style="max-height:60px; max-width:80px; display:block; margin:0 auto;">
+                </a>
+                {% else %}
+                <span style="display:block; color:#aaa; font-size:11px; line-height:40px;">無</span>
+                {% endif %}
+                <div style="margin-top:4px;">
+                  <input type="radio" name="thumbnail_choice_{{ p.obj.id }}" value="db" checked>
+                </div>
+              </label>
+              <label style="text-align:center; cursor:pointer;">
+                <div style="font-size:10px; color:#666; margin-bottom:3px;">Scraped</div>
+                {% if p.nd.thumbnail_url %}
+                <a href="{{ p.nd.thumbnail_url }}" target="_blank" onclick="event.stopPropagation()">
+                  <img src="{{ p.nd.thumbnail_url }}" style="max-height:60px; max-width:80px; display:block; margin:0 auto;" onerror="this.style.display='none'">
+                </a>
+                {% else %}
+                <span style="display:block; color:#aaa; font-size:11px; line-height:40px;">無</span>
+                {% endif %}
+                <div style="margin-top:4px;">
+                  <input type="radio" name="thumbnail_choice_{{ p.obj.id }}" value="scraped">
+                </div>
+              </label>
+            </div>
+          {% else %}
+            {# 多筆 edition 或 game 不存在：不顯示 radio #}
+            {% if p.nd.thumbnail_url %}
+            <a href="{{ p.nd.thumbnail_url }}" target="_blank">
+              <img src="{{ p.nd.thumbnail_url }}" style="max-height:60px; max-width:80px;" onerror="this.style.display='none'">
+            </a>
+            {% else %}—{% endif %}
+          {% endif %}
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          {% if p.nd.min_players or p.nd.max_players %}{{ p.nd.min_players|default:"?" }}–{{ p.nd.max_players|default:"?" }}{% else %}—{% endif %}
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          {% if p.nd.min_playtime or p.nd.max_playtime %}{{ p.nd.min_playtime|default:"?" }}–{{ p.nd.max_playtime|default:"?" }} 分鐘{% else %}—{% endif %}
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">{{ p.nd.age|default:"—" }}</td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          <input type="text" name="designer_{{ p.obj.id }}" value="{{ p.nd.designer|default_if_none:'' }}" style="width:160px;">
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          <input type="text" name="artist_{{ p.obj.id }}" value="{{ p.nd.artist|default_if_none:'' }}" style="width:160px;">
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          <input type="text" name="bgg_id_{{ p.obj.id }}" value="{{ p.nd.bgg_id|default_if_none:'' }}" style="width:80px;">
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          {{ p.nd.rank|default_if_none:"—" }}
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          {{ p.nd.family_rank|default_if_none:"—" }}
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          {{ p.nd.party_rank|default_if_none:"—" }}
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          <input type="text" name="categories_{{ p.obj.id }}" value="{{ p.nd.categories|default_if_none:'' }}" style="width:150px;">
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;">
+          <input type="text" name="mechanisms_{{ p.obj.id }}" value="{{ p.nd.mechanisms|default_if_none:'' }}" style="width:150px;">
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% for pid in product_ids %}
+  <input type="hidden" name="product_ids" value="{{ pid }}">
+  {% endfor %}
+
+  <div style="margin-top:20px;">
+    <input type="submit" value="確認匯入" class="default"
+      style="background:#417690; color:white; padding:8px 16px; border:none; cursor:pointer; font-size:14px;">
+    &nbsp;
+    <a href="{% url 'admin:game_scrapedproduct_changelist' %}" class="button cancel-link">取消</a>
+  </div>
+</form>
+{% endblock %}

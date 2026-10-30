@@ -1,0 +1,43 @@
+{% load static %}
+{% load translate_tags %}
+{# 講稿面板：桌機與手機內容完全相同（沒有任何 id），直接共用同一份。 #}
+                <div class="tab-section-intro">
+                    <p>{% t "game.script.h2_desc" %}</p>
+                </div>
+                <div class="script-pane">
+                    {% if script_data.locked %}
+                    <div class="script-teaser">
+                        {% comment %} 講稿面板。一份 DOM 通吃所有視窗寬度。
+
+   桌機與手機的內容本來就完全相同，以前純粹是被兩套版型各渲染了一次。 {% endcomment %}
+                        <table class="script-meta script-meta-blurred">
+                            <tr class="script-meta-item"><th class="script-meta-label">{% t "game.script.teaser.h1" %}</th><td class="script-meta-value">{% t "game.script.teaser.p1" %}</td></tr>
+                            <tr class="script-meta-item"><th class="script-meta-label">{% t "game.script.teaser.h2" %}</th><td class="script-meta-value">{% t "game.script.teaser.p2" %}</td></tr>
+                            <tr class="script-meta-item"><th class="script-meta-label">{% t "game.script.teaser.h3" %}</th><td class="script-meta-value">{% t "game.script.teaser.p3" %}</td></tr>
+                        </table>
+                        {% comment %}表格下方接真實講稿開頭三段（皆未遮罩）：首段 blur、第二段清楚、
+                        第三段向下淡出，讓視線落在中間那段真的讀得到的內容上。{% endcomment %}
+                        <div class="script-text">{% for line in script_data.text_preview_blur %}<p class="script-line-blur">{{ line }}</p>{% endfor %}{% for line in script_data.text_preview_clear %}<p>{{ line }}</p>{% endfor %}{% for line in script_data.text_preview_fade %}<p class="script-line-fade">{{ line }}</p>{% endfor %}</div>
+                        <div class="script-locked-notice">
+                            <i class="fas fa-lock"></i>
+                            <p>{% t "game.script.paid_feature" %}</p>
+                            <a href="{% url 'account:membership' %}" class="button">{% t "membership.btn.upgrade" %}</a>
+                        </div>
+                    </div>
+                    {% else %}
+                    {% if script_data.host_persona or script_data.player_persona or script_data.atmosphere %}
+                    <table class="script-meta">
+                        {% if script_data.host_persona %}
+                        <tr class="script-meta-item"><th class="script-meta-label">{% t "game.script.host_persona" %}</th><td class="script-meta-value">{{ script_data.host_persona }}</td></tr>
+                        {% endif %}
+                        {% if script_data.player_persona %}
+                        <tr class="script-meta-item"><th class="script-meta-label">{% t "game.script.player_persona" %}</th><td class="script-meta-value">{{ script_data.player_persona }}</td></tr>
+                        {% endif %}
+                        {% if script_data.atmosphere %}
+                        <tr class="script-meta-item"><th class="script-meta-label">{% t "game.script.atmosphere" %}</th><td class="script-meta-value">{{ script_data.atmosphere }}</td></tr>
+                        {% endif %}
+                    </table>
+                    {% endif %}
+                    <div class="script-text">{% for line in script_data.text.splitlines %}{% if line %}<p>{{ line }}</p>{% endif %}{% endfor %}</div>
+                    {% endif %}
+                </div>

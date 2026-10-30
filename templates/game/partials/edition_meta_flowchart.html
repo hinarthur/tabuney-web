@@ -1,0 +1,6 @@
+{% load translate_tags %}{% comment %}流程圖分頁的 meta description。
+
+階段數與步驟數來自 view 算好的 outline，跟頁面上文字版大綱看得到的數字是同一份
+資料——具體數字是只有這一頁成立的內容，對 AI 回答引擎是高價值訊號。
+
+{% t %} 回傳 mark_safe，進 content="..." 屬性一律 force_escape。{% endcomment %}{% t "seo.game.flowchart.desc.prefix" as d_pre %}{% t "seo.game.flowchart.desc.mid" as d_mid %}{% t "seo.game.flowchart.desc.phases" as d_ph %}{% t "seo.game.flowchart.desc.steps" as d_st %}{{ d_pre|force_escape }}{% firstof edition.name edition.game.canonical_name %}{{ d_mid|force_escape }}{{ flowchart_phase_count }}{{ d_ph|force_escape }}{{ flowchart_step_count }}{{ d_st|force_escape }}

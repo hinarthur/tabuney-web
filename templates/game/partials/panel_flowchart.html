@@ -1,0 +1,69 @@
+{% load static %}
+{% load translate_tags %}
+{% comment %} Flowchart 面板。一份 DOM 通吃所有視窗寬度。
+
+   以前桌機／手機各一份，差別只有 pane 高度（600/500），而那份 react_flow_json 會因此整份輸出兩次。高度改由 .fc-viewer-pane 的 media query 決定。 {% endcomment %}
+                <div class="tab-section-intro">
+                    <p>{% t "game.flowchart.h2_desc" %}</p>
+                </div>
+                <div class="flowchart-tab-header">
+                    {% if flowchart_charts|length > 1 %}
+                    <div id="flowchart-ruleset-list" class="flowchart-ruleset-list">
+                        {% for fc in flowchart_charts %}
+                        <button type="button"
+                                class="flowchart-ruleset-pill{% if fc.locked %} locked{% endif %}{% if forloop.first and not fc.locked %} active{% endif %}"
+                                data-ruleset-key="{{ fc.key }}"
+                                {% if fc.locked %}title="{% t 'game.flowchart.paid_feature' %}"{% endif %}>
+                            {% if fc.locked %}<i class="fas fa-lock"></i>{% endif %}
+                            <span>{{ fc.ruleset_label|capfirst }}</span>
+                        </button>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <div class="flowchart-actions{% if flowchart_charts|length > 1 %} with-divider{% endif %}">
+                        <button type="button" class="fc-toolbar-btn{% if not can_flowchart_tour %} locked{% endif %}"
+                                data-fc-action="tour"
+                                title="{% if not can_flowchart_tour %}{% t 'game.flowchart.paid_feature' %}{% else %}{% t 'game.flowchart.tour' %}{% endif %}">
+                            {% if not can_flowchart_tour %}<i class="fas fa-lock"></i>{% endif %}
+                            <i class="fa-solid fa-shoe-prints"></i>
+                        </button>
+                        <button type="button" class="fc-toolbar-btn{% if not can_flowchart_fullscreen %} locked{% endif %}"
+                                data-fc-action="fullscreen"
+                                title="{% if not can_flowchart_fullscreen %}{% t 'game.flowchart.paid_feature' %}{% else %}{% t 'game.flowchart.fullscreen' %}{% endif %}">
+                            {% if not can_flowchart_fullscreen %}<i class="fas fa-lock"></i>{% endif %}
+                            <i class="fas fa-expand"></i>
+                        </button>
+                        <button type="button" class="fc-toolbar-btn{% if not can_flowchart_print %} locked{% endif %}"
+                                data-fc-action="print"
+                                title="{% if not can_flowchart_print %}{% t 'game.flowchart.paid_feature' %}{% else %}{% t 'game.flowchart.print' %}{% endif %}">
+                            {% if not can_flowchart_print %}<i class="fas fa-lock"></i>{% endif %}
+                            <i class="fas fa-print"></i>
+                        </button>
+                        {% include "game/partials/rulebook_source_btn.html" with btn_class="fc-toolbar-btn" %}
+                        <button type="button" class="fc-toolbar-btn fc-legend-btn" title="{% t 'game.flowchart.legend' %}">
+                            <i class="fas fa-circle-info"></i>
+                        </button>
+                        <button type="button" class="fc-toolbar-btn fc-suggest-btn"
+                                title="{% t 'game.flowchart.suggest.title' %}">
+                            <i class="fa-solid fa-flag"></i>
+                        </button>
+                    </div>
+                </div>
+                {% for fc in flowchart_charts %}
+                <div id="fc-viewer-{{ fc.key }}"
+                     class="fc-viewer-pane{% if not forloop.first %} fc-viewer-hidden{% endif %}"
+                     data-ruleset-label="{{ fc.ruleset_label|capfirst }}"
+                     data-fc-id="{{ fc.id }}">
+                    {% if fc.locked %}
+                    <div class="fc-locked-notice">
+                        <i class="fas fa-lock"></i>
+                        <p>{% t "game.flowchart.paid_feature" %}</p>
+                        <a href="{% url 'account:membership' %}" class="button">{% t "membership.btn.upgrade" %}</a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                <p class="fc-flowchart-footnote">{% t "game.flowchart.footnote" %}</p>
+                {% for fc in flowchart_charts %}
+                {% include "game/partials/flowchart_textview.html" with fc=fc %}
+                {% endfor %}

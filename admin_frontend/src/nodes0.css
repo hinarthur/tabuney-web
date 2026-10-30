@@ -1,0 +1,37 @@
+/* Node textures. Colours come from theme.css variables; the node's own
+   background-color is set inline by nodes/index.tsx. */
+[data-fc-node="action"] {
+  background-image: var(--fc-action-sheen, none);
+}
+
+[data-fc-node="oval"] {
+  background-image: var(--fc-oval-sheen, none);
+}
+[data-fc-node="double"] {
+  background-image: var(--fc-double-texture, none);
+}
+[data-fc-node="phase"] {
+  background-image: var(--fc-phase-texture, none);
+}
+[data-fc-node="legend"] {
+  background-image: var(--fc-legend-texture, none);
+  background-size: 8px 8px;
+}
+
+/* Decision node: the diamond is an SVG polygon, so the texture is a CSS layer
+   clipped to the same shape (points match the polygon in DiamondNode). */
+.fc-diamond-texture {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--fc-diamond-texture, none);
+  clip-path: polygon(50% 1%, 99% 50%, 50% 99%, 1% 50%);
+}
+
+/* paper uses flat fills (see .fc-print-ink in editor.css) */
+.fc-print-ink [data-fc-node] {
+  background-image: none !important;
+}
+.fc-print-ink .fc-diamond-texture {
+  display: none !important;
+}

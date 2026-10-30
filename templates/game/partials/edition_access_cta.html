@@ -1,0 +1,62 @@
+{% load translate_tags %}
+{% comment %}
+   標題列右上角的 Edition Access CTA，rulesbot／flowchart／info 三個分頁共用。
+
+   **不放在 script 分頁**：Edition Access 不含 GM 講稿（講稿看的是 tier feature
+   'script'），在那一頁擺這顆按鈕等於暗示買了就能看講稿。gate 在 edition_detail.html。
+
+   狀態旗標與 info 分頁那塊完整區塊同源（EditionDetailView._add_unlock_context），
+   所以兩處永遠一致。這裡是壓縮版：只留一個動作，說明文字交給 info 分頁。
+
+   已取得時不是按鈕而是一塊安靜的標記——使用者在流程圖頁看到功能全開時，
+   這行字說明了為什麼。
+
+   表單的 data-confirm 由 edition_detail.html 的 JS 讀出來丟給 confirm()。
+   ⚠️ 不要寫成 onsubmit="confirm('…')"：譯文含單引號會把整段 inline JS 打斷。
+{% endcomment %}
+{% if cta_modal %}
+    {% comment %} info 分頁：圖示只負責打開 modal，詳文與動作都在 modal 裡
+       （edition_detail_info.html 的 #edition-access-modal）。 {% endcomment %}
+    <button type="button" class="edition-access-cta edition-access-cta-open{% if unlock_is_picked %} is-owned{% endif %}" aria-haspopup="dialog">
+        {% if unlock_is_picked %}{% include "game/partials/edition_access_icon.html" with access_size="1.25em" %}{% else %}{% include "game/partials/edition_access_icon.html" with access_size="1.25em" access_color="currentColor" %}{% endif %}
+        <span>{% if unlock_is_picked %}{% t "game.unlock.star" %}{% elif not unlock_is_authenticated or unlock_can_buy or not unlock_can_pick %}{% t "game.unlock.cta.get" %}{% else %}{% t "game.unlock.cta.free" %}{% endif %}</span>
+    </button>
+
+{% elif unlock_is_picked %}
+    <span class="edition-access-cta is-owned" title="{% t "game.unlock.picked" %}">
+        {% include "game/partials/edition_access_icon.html" with access_size="1.25em" %}
+        <span>{% t "game.unlock.star" %}</span>
+    </span>
+
+{% elif not unlock_is_authenticated %}
+    <button type="button" class="edition-access-cta edition-access-cta-login">
+        {% include "game/partials/edition_access_icon.html" with access_size="1.25em" access_color="currentColor" %}
+        <span>{% t "game.unlock.cta.get" %}</span>
+    </button>
+
+{% elif unlock_can_pick %}
+    <form method="post" action="{% url 'account:unlock-pick' %}" class="edition-unlock-form edition-access-cta-form"
+          data-confirm="{% if unlock_has_flowchart %}{% t 'game.unlock.confirm'|force_escape %}{% else %}{% t 'game.unlock.confirm.no_flowchart'|force_escape %}{% endif %}">
+        {% csrf_token %}
+        <input type="hidden" name="edition_id" value="{{ edition.id }}">
+        <button type="submit" class="edition-access-cta">
+            {% include "game/partials/edition_access_icon.html" with access_size="1.25em" access_color="currentColor" %}
+            <span>{% t "game.unlock.cta.free" %}</span>
+            <small>{% if unlock_free_quota == -1 %}∞{% else %}{{ unlock_free_used }}/{{ unlock_free_quota }}{% endif %}</small>
+        </button>
+    </form>
+
+{% elif unlock_can_buy %}
+    <form method="post" action="{% url 'commerce:create-edition-unlock-session' %}" class="edition-unlock-form edition-access-cta-form"
+          data-confirm="{% t 'game.unlock.buy.confirm'|force_escape %}">
+        {% csrf_token %}
+        <input type="hidden" name="edition_id" value="{{ edition.id }}">
+        <input type="hidden" name="lang" value="{{ request.lang }}">
+        <button type="submit" class="edition-access-cta">
+            {% include "game/partials/edition_access_icon.html" with access_size="1.25em" access_color="currentColor" %}
+            <span>{% t "game.unlock.cta.get" %}</span>
+            <small>{% if edition_access_list_price != edition_access_current_price %}<s>{{ edition_access_list_price }}</s> {% endif %}{{ edition_access_current_price }}</small>
+        </button>
+    </form>
+{% endif %}
+{% comment %} 其餘情形（免費名額用完、且這款還沒有已發布流程圖＝不讓買）不輸出任何東西 {% endcomment %}

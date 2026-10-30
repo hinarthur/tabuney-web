@@ -1,0 +1,94 @@
+{% load translate_tags %}
+{% comment %}
+   Edition Access（版本專享）區塊。全站唯一的取得入口——搜尋卡片上的絲帶只
+   顯示狀態、不可點，因為免費名額不可逆，不該在滑動的清單裡誤觸就用掉。
+
+   六種狀態互斥，旗標由 EditionDetailView._add_unlock_context() 算好：
+     未登入 / 已取得(定案) / 已取得(可退回) / 可用免費名額 / 可加購 / 尚無流程圖
+
+   兩個表單都帶 data-confirm，由 edition_detail_info.html 的 JS 讀出來丟給
+   confirm()。⚠️ 不要把譯文直接寫進 onsubmit="confirm('…')"：譯文含單引號會
+   把整段 inline JS 打斷，而那是六種語言裡遲早會發生的事。走 HTML 屬性 +
+   force_escape 才安全。
+
+   免費名額的確認文字分兩種，因為後果實際上不同：
+     有流程圖   → 這一選就永久定案，退不回來
+     還沒有流程圖 → 可以先佔著，圖上線前隨時退回改選
+   用同一段文字的話，其中一種一定是錯的。
+{% endcomment %}
+<div class="info-section edition-unlock-box">
+    {% if not unlock_is_authenticated %}
+        <span class="edition-unlock-line">
+            {% include "game/partials/edition_access_icon.html" with access_color="var(--color-text-minor)" %}
+            <span class="edition-unlock-text">{% t "game.unlock.login" %}</span>
+        </span>
+        <div class="edition-unlock-form"><button type="button" class="edition-access-cta-login edition-unlock-btn">{% t "auth.btn.google-login" %}</button></div>
+
+    {% elif unlock_is_picked %}
+        <span class="edition-unlock-line">
+            {% include "game/partials/edition_access_icon.html" %}
+            <span class="edition-unlock-text edition-unlock-on">{% t "game.unlock.picked" %}</span>
+        </span>
+        <p class="edition-unlock-note">{% t "game.unlock.perks" %}</p>
+        {% if unlock_can_release %}
+        <p class="edition-unlock-note">{% t "game.unlock.release.hint" %}</p>
+        <form method="post" action="{% url 'account:unlock-release' %}"
+              class="edition-unlock-form" data-confirm="{% t 'game.unlock.release.confirm'|force_escape %}">
+            {% csrf_token %}
+            <input type="hidden" name="edition_id" value="{{ edition.id }}">
+            <button type="submit" class="edition-unlock-btn edition-unlock-btn-plain">
+                {% t "game.unlock.release" %}
+            </button>
+        </form>
+        {% endif %}
+
+    {% elif unlock_can_pick %}
+        <span class="edition-unlock-line">
+            {% include "game/partials/edition_access_icon.html" with access_color="var(--color-text-minor)" %}
+            <span class="edition-unlock-text">{% t "game.unlock.pick.offer" %}</span>
+        </span>
+        <p class="edition-unlock-note">{% t "game.unlock.perks" %}</p>
+        {% if not unlock_has_flowchart %}
+        <p class="edition-unlock-note">{% t "game.unlock.pick.no_flowchart_hint" %}</p>
+        {% endif %}
+        <form method="post" action="{% url 'account:unlock-pick' %}"
+              class="edition-unlock-form"
+              data-confirm="{% if unlock_has_flowchart %}{% t 'game.unlock.confirm'|force_escape %}{% else %}{% t 'game.unlock.confirm.no_flowchart'|force_escape %}{% endif %}">
+            {% csrf_token %}
+            <input type="hidden" name="edition_id" value="{{ edition.id }}">
+            <button type="submit" class="edition-unlock-btn">
+                {% t "game.unlock.pick" %}
+            </button>
+            {% comment %} 名額數字用模板拼，不做成含佔位符的譯文：{% templatetag openblock %} t %} 不支援插值 {% endcomment %}
+            <span class="edition-unlock-quota">
+                {% t "game.unlock.remaining" %}
+                {% if unlock_free_quota == -1 %}∞{% else %}{{ unlock_free_used }}/{{ unlock_free_quota }}{% endif %}
+            </span>
+        </form>
+
+    {% elif unlock_can_buy %}
+        <span class="edition-unlock-line">
+            {% include "game/partials/edition_access_icon.html" with access_color="var(--color-text-minor)" %}
+            <span class="edition-unlock-text">{% t "game.unlock.buy.offer" %}</span>
+        </span>
+        <p class="edition-unlock-note">{% t "game.unlock.perks" %}</p>
+        <form method="post" action="{% url 'commerce:create-edition-unlock-session' %}"
+              class="edition-unlock-form" data-confirm="{% t 'game.unlock.buy.confirm'|force_escape %}">
+            {% csrf_token %}
+            <input type="hidden" name="edition_id" value="{{ edition.id }}">
+            <input type="hidden" name="lang" value="{{ request.lang }}">
+            <button type="submit" class="edition-unlock-btn">
+                {% t "game.unlock.buy" %}
+            </button>
+            {% comment %} 原價劃掉 + 早鳥現價；價格字串來自 settings，與會員頁同源 {% endcomment %}
+            {% include "game/partials/edition_access_price.html" %}
+        </form>
+
+    {% else %}
+        {% comment %} 免費名額用完，而這款還沒有已發布流程圖 —— 不讓買（付了錢可能永遠拿不到東西） {% endcomment %}
+        <span class="edition-unlock-line">
+            {% include "game/partials/edition_access_icon.html" with access_color="var(--color-text-minor)" %}
+            <span class="edition-unlock-text">{% t "game.unlock.no_flowchart_yet" %}</span>
+        </span>
+    {% endif %}
+</div>

@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Content &amp; Publishing Principles - Tabuney{% endblock %}
+{% block meta_description %}How Tabuney sources, generates, reviews and corrects its board game content — including where AI is involved.{% endblock meta_description %}
+{# og:title 不帶 " - Tabuney"，base.html 的 og:site_name 已經有品牌名 #}
+{% block og_title %}Content &amp; Publishing Principles{% endblock og_title %}
+{% block og_description %}How Tabuney sources, generates, reviews and corrects its board game content — including where AI is involved.{% endblock og_description %}
+{% block twitter_title %}Content &amp; Publishing Principles{% endblock twitter_title %}
+{% block twitter_description %}How Tabuney sources, generates, reviews and corrects its board game content — including where AI is involved.{% endblock twitter_description %}
+
+{% comment %}
+這頁只有英文。i18n_patterns 仍然產生 /ja/principles/ 之類的網址，內容卻一模一樣，
+所以一律 canonical 回英文版，避免被當成重複內容。
+之後真的做了多語版本，把這個 block 刪掉即可恢復預設行為。
+{% endcomment %}
+{% block canonical %}{{ principles_url }}{% endblock canonical %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/principles.css' %}?v=1">
+{% endblock extrahead %}
+
+{% block content %}
+
+<div class="principles">
+    <h1>Content &amp; Publishing Principles</h1>
+
+    <p class="principles-lead">
+        Tabuney is an independent tabletop game guide platform designed to help players understand games more quickly and spend more time playing.
+    </p>
+    <p class="principles-lead">
+        These principles explain where our game information comes from, how our guides and AI-powered features are produced, where human review is involved, and how we handle accuracy, corrections, and editorial independence.
+    </p>
+
+    <nav class="principles-toc" aria-label="On this page">
+        <h2>On this page</h2>
+        <ol>
+            <li><a href="#sources">Where our data comes from</a></li>
+            <li><a href="#production">How rules answers, flowcharts and Guide Scripts are produced</a></li>
+            <li><a href="#ai">Where AI is involved and where it is not</a></li>
+            <li><a href="#review">Human review</a></li>
+            <li><a href="#accuracy">Accuracy and limitations</a></li>
+            <li><a href="#corrections">Corrections</a></li>
+            <li><a href="#independence">Independence</a></li>
+            <li><a href="#commitment">Our commitment</a></li>
+        </ol>
+    </nav>
+
+    <h2 id="sources">Where our data comes from</h2>
+    <p>
+        Tabuney primarily relies on official game materials, including rulebooks, reference sheets, publisher-provided information, official clarifications, and other documentation made available for a game.
+    </p>
+    <p>
+        We may also use publicly available sources to verify basic game information such as player count, playing time, recommended age, designers, publishers, and editions.
+    </p>
+    <p>
+        Our guides are not intended to reproduce original rulebooks. Instead, we use source materials to organize, summarize, explain, and restructure game information into formats that are easier to understand and use during play.
+    </p>
+    <p>
+        Tabuney does not claim ownership of the games, rulebooks, artwork, trademarks, characters, or other intellectual property belonging to game designers, publishers, or other rights holders.
+    </p>
+
+    <h2 id="production">How rules answers, flowcharts and Guide Scripts are produced</h2>
+    <p>
+        Different Tabuney features are produced in different ways.
+    </p>
+
+    <h3>Rulesbot</h3>
+    <p>
+        Rulesbot is designed to answer questions about a specific game's rules using information derived from the relevant rulebook and supporting game material.
+    </p>
+    <p>
+        The source information is processed and structured so that the system can retrieve rules relevant to a user's question. AI is then used to interpret the question and generate an answer based on the retrieved information.
+    </p>
+    <p>
+        Rulesbot is intended to explain rules in clear, everyday language rather than simply reproduce passages from a rulebook.
+    </p>
+
+    <h3>Gameplay flowcharts</h3>
+    <p>
+        Gameplay flowcharts reorganize a game's rules into a step-by-step visual structure.
+    </p>
+    <p>
+        They are designed to show the sequence of play, available actions, decisions, conditions, turn progression, end conditions, and other information that may be useful while learning or playing a game.
+    </p>
+    <p>
+        Flowcharts may simplify the presentation of the original rules, but they are intended to preserve their meaning rather than change how the game is played.
+    </p>
+
+    <h3>Guide Scripts</h3>
+    <p>
+        Guide Scripts are spoken explanations designed to help someone introduce a game to other players.
+    </p>
+    <p>
+        They may combine game rules with a more natural teaching order, explanatory wording, and, where appropriate, thematic or contextual elements.
+    </p>
+    <p>
+        Guide Scripts are not transcripts of the original rulebook. They are explanatory materials created by Tabuney to make teaching a game easier and more engaging.
+    </p>
+
+    <h2 id="ai">Where AI is involved and where it is not</h2>
+    <p>
+        Artificial intelligence is an important part of Tabuney's content production and delivery process.
+    </p>
+    <p class="list-lead">AI may be used to:</p>
+    <ul>
+        <li>analyze and organize information from rulebooks and other source materials;</li>
+        <li>assist with structuring game rules;</li>
+        <li>generate initial drafts of summaries, flowcharts, scripts, or supporting content;</li>
+        <li>assist with translations and terminology;</li>
+        <li>retrieve relevant rule information;</li>
+        <li>interpret user questions; and</li>
+        <li>generate Rulesbot responses in real time.</li>
+    </ul>
+    <p>
+        AI does not determine the official rules of a game. The official rules remain those published by the relevant rights holder.
+    </p>
+    <p>
+        We also do not assume that AI-generated content is automatically accurate. AI output may contain misunderstandings, omissions, or incorrect interpretations and may therefore require review, editing, or correction.
+    </p>
+    <p>
+        Some interactive content, particularly Rulesbot responses generated in real time, may be shown to users without individual human review before delivery.
+    </p>
+
+    <h2 id="review">Human review</h2>
+    <p>
+        Where practical, Tabuney reviews and refines content before publication.
+    </p>
+    <p>
+        Human review may include checking rule interpretations, improving structure and wording, correcting AI-generated drafts, refining flowcharts, reviewing terminology, and comparing content with the original source materials.
+    </p>
+    <p>
+        The level of review may vary by feature and by game. Some content receives extensive manual refinement, while other content may rely more heavily on automated processing.
+    </p>
+    <p>
+        Real-time AI-generated answers cannot normally be reviewed individually before they are displayed. For this reason, users should treat Rulesbot as a practical rules assistant rather than an official authority.
+    </p>
+    <p>
+        Human review reduces the risk of errors but does not guarantee that every piece of content will be complete or correct.
+    </p>
+
+    <h2 id="accuracy">Accuracy and limitations</h2>
+    <p>
+        We aim to make Tabuney's content accurate, clear, and useful.
+    </p>
+    <p>
+        However, tabletop game rules can be complex. Different editions may contain different wording or rules, and publishers may release revised rulebooks, FAQs, errata, clarifications, or expansion-specific changes.
+    </p>
+    <p>
+        Our content may therefore occasionally be incomplete, outdated, ambiguous, or incorrect.
+    </p>
+    <p>
+        Tabuney's guides, flowcharts, Guide Scripts, and Rulesbot answers are intended as learning and reference tools. They do not replace the official rulebook.
+    </p>
+    <p>
+        If information on Tabuney conflicts with official rules or clarifications published by the game's rights holder, the official source should take precedence.
+    </p>
+    <p>
+        Users should also take particular care when different editions, expansions, promotional content, or regional versions of a game contain different rules.
+    </p>
+
+    <h2 id="corrections">Corrections</h2>
+    <p>
+        We welcome reports of inaccurate, unclear, incomplete, or outdated information.
+    </p>
+    <p>
+        When a potential issue is reported, we may review the relevant source materials and update the affected content where appropriate.
+    </p>
+    <p class="list-lead">Corrections may also be made when:</p>
+    <ul>
+        <li>a publisher releases revised rules or official errata;</li>
+        <li>a new edition changes existing rules;</li>
+        <li>additional official clarification becomes available;</li>
+        <li>we identify an error through our own review; or</li>
+        <li>improvements can make an explanation clearer without changing its meaning.</li>
+    </ul>
+    <p>
+        If you notice a possible error, please let us know through our <a href="{% url 'about' %}#contact">contact form</a>.
+    </p>
+    <p>
+        We appreciate clear reports that identify the game, the relevant rule or feature, and the reason you believe a correction may be needed.
+    </p>
+
+    <h2 id="independence">Independence</h2>
+    <p>
+        Tabuney is an independent tabletop game guide platform.
+    </p>
+    <p>
+        Unless explicitly stated otherwise, Tabuney is not the official website of the games listed on the service and is not affiliated with, endorsed by, sponsored by, or approved by their designers or publishers.
+    </p>
+    <p>
+        The inclusion of a game on Tabuney does not imply a commercial relationship with its designer, publisher, distributor, or other rights holder.
+    </p>
+    <p>
+        Where commercial relationships, sponsorships, affiliate arrangements, or other partnerships exist, they do not determine how we interpret or explain a game's rules.
+    </p>
+    <p>
+        Our goal is to present useful and understandable game information while clearly distinguishing Tabuney's explanatory content from the original works and official materials created by game publishers and designers.
+    </p>
+
+    <h2 id="commitment">Our commitment</h2>
+    <p>
+        Our guiding principle is simple: make tabletop games easier to learn without changing how they are meant to be played.
+    </p>
+    <p class="list-lead">We aim to:</p>
+    <ul>
+        <li>rely on appropriate source materials;</li>
+        <li>explain rules clearly rather than merely reproduce them;</li>
+        <li>be transparent about where AI is involved;</li>
+        <li>apply human review where practical;</li>
+        <li>acknowledge the limitations of our content;</li>
+        <li>correct meaningful errors when they are identified; and</li>
+        <li>remain clear about Tabuney's independent relationship with the games and publishers we cover.</li>
+    </ul>
+    <p>
+        These principles may evolve as Tabuney develops new tools, improves its content production processes, or changes the way AI is used across the platform.
+    </p>
+
+    <p class="principles-updated">
+        Last updated: 2026-08-14
+    </p>
+</div>
+
+{% endblock content %}

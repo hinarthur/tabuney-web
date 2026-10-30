@@ -1,0 +1,29 @@
+# 版本控制
+.git
+.gitignore
+
+# Python 快取與環境
+__pycache__/
+*.pyc
+venv/
+.venv/
+.env
+
+# 媒體檔
+media/
+
+#DB
+qdrant_storage/
+
+# 日誌與臨時檔
+*.log
+tmp/
+temp/
+
+# 作業系統產生的檔案
+.DS_Store
+Thumbs.db
+
+# 映像檔編譯產物
+dist/
+build/

@@ -1,0 +1,18 @@
+{% extends "game/edition_detail.html" %}
+{% load static %}
+{% load translate_tags %}
+
+{% block meta_description %}{% include "game/partials/edition_meta_script.html" %}{% endblock meta_description %}
+{% block og_description %}{% include "game/partials/edition_meta_script.html" %}{% endblock og_description %}
+{% block twitter_description %}{% include "game/partials/edition_meta_script.html" %}{% endblock twitter_description %}
+
+{% block panel %}{% include "game/partials/panel_script.html" %}{% endblock panel %}
+
+{% block edition_tail %}
+<script src="{% static 'js/edition_track.js' %}?v=2"></script>
+<script>
+    // 同 flowchart：讀講稿＝載入這一頁。trackScript() 會自己分辨撞付費牆
+    // （.script-locked-notice）與真的讀到講稿。
+    if (window.trackScript) { window.trackScript(); }
+</script>
+{% endblock edition_tail %}

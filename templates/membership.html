@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% load translate_tags %}
+{% load static %}
+
+{% block title %}{% t "membership.title.plans" %} - Tabuney{% endblock %}
+{% block meta_description %}{% t "seo.membership.description" %}{% endblock meta_description %}
+{# og:title 不帶 " - Tabuney"，base.html 的 og:site_name 已經有品牌名 #}
+{% block og_title %}{% t "membership.title.plans" %}{% endblock og_title %}
+{% block og_description %}{% t "seo.membership.description" %}{% endblock og_description %}
+{% block twitter_title %}{% t "membership.title.plans" %}{% endblock twitter_title %}
+{% block twitter_description %}{% t "seo.membership.description" %}{% endblock twitter_description %}
+
+{% block robots %}<meta name="robots" content="noindex,nofollow">{% endblock robots %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/membership.css' %}?v=5">
+{% endblock extrahead %}
+
+{% block content %}
+<div class="membership-container">
+    <div class="membership-current">
+        <p>{% t "membership.header.current_tier" %}
+            {% with tier_key="membership.tier."|add:current_tier %}
+            {% t tier_key %}
+            {% endwith %}
+        </p>
+    </div>
+    <h1 class="membership-title">{% t "membership.title.plans" %}</h1>
+    <div class="tier-table-wrapper">
+        <table class="tier-table">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>{% t "membership.tier.free" %}</th>
+                    <th>
+                        {% t "membership.tier.member" %}
+                        {% if current_tier == 'free' %}
+                        <br>
+                        <button type="button" class="gsi-material-button"
+                            onclick="if(window.authHandler) window.authHandler.handleLogin();" style="margin-top: 8px;">
+                            <div class="gsi-material-button-state"></div>
+                            <div class="gsi-material-button-content-wrapper">
+                                <div class="gsi-material-button-icon">
+                                    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"
+                                        xmlns:xlink="http://www.w3.org/1999/xlink" style="display: block;">
+                                        <path fill="#EA4335"
+                                            d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z">
+                                        </path>
+                                        <path fill="#4285F4"
+                                            d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z">
+                                        </path>
+                                        <path fill="#FBBC05"
+                                            d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z">
+                                        </path>
+                                        <path fill="#34A853"
+                                            d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z">
+                                        </path>
+                                        <path fill="none" d="M0 0h48v48H0z"></path>
+                                    </svg>
+                                </div>
+                                <span class="gsi-material-button-contents">Sign in</span>
+                                <span style="display: none;">Sign in with Google</span>
+                            </div>
+                        </button>
+                        {% endif %}
+                    </th>
+                    <th>
+                        <div class="th-subscriber-header">
+                            <span>{% t "membership.tier.subscriber" %}</span>
+                            {% if current_tier == 'free' or current_tier == 'member' %}
+                            <form action="{% url 'commerce:create-checkout-session' %}" method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="lang" value="{{ request.lang }}">
+                                <button type="submit" class="upgrade-btn" style="border: none; cursor: pointer;">{% t "membership.btn.upgrade" %}</button>
+                            </form>
+                            {% elif current_tier == 'subscriber' and subscription %}
+                            <div class="subscription-status">
+                                <div>{% t "membership.subscription.valid_until" %} {{ subscription.current_period_end|date:"Y-m-d" }}</div>
+                                {% if not subscription.cancel_at_period_end %}
+                                <form action="{% url 'commerce:cancel-subscription' %}" method="POST" style="margin-top: 8px;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="lang" value="{{ request.lang }}">
+                                    {% t "membership.subscription.confirm_cancel" as cancel_msg %}
+                                    <button type="submit" class="upgrade-btn cancel-btn" style="cursor: pointer; padding: 4px 12px; font-size: 13px;" onclick="return confirm('{{ cancel_msg|escapejs }}')">
+                                        {% t "membership.subscription.btn.cancel" %}</button>
+                                </form>
+                                {% else %}
+                                <div class="subscription-warning">({% t "membership.subscription.auto_renew_off" %})</div>
+                                <form action="{% url 'commerce:resume-subscription' %}" method="POST" style="margin-top: 8px;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="lang" value="{{ request.lang }}">
+                                    <button type="submit" class="upgrade-btn resume-btn" style="cursor: pointer; padding: 4px 12px; font-size: 13px;">{% t "membership.subscription.btn.resume" %}</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{% t "membership.price" %}</td>
+                    <td>{% t "membership.price.free" %}</td>
+                    <td>{% t "membership.price.free" %}</td>
+                    <td>
+                        <div class="price-cell">
+                            <span class="price-badge">{% t "membership.price.discount_badge" %}</span>
+                            <div class="price-original">USD$9.99 {% t "common.unit.per_year" %}</div>
+                            <div class="price-current">USD$6.99 {% t "common.unit.per_year" %}</div>
+                            <div class="price-promo-label">{% t "membership.price.early_supporter" %}</div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>{% t "membership.platvm.view" %}</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td>{% t "membership.collection.save" %}</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td>{% t "membership.preference.save" %}</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td>{% t "membership.chatbot.query" %}</td>
+                    <td>❌</td>
+                    <td>13 / {% t "membership.unit.week" %}</td>
+                    <td>♾️</td>
+                </tr>
+                <tr>
+                    <td>{% t "membership.flowchart.browsing" %}</td>
+                    <td>{% t "membership.flowchart.basic_only" %}</td>
+                    <td>{% t "membership.flowchart.basic_only" %}</td>
+                    <td>{% t "membership.flowchart.all_and_features" %}</td>
+                </tr>
+                <tr>
+                    <td>{% t "membership.script.view" %}</td>
+                    <td>❌</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td>{% t "membership.news.browsing" %}</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td>{% t "membership.news.sharing" %}</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td>{% t "membership.news.save_cate_limit" %}</td>
+                    <td>❌</td>
+                    <td>1</td>
+                    <td>24</td>
+                </tr>
+                <tr>
+                    <td>{% t "membership.setting" %}</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                </tr>
+                <!-- 
+                <tr>
+                    <td>推薦 (Recommend)</td>
+                    <td>Standard</td>
+                    <td>AI Powered</td>
+                    <td>Deep AI Insights</td>
+                </tr>
+                <tr>
+                    <td>回報關聯性 (Report relevance)</td>
+                    <td><span class="check-icon">✓</span></td>
+                    <td><span class="check-icon">✓</span></td>
+                    <td><span class="check-icon">✓</span></td>
+                </tr> -->
+            </tbody>
+        </table>
+
+        {% comment %}
+        我的 Edition Access。名額不可逆（選定後只有在該版本還沒有任何已發布
+        流程圖時才退得回），所以一定要有個地方查得到自己用掉了哪幾款、還剩
+        幾個免費名額——否則使用者只能一款一款點進 info 頁去湊。
+
+        intro 那段除了說明這是什麼，還要明白告訴使用者「去哪裡加」：這一頁
+        沒有任何新增入口，入口只在各 edition 的 info 分頁。
+        {% endcomment %}
+        {% if user.is_authenticated %}
+        <div class="my-unlocks">
+            <h3>{% t "membership.unlock.heading" %}
+                <span class="my-unlocks-quota">
+                    {% t "game.unlock.remaining" %}
+                    {% if unlock_free_quota == -1 %}∞{% else %}{{ unlock_free_used }}/{{ unlock_free_quota }}{% endif %}
+                </span>
+            </h3>
+            <p class="my-unlocks-intro">{% t "membership.unlock.intro" %}</p>
+            <p class="my-unlocks-intro">
+                {% t "membership.unlock.where" %}
+                {% include "game/partials/edition_access_icon.html" with access_size="1.6em" %}
+            </p>
+            <p class="my-unlocks-intro">
+                {% t "membership.unlock.pricing" %}
+                {% include "game/partials/edition_access_price.html" %}
+            </p>
+            {% if my_unlocks %}
+            <ul class="my-unlocks-list">
+                {% for u in my_unlocks %}
+                <li>
+                    {% include "game/partials/edition_access_icon.html" %}
+                    <a href="{{ u.edition.get_absolute_url }}info/">{{ u.edition.name }}</a>
+                    <span class="my-unlocks-source">
+                        {% if u.source == 'paid' %}{% t "game.unlock.source.paid" %}{% else %}{% t "game.unlock.source.free" %}{% endif %}
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="my-unlocks-empty">{% t "membership.unlock.empty" %}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock content %}

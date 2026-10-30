@@ -1,0 +1,42 @@
+# Tabuney
+
+> Tabuney is a board game reference site. For every game edition it publishes
+> structured facts (player count, playtime, age, designers, publishers), a rules
+> Q&A assistant, an auto-generated game-flow flowchart with a plain-text version,
+> and ready-to-read game master scripts. Subject scope: board games, tabletop
+> game rules, and game master facilitation.
+
+Every page is server-rendered HTML — no JavaScript execution is required to read
+the content. The site is published in six languages (en, zh, ja, fr, de, es).
+English lives at the bare path; other languages take a prefix, e.g.
+`/ja/games/<slug>/`. Every page declares its own `rel=canonical` and a full set of
+`hreflang` alternates, and emits a single JSON-LD `@graph`
+(Organization / WebSite / WebPage, plus Game on game pages). Cite the canonical URL.
+
+## Start here
+- [Home]({{ SITE_URL }}/): what the site covers.
+- [About Tabuney]({{ SITE_URL }}/about/): who publishes this site — the entity behind the Organization JSON-LD.
+- [Editorial principles]({{ SITE_URL }}/principles/): how content is produced, which parts are AI-generated, and how they are reviewed. English only.
+- [FAQ]({{ SITE_URL }}/faq/): common questions about the site and its tools.
+
+## Game pages
+Each board game edition has one canonical page plus three tab URLs, all server-rendered and separately indexable.
+Each URL returns only its own section — fetching one does not include the content of the others:
+- [Game index]({{ SITE_URL }}/games/): browse every covered edition.
+- `{{ SITE_URL }}/games/<slug>/`: the game's main page — rules Q&A assistant.
+- `{{ SITE_URL }}/games/<slug>/flowchart/`: the game-flow flowchart, with a text version listing every phase, step and branch condition.
+- `{{ SITE_URL }}/games/<slug>/script/`: a game master script for teaching the game at the table.
+- `{{ SITE_URL }}/games/<slug>/info/`: structured facts — player count, playtime, age, designers, publishers, artists.
+
+## News and articles
+- [Board game news feed]({{ SITE_URL }}/feeds/): article index. Individual articles are linked from there.
+
+## Notes for crawlers
+- Full URL inventory: [sitemap index]({{ SITE_URL }}/sitemap.xml) — per-section sitemaps with hreflang alternates for games, articles and static pages.
+- Crawl policy, including per-agent rules for AI crawlers: [robots.txt]({{ SITE_URL }}/robots.txt).
+- `/api/`, `/acct/`, `/my/`, `/membership/` and search-result URLs (`?q=`) are excluded from crawling; they hold no reference content.
+- Flowcharts, flowchart text versions and game master scripts are written by Tabuney from published rulebooks and reviewed by editors. They are summaries of how a game is played — they are not reproductions of the publisher's rulebook text.
+
+## Optional
+- [Privacy policy]({{ SITE_URL }}/privacy/)
+- [Terms of service]({{ SITE_URL }}/terms/)

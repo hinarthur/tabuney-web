@@ -1,0 +1,239 @@
+{% extends "admin/base_site.html" %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{{ home_url }}">Home</a> &rsaquo;
+    Feed Panel
+</div>
+{% endblock %}
+{% block content %}
+<div id="content-main">
+    <h1>Feed Panel</h1>
+
+    <div class="module">
+        <h2>Quick Links</h2>
+        <table>
+            <tbody>
+                <tr>
+                    <th scope="row">
+                        <a href="#" id="fetch-rss-btn" class="btn btn-primary">
+                            Fetch RSS Feeds
+                        </a>
+                    </th>
+                    <td>立即抓取最新 RSS 文章</td>
+                    <script>
+                        console.log('clicked fetch rss');
+                        document.getElementById('fetch-rss-btn').addEventListener('click', function () {
+                            fetch("{% url 'fetch_rss' %}", {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': '{{ csrf_token }}',
+                                    'Content-Type': 'application/json'
+                                }
+                            })
+                                .then(response => response.json())
+                                .then(data => {
+                                    alert(data.message);
+                                })
+                                .catch(error => {
+                                    console.error('Error:', error);
+                                });
+                        });
+                    </script>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <a href="#" id="reset_rss_tasks" class="btn btn-primary">
+                            Reset RSS Tasks Schedule
+                        </a>
+                    </th>
+                    <td>重新排程RSS Fetch Schedule</td>
+                    <script>
+                        console.log('reset rss tasks');
+                        document.getElementById('reset_rss_tasks').addEventListener('click', function () {
+                            fetch("{% url 'reset_rss_tasks' %}", {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': '{{ csrf_token }}',
+                                    'Content-Type': 'application/json'
+                                }
+                            })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.message) {
+                                        alert(data.message);
+                                    } else if (data.error) {
+                                        alert(data.error);
+                                    } else {
+                                        alert('Unexpected response');
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error:', error);
+                                });
+                        });
+                    </script>
+                </tr>
+                {% for link in custom_links %}
+                <tr>
+                    <th scope="row">
+                        <a href="{{ link.url }}" class="btn btn-primary">{{ link.title }}</a>
+                    </th>
+                    <td>{{ link.description }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<h2>網站RSS資訊解析</h2>
+<form method="post" style="margin-bottom:1em;">
+    {% csrf_token %}
+    <input type="text" name="site_url" value="{{ site_url|default_if_none:'' }}" style="width:350px;"
+        placeholder="請輸入網址">
+    <button type="submit">偵測資訊</button>
+</form>
+{% if error %}
+<div style="color:red;">{{ error }}</div>
+{% endif %}
+<!-- {% if result %}
+<table class="table table-bordered" style="width:auto;">
+    <tr>
+        <th>網站名</th>
+        <td>
+            <span id="site-title-txt">{{ result.site_title }}</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary"
+                onclick="copyText('site-title-txt', this)">複製</button>
+        </td>
+    </tr>
+    <tr>
+        <th>RSS網址</th>
+        <td>
+            {% if result.rss_url %}
+            <span id="rss-url-txt">{{ result.rss_url }}</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary"
+                onclick="copyText('rss-url-txt', this)">複製</button>
+            <a href="{{ result.rss_url }}" target="_blank" style="margin-left:5px;">前往</a>
+            {% else %}
+            <span class="text-danger">未找到</span>
+            {% endif %}
+        </td>
+    </tr>
+    <tr>
+        <th>網站Logo</th>
+        <td>
+            {% if result.logo_url %}
+            <img src="{{ result.logo_url }}" style="max-height:32px;vertical-align:middle;margin-right:10px;"
+                alt="Site Logo">
+            <a href="{{ result.logo_url }}" target="_blank">新視窗打開</a>
+            {% else %}
+            <span class="text-muted">未找到</span>
+            {% endif %}
+        </td>
+    </tr>
+    <tr>
+        <th>語言</th>
+        <td>{{ result.language|default:"未知" }}</td>
+    </tr>
+    <tr>
+        <th>最新發布文章時間</th>
+        <td>
+            {% if result.latest_entry_date %}
+            {{ result.latest_entry_date }}
+            {% else %}
+            <span class="text-muted">無法取得</span>
+            {% endif %}
+        </td>
+    </tr>
+</table>
+{% endif %} -->
+
+{% if result_list %}
+    {% for result in result_list %}
+        <table class="table table-bordered" style="width:auto; margin-bottom:20px;">
+            <tr>
+                <th>網站名</th>
+                <td>
+                    <span id="site-title-txt-{{ forloop.counter0 }}">{{ result.site_title }}</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                        onclick="copyText('site-title-txt-{{ forloop.counter0 }}', this)">複製</button>
+                </td>
+            </tr>
+            <tr>
+                <th>RSS網址</th>
+                <td>
+                    {% if result.rss_url %}
+                        <span id="rss-url-txt-{{ forloop.counter0 }}">{{ result.rss_url }}</span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                            onclick="copyText('rss-url-txt-{{ forloop.counter0 }}', this)">複製</button>
+                        <a href="{{ result.rss_url }}" target="_blank" style="margin-left:5px;">前往</a>
+                    {% else %}
+                        <span class="text-danger">未找到</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>網站Logo</th>
+                <td>
+                    {% if result.logo_url %}
+                        <img src="{{ result.logo_url }}" style="max-height:32px;vertical-align:middle;margin-right:10px;"
+                            alt="Site Logo">
+                        <a href="{{ result.logo_url }}" target="_blank">新視窗打開</a>
+                    {% else %}
+                        <span class="text-muted">未找到</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>語言</th>
+                <td>{{ result.language|default:"未知" }}</td>
+            </tr>
+            <tr>
+                <th>最新發布文章時間</th>
+                <td>
+                    {% if result.latest_entry_date %}
+                        {{ result.latest_entry_date }}
+                    {% else %}
+                        <span class="text-muted">無法取得</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    {% endfor %}
+{% else %}
+    <div class="alert alert-warning">未找到任何RSS Feed</div>
+{% endif %}
+
+
+<script>
+    function copyText(elementId, btn) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        // 這裡的 span 只會有純文字，也可用 el.innerText
+        const text = el.textContent || el.innerText;
+        if (!navigator.clipboard) {
+            // 舊方法
+            const temp = document.createElement("textarea");
+            temp.value = text;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand("copy");
+            document.body.removeChild(temp);
+        } else {
+            navigator.clipboard.writeText(text);
+        }
+        // 小回饋動畫/變化
+        if (btn) {
+            const oldText = btn.textContent;
+            btn.textContent = "已複製";
+            btn.disabled = true;
+            setTimeout(() => {
+                btn.textContent = oldText;
+                btn.disabled = false;
+            }, 900);
+        }
+    }
+</script>
+
+{% endblock %}

@@ -1,0 +1,977 @@
+/* ============================================================
+   TABUNEY THEME
+   ============================================================
+
+   Design direction
+   ----------------
+   - Clean, light, friendly product UI
+   - Soft blue / teal brand identity
+   - Low-saturation surfaces
+   - Dark text instead of white text on bright node colours
+   - Flowchart hierarchy relies on:
+       shape + tint + border + typography
+     rather than saturated colour blocks
+   - Light mode should feel airy
+   - Dark mode should feel calm rather than neon
+
+   Theme is controlled by:
+   <html data-theme="default|dark">
+
+   Component CSS should reference variables here instead of
+   overriding theme-specific styles locally.
+   ============================================================ */
+
+
+/* ============================================================
+   DEFAULT THEME — LIGHT
+   ============================================================ */
+
+:root[data-theme="default"] {
+
+    /* --------------------------------------------------------
+       Core brand
+       -------------------------------------------------------- */
+
+    --color-primary: #168BC3;
+    --color-primary-light: #71C7D4;
+
+    /*
+       Previous bright yellow is softened so that it can still
+       serve as a warm accent without looking like a warning.
+    */
+    --color-secondary: #E9BE45;
+
+
+    /* --------------------------------------------------------
+       General backgrounds
+       -------------------------------------------------------- */
+
+    --color-bg: #F5F7FA;
+    --color-bg-alt: #EDF2F7;
+    --color-bg-hover: #E6F1F7;
+
+    --color-bg-popup: #FFFFFF;
+
+
+    /* --------------------------------------------------------
+       General typography
+       -------------------------------------------------------- */
+
+    --color-text-main: #253247;
+    --color-text-minor: #657287;
+    --color-text-disabled: #9CA7B5;
+    --color-text-negative: #8B95A3;
+
+    --color-link: var(--color-primary);
+    --color-link-hover: #1477A8;
+
+
+    /* --------------------------------------------------------
+       General UI
+       -------------------------------------------------------- */
+
+    --shadow-sm:
+        0 1px 2px rgba(25, 41, 61, 0.04),
+        0 2px 6px rgba(25, 41, 61, 0.03);
+
+    --overlay-hover: rgba(23, 59, 92, 0.035);
+
+    --toast-bg: rgba(24, 32, 48, 0.92);
+    --toast-text: #FFFFFF;
+
+    --hamburger-line: #253247;
+
+    --btn-shadow:
+        0 1px 2px rgba(26, 48, 77, 0.06),
+        0 3px 8px rgba(26, 48, 77, 0.05);
+
+    --btn-shadow-hover:
+        0 4px 10px rgba(26, 48, 77, 0.08),
+        0 8px 22px rgba(26, 48, 77, 0.07);
+
+    --emoji-bg: #F1F4F7;
+    --emoji-border: #DEE4EA;
+
+    --popup-shadow:
+        0 18px 42px rgba(25, 41, 61, 0.14),
+        0 5px 14px rgba(25, 41, 61, 0.07);
+
+    --color-price-note: #9A741C;
+
+    --border-popup: #D2DAE4;
+
+    --shadow-dropdown:
+        0 12px 30px rgba(25, 41, 61, 0.12),
+        0 3px 8px rgba(25, 41, 61, 0.06);
+
+    --border-subtle: rgba(42, 61, 84, 0.11);
+    --border-card: rgba(42, 61, 84, 0.07);
+
+    --shadow-card:
+        0 10px 30px rgba(35, 55, 82, 0.07),
+        0 2px 8px rgba(35, 55, 82, 0.035);
+
+    --shadow-card-hover:
+        0 18px 42px rgba(35, 55, 82, 0.10),
+        0 5px 14px rgba(35, 55, 82, 0.055);
+
+
+    /* ========================================================
+       LANDING / ABOUT
+       ======================================================== */
+
+    /*
+       Landing should be slightly warmer / softer than an
+       enterprise dashboard while remaining within Tabuney blue.
+    */
+
+    --landing-bg: #FAFCFE;
+    --landing-bg-soft: #F1F7FB;
+    --landing-bg-deep: #E5F0F7;
+
+    --landing-gradient-1: #E9F4FA;
+    --landing-gradient-2: #DDECF5;
+
+    --landing-text: #1D2B3F;
+    --landing-text-soft: #607187;
+    --landing-text-on-dark: #F7FAFC;
+
+    --landing-accent: #168BC3;
+    --landing-accent-soft: #55AFB3;
+    --landing-accent-warm: #D5A93D;
+
+    --landing-line: rgba(22, 139, 195, 0.14);
+
+    --landing-glow: rgba(22, 139, 195, 0.11);
+    --landing-glow-soft: rgba(85, 175, 179, 0.13);
+
+    --landing-surface: rgba(255, 255, 255, 0.70);
+
+
+    /* --------------------------------------------------------
+       Home hero showcase (Full Flowchart + Step Flow cards)
+       -------------------------------------------------------- */
+
+    --hero-halo: #D6EAFC;
+    --hero-panel: #FFFFFF;
+    --hero-paper: #FFFFFF;
+    --hero-card-border: #DCE6F2;
+    --hero-card-shadow: rgba(26, 54, 94, 0.17);
+    --hero-note: #086DE6;
+    --hero-note-arrow: #E6A719;
+
+    --hero-step-surface: #F8FBFF;
+    --hero-step-border: #C9DCE8;
+    --hero-step-ink: #24364C;
+    --hero-step-toolbar: #FFFFFF;
+    --hero-step-toolbar-border: #BCCFE0;
+    --hero-step-btn-border: #9AB5CB;
+    --hero-step-btn-hover: #E4F2F8;
+    --hero-step-decision-fill: #DDF3F2;
+    --hero-step-decision-stroke: #65B9B5;
+    --hero-step-decision-ink: #246B69;
+    --hero-step-action-fill: #DFEFFA;
+    --hero-step-action-stroke: #7BB8DB;
+    --hero-step-node-ink: #285F86;
+    --hero-step-parallel-fill: #EDEAF8;
+    --hero-step-parallel-stroke: #A99AD2;
+    --hero-step-end-fill: #FFF0DC;
+    --hero-step-end-stroke: #E1B46C;
+    --hero-step-stripe: #246B69;
+
+    /* Ready to play? 底圖是明亮的山丘，兩種主題都用深色字 */
+    --cta-ink: #1D2B3F;
+    --cta-ink-soft: #3F5068;
+    --cta-note: #086DE6;
+
+    /* Home 各區塊背景（由上到下） */
+    --home-hero-bg: #F7FAFD;
+    --home-popular-bg: #FFFFFF;
+    --home-flowchart-bg: #EAF3FA;
+    --home-features-bg: #FFFFFF;
+    --home-news-bg: #F7FAFD;
+    --home-footer-bg: #F1F5F9;
+
+    /* Popular gameplay guides 第 5 張「Browse」卡 */
+    --browse-card-bg: #EAF4FB;
+    --browse-card-border: #C7E3F2;
+    --browse-icon-bg: #D7ECF8;
+    --browse-icon-color: #168BC3;
+    --browse-title: #253247;
+    --browse-description: #596F84;
+    --browse-button-bg: #168BC3;
+    --browse-button-text: #FFFFFF;
+
+    /* More ways to learn 卡片邊框 */
+    --feature-card-border: #E0E7EF;
+
+
+    /* ========================================================
+       FAQ
+       ======================================================== */
+
+    --faq-bg: var(--landing-bg);
+    --faq-text: var(--landing-text);
+    --faq-text-soft: var(--landing-text-soft);
+
+    --faq-accent: var(--landing-accent);
+
+    --faq-border: rgba(36, 81, 115, 0.11);
+
+    --faq-item-bg: rgba(255, 255, 255, 0.82);
+
+
+    /* ========================================================
+       FLOWCHART — LIGHT
+       ========================================================
+
+       Visual philosophy:
+
+       Action:
+           brand-harmonised phase tints
+
+       Start:
+           soft teal-green
+
+       End:
+           soft rose (distinct from amber Endgame actions)
+
+       Decision:
+           soft teal
+
+       Simultaneous:
+           soft lavender
+
+       Phase:
+           soft golden cream
+
+       The node shape should remain the strongest semantic cue.
+       Colour is secondary.
+       ======================================================== */
+
+
+    /* --------------------------------------------------------
+       Canvas
+       -------------------------------------------------------- */
+
+    --fc-editor-bg: #F8FAFC;
+    --fc-editor-text: #344054;
+
+    /* Board popup (grid diagram bound to a step). Cell fills come from each
+       board's own palette; these are the empty cell, grid lines and text halo. */
+    --fc-board-cell: #F4F1EA;
+    --fc-board-line: #8C8577;
+    --fc-board-text: #222222;
+    --fc-board-text-halo: #FFFFFF;
+    --fc-board-mark-outline: #222222;
+    --fc-modal-backdrop: rgba(15, 23, 42, 0.45);
+
+    /*
+       Generic fallback border used by components that do not
+       yet reference type-specific borders.
+    */
+    --fc-node-border: #CCD6E2;
+
+
+    /* --------------------------------------------------------
+       Standard action node
+       -------------------------------------------------------- */
+
+    --fc-action-bg: #FFFFFF;
+    --fc-action-text: #344054;
+    --fc-action-border: #CBD6E2;
+
+
+    /* --------------------------------------------------------
+       Start node
+       -------------------------------------------------------- */
+
+    --fc-oval-start-bg: #E6F6F2;
+    --fc-oval-start-text: #27695F;
+    --fc-oval-start-border: #8AC8BA;
+
+
+    /* --------------------------------------------------------
+       End node
+       -------------------------------------------------------- */
+
+    --fc-oval-end-bg: #FCEDEF;
+    --fc-oval-end-text: #94505A;
+    --fc-oval-end-border: #DEA1AA;
+
+
+    /*
+       Backward-compatible fallback if start/end currently use
+       one shared text variable.
+    */
+    --fc-oval-text: #344054;
+
+
+    /* --------------------------------------------------------
+       Decision node
+       -------------------------------------------------------- */
+
+    --fc-diamond-bg: #DDF3F2;
+    --fc-diamond-text: #246B69;
+    --fc-diamond-border: #65B9B5;
+
+
+    /* --------------------------------------------------------
+       Simultaneous / double node
+       -------------------------------------------------------- */
+
+    --fc-double-bg: #EDEAF8;
+    --fc-double-text: #66538C;
+    --fc-double-border: #A99AD2;
+
+
+    /* --------------------------------------------------------
+       Phase
+       -------------------------------------------------------- */
+
+    /*
+       Phase is intentionally understated.
+       It should organise the diagram, not compete with actions.
+    */
+
+    --fc-phase-bg: #FFF8E7;
+    --fc-phase-text: #876B2B;
+    --fc-phase-border: #E4C87F;
+
+
+    /* --------------------------------------------------------
+       Action node colours by phase
+       1 = Preparation
+       2 = Game Flow
+       3 = Endgame
+       -------------------------------------------------------- */
+
+    --fc-phase1-bg: #E5F5EB;
+    --fc-phase1-text: #2F7055;
+    --fc-phase1-border: #80C7A5;
+
+    --fc-phase2-bg: #DFEFFA;
+    --fc-phase2-text: #285F86;
+    --fc-phase2-border: #7BB8DB;
+
+    --fc-phase3-bg: #FFF0DC;
+    --fc-phase3-text: #916321;
+    --fc-phase3-border: #E1B46C;
+
+
+    /* --------------------------------------------------------
+       Legend
+       -------------------------------------------------------- */
+
+    --fc-legend-bg: #F3F6F9;
+    --fc-legend-title: #344054;
+    --fc-legend-content: #697586;
+
+    --fc-text-color: #344054;
+
+
+    /* --------------------------------------------------------
+       Edges
+       -------------------------------------------------------- */
+
+    /*
+       Default paths are intentionally lighter than node text.
+       This prevents dense charts becoming visually heavy.
+    */
+
+    --fc-edge-stroke: #8290A3;
+
+    /*
+       Yes / No retain green / rose semantics but are muted.
+    */
+    --fc-edge-yes: #4D9272;
+    --fc-edge-no: #BD6871;
+
+    --fc-edge-label-bg: rgba(248, 250, 252, 0.94);
+
+
+    /* --------------------------------------------------------
+       Optional node styling tokens
+       --------------------------------------------------------
+
+       These are new tokens for gradually modernising component
+       CSS. Existing code does not have to use them immediately.
+    */
+
+    --fc-node-shadow:
+        0 1px 2px rgba(29, 46, 70, 0.035),
+        0 3px 8px rgba(29, 46, 70, 0.025);
+
+    --fc-node-shadow-hover:
+        0 5px 14px rgba(29, 46, 70, 0.075);
+
+    --fc-node-selected-ring:
+        0 0 0 2px rgba(22, 139, 195, 0.18);
+
+    --fc-handle-bg: #95A4B7;
+
+    /* Print palette (ink saving). Paper is always light, so these live only in
+       the default theme; the print window is forced to data-theme="default". */
+    --fc-print-ink: #000000;
+    --fc-print-start-bg: #d9f7be;
+    --fc-print-start-border: #237804;
+    --fc-print-end-bg: #ffccc7;
+    --fc-print-end-border: #cf1322;
+    --fc-print-diamond-bg: #e6f4ff;
+    --fc-print-diamond-border: #0958d9;
+    --fc-print-double-bg: #efdbff;
+    --fc-print-double-border: #531dab;
+    --fc-print-phase-bg: #ffe7ba;
+    --fc-print-phase-border: #d46b08;
+    --fc-print-action-bg: #ffffff;
+
+    /* Action node sheen: soft highlight from the top-left, over the node colour */
+    --fc-action-sheen: linear-gradient(145deg, rgba(255,255,255,0.75), rgba(255,255,255,0) 50%, rgba(0,0,0,0.08));
+    /* Decision node texture: soft highlight + fine diagonal hatch */
+    --fc-diamond-texture:
+        radial-gradient(circle at 25% 20%, rgba(255,255,255,0.42), transparent 45%),
+        repeating-linear-gradient(135deg, rgba(37,109,106,0.05) 0, rgba(37,109,106,0.05) 1px, transparent 1px, transparent 5px);
+    /* Texture per node type (layered over the node colour; see nodes.css) */
+    --fc-oval-sheen: linear-gradient(160deg, rgba(255,255,255,0.45), rgba(255,255,255,0) 60%);
+    --fc-double-texture:
+        repeating-linear-gradient(45deg, rgba(112,88,135,0.07) 0, rgba(112,88,135,0.07) 1px, transparent 1px, transparent 5px),
+        repeating-linear-gradient(-45deg, rgba(112,88,135,0.07) 0, rgba(112,88,135,0.07) 1px, transparent 1px, transparent 5px);
+    --fc-phase-texture:
+        repeating-linear-gradient(0deg, rgba(128,99,29,0.09) 0, rgba(128,99,29,0.09) 1px, transparent 1px, transparent 4px);
+    --fc-legend-texture:
+        linear-gradient(rgba(52,64,84,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(52,64,84,0.06) 1px, transparent 1px);
+
+    /* Selection outline / drop target, and empty-placeholder dashes */
+    --fc-select: #3F7FBF;
+    --fc-placeholder: #B7C2D0;
+
+    --fc-group-bg: rgba(234, 242, 252, 0.36);
+    --fc-group-border: #BDCCDC;
+}
+
+
+
+/* ============================================================
+   DARK THEME
+   ============================================================ */
+
+:root[data-theme="dark"] {
+
+    /* --------------------------------------------------------
+       Core brand
+       -------------------------------------------------------- */
+
+    --color-primary: #5EB5D8;
+    --color-primary-light: #80CFD2;
+    --color-secondary: #E4C665;
+
+
+    /* --------------------------------------------------------
+       General backgrounds
+       -------------------------------------------------------- */
+
+    --color-bg: #111823;
+    --color-bg-alt: #182231;
+    --color-bg-hover: #223144;
+
+    --color-bg-popup: #1B2635;
+
+
+    /* --------------------------------------------------------
+       General typography
+       -------------------------------------------------------- */
+
+    --color-text-main: #E5EBF2;
+    --color-text-minor: #B5C0CE;
+    --color-text-disabled: #7D8999;
+    --color-text-negative: #929DAC;
+
+    --color-link: var(--color-primary);
+    --color-link-hover: #83CBE7;
+
+
+    /* --------------------------------------------------------
+       General UI
+       -------------------------------------------------------- */
+
+    --shadow-sm:
+        0 1px 3px rgba(0, 0, 0, 0.28);
+
+    --overlay-hover: rgba(255, 255, 255, 0.045);
+
+    --toast-bg: rgba(245, 248, 252, 0.94);
+    --toast-text: #18212E;
+
+    --hamburger-line: #E8EDF4;
+
+    --btn-shadow:
+        0 2px 5px rgba(0, 0, 0, 0.24);
+
+    --btn-shadow-hover:
+        0 6px 18px rgba(0, 0, 0, 0.34);
+
+    --emoji-bg: #263242;
+    --emoji-border: #405066;
+
+    --popup-shadow:
+        0 18px 45px rgba(0, 0, 0, 0.48);
+
+    --color-price-note: #E3BC62;
+
+    --border-popup: #4A596D;
+
+    --shadow-dropdown:
+        0 14px 34px rgba(0, 0, 0, 0.42);
+
+    --border-subtle: rgba(221, 231, 244, 0.13);
+    --border-card: rgba(221, 231, 244, 0.075);
+
+    --shadow-card:
+        0 12px 32px rgba(0, 0, 0, 0.27),
+        0 3px 10px rgba(0, 0, 0, 0.17);
+
+    --shadow-card-hover:
+        0 20px 44px rgba(0, 0, 0, 0.37),
+        0 8px 18px rgba(0, 0, 0, 0.22);
+
+
+    /* ========================================================
+       LANDING / ABOUT — DARK
+       ======================================================== */
+
+    --landing-bg: #0C1420;
+    --landing-bg-soft: #121F2E;
+    --landing-bg-deep: #09101A;
+
+    --landing-gradient-1: #12283A;
+    --landing-gradient-2: #173247;
+
+    --landing-text: #EBF1F8;
+    --landing-text-soft: #AAB9C9;
+    --landing-text-on-dark: #F7FAFD;
+
+    --landing-accent: #64B9DC;
+    --landing-accent-soft: #7AC7C8;
+    --landing-accent-warm: #E5C15C;
+
+    --landing-line: rgba(100, 185, 220, 0.16);
+
+    --landing-glow: rgba(100, 185, 220, 0.13);
+    --landing-glow-soft: rgba(122, 199, 200, 0.14);
+
+    --landing-surface: rgba(255, 255, 255, 0.045);
+
+
+    /* --------------------------------------------------------
+       Home hero showcase — DARK
+       -------------------------------------------------------- */
+
+    --hero-halo: #183A58;
+    --hero-panel: #192638;
+    --hero-paper: #182231;
+    --hero-card-border: #28384D;
+    --hero-card-shadow: rgba(0, 0, 0, 0.38);
+    --hero-note: #77C6EB;
+    --hero-note-arrow: #E6A719;
+
+    --hero-step-surface: #1B2635;
+    --hero-step-border: #45556B;
+    --hero-step-ink: #E7F2FC;
+    --hero-step-toolbar: #172333;
+    --hero-step-toolbar-border: #748296;
+    --hero-step-btn-border: #687F98;
+    --hero-step-btn-hover: #2D516A;
+    --hero-step-decision-fill: #254846;
+    --hero-step-decision-stroke: #67BCB5;
+    --hero-step-decision-ink: #C5E7E4;
+    --hero-step-action-fill: #25405B;
+    --hero-step-action-stroke: #81B5DF;
+    --hero-step-node-ink: #DBEAF7;
+    --hero-step-parallel-fill: #39314C;
+    --hero-step-parallel-stroke: #AB95CB;
+    --hero-step-end-fill: #48313A;
+    --hero-step-end-stroke: #B9818A;
+    --hero-step-stripe: #B6E9E5;
+
+    /* Ready to play? 底圖是明亮的山丘，兩種主題都用深色字 */
+    --cta-ink: #1D2B3F;
+    --cta-ink-soft: #3F5068;
+    --cta-note: #086DE6;
+
+    /* Home 各區塊背景（由上到下） */
+    --home-hero-bg: #101823;
+    --home-popular-bg: #141F2D;
+    --home-flowchart-bg: #1B2B3C;
+    --home-features-bg: #101823;
+    --home-news-bg: #141F2D;
+    --home-footer-bg: #182231;
+
+    /* Popular gameplay guides 第 5 張「Browse」卡 */
+    --browse-card-bg: #203648;
+    --browse-card-border: #36576A;
+    --browse-icon-bg: #29495A;
+    --browse-icon-color: #86D0E6;
+    --browse-title: #EFF5FA;
+    --browse-description: #B7CCD9;
+    --browse-button-bg: #5EB5D8;
+    --browse-button-text: #102332;
+
+    /* More ways to learn 卡片邊框 */
+    --feature-card-border: #334456;
+
+
+    /* ========================================================
+       FAQ — DARK
+       ======================================================== */
+
+    --faq-bg: var(--landing-bg);
+    --faq-text: var(--landing-text);
+    --faq-text-soft: var(--landing-text-soft);
+
+    --faq-accent: var(--landing-accent);
+
+    --faq-border: rgba(152, 190, 216, 0.14);
+
+    --faq-item-bg: rgba(255, 255, 255, 0.038);
+
+
+    /* ========================================================
+       FLOWCHART — DARK
+       ======================================================== */
+
+    /*
+       Dark mode follows the same semantic families as light
+       mode, but surfaces are restrained and slightly desaturated.
+    */
+
+
+    /* --------------------------------------------------------
+       Canvas
+       -------------------------------------------------------- */
+
+    --fc-editor-bg: #182231;
+    --fc-editor-text: #E3EAF2;
+
+    --fc-board-cell: #2A3546;
+    --fc-board-line: #6B7A90;
+    --fc-board-text: #111111;
+    --fc-board-text-halo: #F5F5F5;
+    --fc-board-mark-outline: #111111;
+    --fc-modal-backdrop: rgba(0, 0, 0, 0.6);
+
+    --fc-node-border: #526175;
+
+
+    /* --------------------------------------------------------
+       Standard action node
+       -------------------------------------------------------- */
+
+    --fc-action-bg: #263244;
+    --fc-action-text: #E2E9F1;
+    --fc-action-border: #526277;
+
+
+    /* --------------------------------------------------------
+       Start
+       -------------------------------------------------------- */
+
+    --fc-oval-start-bg: #21443F;
+    --fc-oval-start-text: #B9E1D8;
+    --fc-oval-start-border: #4C8E80;
+
+
+    /* --------------------------------------------------------
+       End
+       -------------------------------------------------------- */
+
+    --fc-oval-end-bg: #4A2D34;
+    --fc-oval-end-text: #F0C6CC;
+    --fc-oval-end-border: #A66771;
+
+    --fc-oval-text: #E4EAF1;
+
+
+    /* --------------------------------------------------------
+       Decision
+       -------------------------------------------------------- */
+
+    --fc-diamond-bg: #1F4645;
+    --fc-diamond-text: #BCE8E2;
+    --fc-diamond-border: #59A7A1;
+
+
+    /* --------------------------------------------------------
+       Simultaneous
+       -------------------------------------------------------- */
+
+    --fc-double-bg: #34314B;
+    --fc-double-text: #DDD7F1;
+    --fc-double-border: #8274AD;
+
+
+    /* --------------------------------------------------------
+       Phase
+       -------------------------------------------------------- */
+
+    --fc-phase-bg: #463D2A;
+    --fc-phase-text: #F1DCA9;
+    --fc-phase-border: #A28A55;
+
+
+    /* --------------------------------------------------------
+       Action node colours by phase
+       1 = Preparation
+       2 = Game Flow
+       3 = Endgame
+       -------------------------------------------------------- */
+
+    --fc-phase1-bg: #234239;
+    --fc-phase1-text: #C0E7D3;
+    --fc-phase1-border: #5B9D80;
+
+    --fc-phase2-bg: #203C57;
+    --fc-phase2-text: #C3E0F4;
+    --fc-phase2-border: #6298BD;
+
+    --fc-phase3-bg: #483922;
+    --fc-phase3-text: #F6DFB4;
+    --fc-phase3-border: #B58C49;
+
+
+    /* --------------------------------------------------------
+       Legend
+       -------------------------------------------------------- */
+
+    --fc-legend-bg: #202B3A;
+    --fc-legend-title: #E5EBF2;
+    --fc-legend-content: #AFBBC9;
+
+    --fc-text-color: #E3EAF2;
+
+
+    /* --------------------------------------------------------
+       Edges
+       -------------------------------------------------------- */
+
+    --fc-edge-stroke: #9AA8B9;
+    --fc-edge-yes: #78B596;
+    --fc-edge-no: #D68A91;
+
+    --fc-edge-label-bg: rgba(24, 34, 49, 0.94);
+
+
+    /* --------------------------------------------------------
+       Optional modern flowchart tokens
+       -------------------------------------------------------- */
+
+    --fc-node-shadow:
+        0 2px 5px rgba(0, 0, 0, 0.18);
+
+    --fc-node-shadow-hover:
+        0 6px 16px rgba(0, 0, 0, 0.27);
+
+    --fc-node-selected-ring:
+        0 0 0 2px rgba(94, 181, 216, 0.24);
+
+    --fc-handle-bg: #8493A6;
+
+    /* Action node sheen: soft highlight from the top-left, over the node colour */
+    --fc-action-sheen: linear-gradient(145deg, rgba(255,255,255,0.16), rgba(255,255,255,0) 50%, rgba(0,0,0,0.22));
+    /* Decision node texture: soft highlight + fine diagonal hatch */
+    --fc-diamond-texture:
+        radial-gradient(circle at 25% 20%, rgba(255,255,255,0.12), transparent 45%),
+        repeating-linear-gradient(135deg, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 5px);
+    /* Texture per node type (layered over the node colour; see nodes.css) */
+    --fc-oval-sheen: linear-gradient(160deg, rgba(255,255,255,0.12), rgba(255,255,255,0) 60%);
+    --fc-double-texture:
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 5px),
+        repeating-linear-gradient(-45deg, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 5px);
+    --fc-phase-texture:
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 4px);
+    --fc-legend-texture:
+        linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+
+    /* Selection outline / drop target, and empty-placeholder dashes */
+    --fc-select: #5EB5D8;
+    --fc-placeholder: #526175;
+
+    --fc-group-bg: rgba(50, 71, 96, 0.26);
+    --fc-group-border: #556A83;
+}
+
+
+
+/* ============================================================
+   REACT FLOW LIBRARY OVERRIDES — LIGHT
+   ============================================================
+
+   React Flow declares its own --xy-* properties on .react-flow.
+   Defining these directly here gives our theme variables higher
+   specificity than the library defaults.
+   ============================================================ */
+
+:root[data-theme="default"] .react-flow {
+
+    --xy-background-color-default:
+        var(--fc-editor-bg);
+
+    --xy-background-pattern-dots-color-default:
+        #D7E0EA;
+
+    --xy-background-pattern-lines-color-default:
+        #DEE6EE;
+
+    --xy-background-pattern-cross-color-default:
+        #DEE6EE;
+
+
+    --xy-node-color-default:
+        var(--fc-action-text);
+
+    --xy-node-border-default:
+        1px solid var(--fc-node-border);
+
+    --xy-node-background-color-default:
+        var(--fc-action-bg);
+
+    --xy-node-boxshadow-hover-default:
+        var(--fc-node-shadow-hover);
+
+    --xy-node-boxshadow-selected-default:
+        var(--fc-node-selected-ring);
+
+
+    --xy-handle-background-color-default:
+        var(--fc-handle-bg);
+
+    --xy-handle-border-color-default:
+        #FFFFFF;
+
+
+    --xy-edge-stroke-default:
+        var(--fc-edge-stroke);
+
+    --xy-edge-stroke-selected-default:
+        var(--color-primary);
+
+
+    --xy-controls-button-background-color-default:
+        rgba(255, 255, 255, 0.94);
+
+    --xy-controls-button-background-color-hover-default:
+        #EFF5F9;
+
+    --xy-controls-button-color-default:
+        var(--color-text-main);
+
+    --xy-controls-button-border-color-default:
+        #D4DEE8;
+
+
+    --xy-edge-label-background-color-default:
+        var(--fc-edge-label-bg);
+
+    --xy-edge-label-color-default:
+        var(--fc-text-color);
+
+
+    --xy-minimap-background-color-default:
+        #F2F6F9;
+
+    --xy-minimap-mask-background-color-default:
+        rgba(231, 238, 244, 0.68);
+
+    --xy-minimap-node-background-color-default:
+        #A9B8C8;
+
+
+    --xy-attribution-background-color-default:
+        rgba(255, 255, 255, 0.74);
+}
+
+
+
+/* ============================================================
+   REACT FLOW LIBRARY OVERRIDES — DARK
+   ============================================================ */
+
+:root[data-theme="dark"] .react-flow {
+
+    --xy-background-color-default:
+        var(--fc-editor-bg);
+
+    --xy-background-pattern-dots-color-default:
+        #3C4A5B;
+
+    --xy-background-pattern-lines-color-default:
+        #344151;
+
+    --xy-background-pattern-cross-color-default:
+        #344151;
+
+
+    --xy-node-color-default:
+        var(--fc-action-text);
+
+    --xy-node-border-default:
+        1px solid var(--fc-node-border);
+
+    --xy-node-background-color-default:
+        var(--fc-action-bg);
+
+    --xy-node-boxshadow-hover-default:
+        var(--fc-node-shadow-hover);
+
+    --xy-node-boxshadow-selected-default:
+        var(--fc-node-selected-ring);
+
+
+    --xy-handle-background-color-default:
+        var(--fc-handle-bg);
+
+    --xy-handle-border-color-default:
+        var(--fc-editor-bg);
+
+
+    --xy-edge-stroke-default:
+        var(--fc-edge-stroke);
+
+    --xy-edge-stroke-selected-default:
+        var(--color-primary-light);
+
+
+    --xy-controls-button-background-color-default:
+        #202C3C;
+
+    --xy-controls-button-background-color-hover-default:
+        #2A394D;
+
+    --xy-controls-button-color-default:
+        var(--color-text-main);
+
+    --xy-controls-button-border-color-default:
+        #49596E;
+
+
+    --xy-edge-label-background-color-default:
+        var(--fc-edge-label-bg);
+
+    --xy-edge-label-color-default:
+        var(--fc-text-color);
+
+
+    --xy-minimap-background-color-default:
+        #202B3A;
+
+    --xy-minimap-mask-background-color-default:
+        rgba(12, 20, 32, 0.62);
+
+    --xy-minimap-node-background-color-default:
+        #718095;
+
+
+    --xy-attribution-background-color-default:
+        rgba(17, 24, 35, 0.72);
+}

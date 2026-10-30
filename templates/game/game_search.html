@@ -1,0 +1,456 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load translate_tags %}
+
+{% block title %}{% t "seo.game.search.title" %} - Tabuney{% endblock title %}
+
+{% comment %}
+/games/ 和 / 是同一個 view，無查詢時內容完全相同 —— canonical 指回首頁把權重合併。
+有查詢時是搜尋結果頁，絕不能讓它進索引（無限組合、內容單薄）。
+{% endcomment %}
+{# {% url 'home' %} 會自動帶上當前語言前綴，所以 /ja/games/ 收斂到 /ja/ 而不是 / #}
+{% block canonical %}{% if query %}{{ SITE_URL }}{% url 'games:search' %}{% else %}{{ SITE_URL }}{% url 'home' %}{% endif %}{% endblock canonical %}
+{% block robots %}{% if query %}<meta name="robots" content="noindex,follow">{% endif %}{% endblock robots %}
+{% block meta_description %}{% t "seo.game.search.description" %}{% endblock meta_description %}
+{# og:title 不帶 " - Tabuney"，base.html 的 og:site_name 已經有品牌名 #}
+{% block og_title %}{% t "seo.game.search.title" %}{% endblock og_title %}
+{% block og_description %}{% t "seo.game.search.description" %}{% endblock og_description %}
+{% block twitter_title %}{% t "seo.game.search.title" %}{% endblock twitter_title %}
+{% block twitter_description %}{% t "seo.game.search.description" %}{% endblock twitter_description %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/game_search.css' %}?v=10">
+{% endblock extrahead %}
+
+{% block content %}
+<div class="container search-container">
+    
+    {% if not query %}
+    <div class="search-header">
+        {# 標語降級成 eyebrow，h1 與 <title> 共用同一個 key 才對得齊，也才會跟著語言翻 #}
+        <p class="eyebrow">Max the Playtime</p>
+        <h1 class="search-title">{% t "seo.game.search.h1" %}</h1>
+        <p class="search-description">{% t "game.search.intro" %}</p>
+        <button type="button" class="btn-secondary open-suggest-game-modal">
+            <i class="fas fa-plus"></i> {% t "game.suggest.button" %}
+        </button>
+    </div>
+    {% endif %}
+
+    <form method="get" action="" class="search-form">
+        <div class="input-wrapper">
+            <i class="fas fa-search search-icon"></i>
+            {# autocomplete="off" 是關掉瀏覽器自己的歷史下拉，不然它會蓋在我們的建議清單上 #}
+            <input type="text" name="q" value="{{ query|default:'' }}" 
+                   placeholder="{% t "game.placeholder.search-game" %}" 
+                   class="search-input"
+                   autocomplete="off"
+                   role="combobox"
+                   aria-autocomplete="list"
+                   aria-expanded="false"
+                   aria-controls="autocomplete-list"
+                   autofocus>
+            <ul id="autocomplete-list" class="autocomplete-list" role="listbox"
+                data-min-chars="{{ autocomplete_min_chars }}" hidden></ul>
+        </div>
+        <button type="submit" class="btn-primary search-btn">
+            {% t "common.btn.search" %}
+        </button>
+    </form>
+
+    {# 搜尋結果與無查詢的全量瀏覽清單共用同一套卡片與捲動載入 #}
+    <div class="search-results">
+        {% if query %}
+        <h1 class="search-results-title">
+            {% t "common.label.search-result" %}: {{ total_count }}
+        </h1>
+        {% endif %}
+
+        {% if results %}
+            <div class="game-list" id="game-list"
+                 data-has-next="{{ has_next|yesno:'true,false' }}"
+                 data-next-page="2"
+                 data-seed="{{ browse_seed|default:'' }}">
+                {% include "game/partials/game_cards.html" %}
+                <div id="scroll-sentinel"></div>
+            </div>
+            <div id="load-more-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+            </div>
+        {% elif query %}
+            <div class="no-results">
+                <i class="fas fa-ghost no-results-icon"></i>
+                <p>{% t "search.result.empty" %}</p>
+                <button type="button" class="btn-secondary open-suggest-game-modal">
+                    <i class="fas fa-plus"></i> {% t "game.suggest.button" %}
+                </button>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if has_next %}
+    <script>
+    (function () {
+        const list = document.getElementById('game-list');
+        const sentinel = document.getElementById('scroll-sentinel');
+        const spinner = document.getElementById('load-more-spinner');
+        if (!list || !sentinel) return;
+
+        let nextPage = parseInt(list.dataset.nextPage, 10);
+        let hasNext = list.dataset.hasNext === 'true';
+        // 瀏覽清單前 30 名是打散的，seed 要每頁帶回去，順序才不會重複或漏
+        const seed = list.dataset.seed;
+        let loading = false;
+
+        async function loadMore() {
+            if (!hasNext || loading) return;
+            loading = true;
+            spinner.style.display = 'flex';
+
+            const url = new URL(window.location.href);
+            url.searchParams.set('page', nextPage);
+            if (seed) url.searchParams.set('seed', seed);
+
+            try {
+                const res = await fetch(url.toString(), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!res.ok) throw new Error('fetch failed');
+                const data = await res.json();
+
+                const tmp = document.createElement('div');
+                tmp.innerHTML = data.html;
+                while (tmp.firstChild) {
+                    sentinel.parentNode.insertBefore(tmp.firstChild, sentinel);
+                }
+
+                hasNext = data.has_next;
+                nextPage = data.next_page;
+
+                if (!hasNext) {
+                    observer.disconnect();
+                    sentinel.remove();
+                }
+            } catch (e) {
+                console.error('Infinite scroll error:', e);
+            } finally {
+                loading = false;
+                spinner.style.display = 'none';
+            }
+        }
+
+        const observer = new IntersectionObserver(
+            (entries) => { if (entries[0].isIntersecting) loadMore(); },
+            { rootMargin: '300px' }
+        );
+        observer.observe(sentinel);
+    })();
+    </script>
+    {% endif %}
+
+</div>
+
+{% comment %}
+這段刻意不含任何 t 標籤譯文：建議清單只顯示遊戲名稱，沒有要翻的字串，
+也就避開了譯文裡的撇號截斷 JS 字串字面值那個坑（見下面 suggest modal）。
+{% endcomment %}
+<script>
+(function () {
+    const form = document.querySelector('.search-form');
+    const input = form && form.querySelector('.search-input');
+    const list = document.getElementById('autocomplete-list');
+    if (!form || !input || !list) return;
+
+    const ENDPOINT = "{% url 'games:autocomplete' %}";
+    const MIN_CHARS = parseInt(list.dataset.minChars, 10) || 2;
+    const DEBOUNCE_MS = 200;
+
+    let timer = null;
+    let controller = null;
+    let items = [];
+    let activeIndex = -1;
+    // 注音／拼音／日文輸入法組字期間 input 事件會逐個羅馬字觸發，那些片段
+    // （"dizhu" 之類）拿去查一定是零筆。組字完成才查，CJK 使用者才有建議可看。
+    let composing = false;
+
+    function close() {
+        list.hidden = true;
+        list.innerHTML = '';
+        items = [];
+        activeIndex = -1;
+        input.setAttribute('aria-expanded', 'false');
+        input.removeAttribute('aria-activedescendant');
+    }
+
+    function setActive(index) {
+        const lis = list.children;
+        if (activeIndex >= 0 && lis[activeIndex]) {
+            lis[activeIndex].classList.remove('is-active');
+            lis[activeIndex].setAttribute('aria-selected', 'false');
+        }
+        activeIndex = index;
+        if (index >= 0 && lis[index]) {
+            lis[index].classList.add('is-active');
+            lis[index].setAttribute('aria-selected', 'true');
+            lis[index].scrollIntoView({ block: 'nearest' });
+            input.setAttribute('aria-activedescendant', lis[index].id);
+        } else {
+            input.removeAttribute('aria-activedescendant');
+        }
+    }
+
+    function render(rows) {
+        if (!rows.length) { close(); return; }
+        items = rows;
+        activeIndex = -1;
+        list.innerHTML = '';
+
+        rows.forEach(function (row, i) {
+            const li = document.createElement('li');
+            li.className = 'autocomplete-item';
+            li.id = 'autocomplete-item-' + i;
+            li.setAttribute('role', 'option');
+            li.setAttribute('aria-selected', 'false');
+
+            const link = document.createElement('a');
+            link.href = row.url;
+
+            if (row.thumbnail) {
+                const img = document.createElement('img');
+                img.className = 'autocomplete-thumb';
+                img.src = row.thumbnail;
+                img.alt = '';
+                img.loading = 'lazy';
+                link.appendChild(img);
+            } else {
+                const placeholder = document.createElement('span');
+                placeholder.className = 'autocomplete-thumb autocomplete-thumb-placeholder';
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-image';
+                placeholder.appendChild(icon);
+                link.appendChild(placeholder);
+            }
+
+            const name = document.createElement('span');
+            name.className = 'autocomplete-name';
+            // textContent 不是 innerHTML：遊戲名稱是後台／scraper 來的資料，
+            // 當成 HTML 插進來就是一個 XSS 破口。
+            name.textContent = row.name;
+            link.appendChild(name);
+
+            li.appendChild(link);
+            li.addEventListener('mouseenter', function () { setActive(i); });
+            list.appendChild(li);
+        });
+
+        list.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+    }
+
+    async function fetchSuggestions(query) {
+        // 上一次還在飛就取消：慢的那個回來時會蓋掉新的結果
+        if (controller) controller.abort();
+        controller = new AbortController();
+
+        try {
+            const res = await fetch(ENDPOINT + '?q=' + encodeURIComponent(query), {
+                signal: controller.signal,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            if (!res.ok) { close(); return; }
+            const data = await res.json();
+            // abort 之外的雙保險：使用者可能在等回應時又改了字
+            if (input.value.trim() !== query) return;
+            render(data.results || []);
+        } catch (err) {
+            if (err.name !== 'AbortError') close();
+        }
+    }
+
+    function schedule() {
+        clearTimeout(timer);
+        const query = input.value.trim();
+        if (query.length < MIN_CHARS) {
+            if (controller) controller.abort();
+            close();
+            return;
+        }
+        timer = setTimeout(function () { fetchSuggestions(query); }, DEBOUNCE_MS);
+    }
+
+    input.addEventListener('compositionstart', function () { composing = true; });
+    input.addEventListener('compositionend', function () { composing = false; schedule(); });
+    input.addEventListener('input', function () { if (!composing) schedule(); });
+
+    input.addEventListener('keydown', function (e) {
+        // 組字中的 Enter 是「選這個候選字」，不能當成送出或選建議
+        if (e.isComposing) return;
+        if (list.hidden || !items.length) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setActive((activeIndex + 1) % items.length);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setActive((activeIndex - 1 + items.length) % items.length);
+        } else if (e.key === 'Enter') {
+            // 沒選中任何一筆就不攔，讓表單照常送出走整頁搜尋
+            if (activeIndex >= 0) {
+                e.preventDefault();
+                window.location.href = items[activeIndex].url;
+            }
+        } else if (e.key === 'Escape') {
+            close();
+        }
+    });
+
+    // 用 document click 而不是 input blur 關閉：blur 會先於 click 觸發，
+    // 清單在使用者點下去之前就消失了，等於永遠點不到。
+    document.addEventListener('click', function (e) {
+        if (!form.contains(e.target)) close();
+    });
+})();
+</script>
+
+<!-- Suggest a Game Modal -->
+<div id="suggest-game-modal" class="suggest-modal" aria-hidden="true">
+    <div class="suggest-modal-backdrop"></div>
+
+    <div class="suggest-modal-content" role="dialog" aria-modal="true">
+        {% if request.user.is_authenticated %}
+        <h2>{% t "game.suggest.modal.title" %}</h2>
+
+        <form id="suggest-game-form">
+            {% csrf_token %}
+            <div class="suggest-form-field">
+                <label for="suggest-game-name">{% t "game.suggest.modal.name.label" %} <span class="required-mark">*</span></label>
+                <input type="text" id="suggest-game-name" name="name" required>
+            </div>
+            <div class="suggest-form-field">
+                <label for="suggest-game-rulebook-url">{% t "game.suggest.modal.rulebook_url.label" %} <span class="required-mark">*</span></label>
+                <input type="url" id="suggest-game-rulebook-url" name="rulebook_url" required>
+            </div>
+            <div class="suggest-form-field">
+                <label for="suggest-game-barcode">{% t "game.suggest.modal.barcode.label" %}</label>
+                <input type="text" id="suggest-game-barcode" name="barcode">
+            </div>
+            <div class="suggest-form-field">
+                <label for="suggest-game-note">{% t "game.suggest.modal.note.label" %}</label>
+                <textarea id="suggest-game-note" name="note" rows="3"></textarea>
+            </div>
+
+            <div id="suggest-game-feedback" class="suggest-game-feedback" role="status"></div>
+
+            <div class="suggest-modal-actions">
+                <button type="submit" class="btn-primary">{% t "common.btn.submit" %}</button>
+                <button type="button" class="btn-secondary close-suggest-game-modal">{% t "cancel" %}</button>
+            </div>
+        </form>
+        {% else %}
+        <h2>{% t "game.suggest.modal.title" %}</h2>
+        <p class="suggest-login-desc">{% t "game.suggest.modal.login-required" %}</p>
+        <div id="suggest-game-login-btn" class="suggest-login-btn"></div>
+        <div class="suggest-modal-actions">
+            <button type="button" class="btn-secondary close-suggest-game-modal">{% t "cancel" %}</button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# {% t %} 回傳 mark_safe，直接寫進 JS 字串字面值會被譯文裡的撇號截斷（整段 script SyntaxError）#}
+{% t "game.suggest.modal.success" as t_suggest_success %}
+{% t "game.suggest.modal.login-required" as t_suggest_login_required %}
+{% t "game.suggest.modal.error.generic" as t_suggest_error_generic %}
+{% t "game.suggest.modal.checking" as t_suggest_checking %}
+{% t "game.suggest.modal.checking.button" as t_suggest_checking_btn %}
+<script>
+(function () {
+    const modal = document.getElementById('suggest-game-modal');
+    if (!modal) return;
+
+    const backdrop = modal.querySelector('.suggest-modal-backdrop');
+    const openBtns = document.querySelectorAll('.open-suggest-game-modal');
+    const closeBtns = modal.querySelectorAll('.close-suggest-game-modal');
+    const form = document.getElementById('suggest-game-form');
+    const feedback = document.getElementById('suggest-game-feedback');
+    const loginBtnContainer = document.getElementById('suggest-game-login-btn');
+    let loginBtnRendered = false;
+
+    function openModal() {
+        modal.classList.add('show');
+        modal.setAttribute('aria-hidden', 'false');
+        if (loginBtnContainer && !loginBtnRendered && typeof window.renderGoogleLoginButton === 'function') {
+            window.renderGoogleLoginButton(loginBtnContainer);
+            loginBtnRendered = true;
+        }
+    }
+
+    function closeModal() {
+        modal.classList.remove('show');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    openBtns.forEach(btn => btn.addEventListener('click', openModal));
+    closeBtns.forEach(btn => btn.addEventListener('click', closeModal));
+    if (backdrop) backdrop.addEventListener('click', closeModal);
+
+    if (form) {
+        const submitBtn = form.querySelector('button[type=submit]');
+        const submitLabel = submitBtn ? submitBtn.textContent : '';
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            // 後端會實際連去抓 rulebook URL 確認是 PDF，會有幾秒延遲，
+            // 這段期間鎖住按鈕並說明正在檢查，免得使用者以為沒反應而重送。
+            feedback.textContent = "{{ t_suggest_checking|escapejs }}";
+            feedback.className = 'suggest-game-feedback';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "{{ t_suggest_checking_btn|escapejs }}";
+            }
+
+            const csrf = form.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+            const payload = {
+                name: document.getElementById('suggest-game-name').value.trim(),
+                rulebook_url: document.getElementById('suggest-game-rulebook-url').value.trim(),
+                barcode: document.getElementById('suggest-game-barcode').value.trim(),
+                note: document.getElementById('suggest-game-note').value.trim(),
+            };
+
+            try {
+                const res = await fetch("{% url 'games:suggest-game' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrf,
+                    },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    feedback.textContent = data.message || "{{ t_suggest_success|escapejs }}";
+                    feedback.classList.add('success');
+                    form.reset();
+                } else if (res.status === 401) {
+                    feedback.textContent = "{{ t_suggest_login_required|escapejs }}";
+                    feedback.classList.add('error');
+                } else {
+                    const errors = data.errors ? Object.values(data.errors).join(' ') : "{{ t_suggest_error_generic|escapejs }}";
+                    feedback.textContent = errors;
+                    feedback.classList.add('error');
+                }
+            } catch (err) {
+                feedback.textContent = "{{ t_suggest_error_generic|escapejs }}";
+                feedback.classList.add('error');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = submitLabel;
+                }
+            }
+        });
+    }
+})();
+</script>
+{% endblock content %}

@@ -1,0 +1,5 @@
+{% load translate_tags %}{% comment %}GM 講稿分頁的 meta description。
+
+刻意不帶講稿內容：那是付費內容，description 只描述「這頁有什麼」。
+
+{% t %} 回傳 mark_safe，進 content="..." 屬性一律 force_escape。{% endcomment %}{% t "seo.game.script.desc.prefix" as d_pre %}{% t "seo.game.script.desc.suffix" as d_suf %}{{ d_pre|force_escape }}{% firstof edition.name edition.game.canonical_name %}{{ d_suf|force_escape }}

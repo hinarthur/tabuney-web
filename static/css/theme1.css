@@ -1,0 +1,778 @@
+/* ============================================================
+   TABUNEY THEME
+   ============================================================
+
+   Design direction
+   ----------------
+   - Clean, light, friendly product UI
+   - Soft blue / teal brand identity
+   - Low-saturation surfaces
+   - Dark text instead of white text on bright node colours
+   - Flowchart hierarchy relies on:
+       shape + tint + border + typography
+     rather than saturated colour blocks
+   - Light mode should feel airy
+   - Dark mode should feel calm rather than neon
+
+   Theme is controlled by:
+   <html data-theme="default|dark">
+
+   Component CSS should reference variables here instead of
+   overriding theme-specific styles locally.
+   ============================================================ */
+
+
+/* ============================================================
+   DEFAULT THEME — LIGHT
+   ============================================================ */
+
+:root[data-theme="default"] {
+
+    /* --------------------------------------------------------
+       Core brand
+       -------------------------------------------------------- */
+
+    --color-primary: #168BC3;
+    --color-primary-light: #71C7D4;
+
+    /*
+       Previous bright yellow is softened so that it can still
+       serve as a warm accent without looking like a warning.
+    */
+    --color-secondary: #E9BE45;
+
+
+    /* --------------------------------------------------------
+       General backgrounds
+       -------------------------------------------------------- */
+
+    --color-bg: #F5F7FA;
+    --color-bg-alt: #EDF2F7;
+    --color-bg-hover: #E6F1F7;
+
+    --color-bg-popup: #FFFFFF;
+
+
+    /* --------------------------------------------------------
+       General typography
+       -------------------------------------------------------- */
+
+    --color-text-main: #253247;
+    --color-text-minor: #657287;
+    --color-text-disabled: #9CA7B5;
+    --color-text-negative: #8B95A3;
+
+    --color-link: var(--color-primary);
+    --color-link-hover: #1477A8;
+
+
+    /* --------------------------------------------------------
+       General UI
+       -------------------------------------------------------- */
+
+    --shadow-sm:
+        0 1px 2px rgba(25, 41, 61, 0.04),
+        0 2px 6px rgba(25, 41, 61, 0.03);
+
+    --overlay-hover: rgba(23, 59, 92, 0.035);
+
+    --toast-bg: rgba(24, 32, 48, 0.92);
+    --toast-text: #FFFFFF;
+
+    --hamburger-line: #253247;
+
+    --btn-shadow:
+        0 1px 2px rgba(26, 48, 77, 0.06),
+        0 3px 8px rgba(26, 48, 77, 0.05);
+
+    --btn-shadow-hover:
+        0 4px 10px rgba(26, 48, 77, 0.08),
+        0 8px 22px rgba(26, 48, 77, 0.07);
+
+    --emoji-bg: #F1F4F7;
+    --emoji-border: #DEE4EA;
+
+    --popup-shadow:
+        0 18px 42px rgba(25, 41, 61, 0.14),
+        0 5px 14px rgba(25, 41, 61, 0.07);
+
+    --color-price-note: #9A741C;
+
+    --border-popup: #D2DAE4;
+
+    --shadow-dropdown:
+        0 12px 30px rgba(25, 41, 61, 0.12),
+        0 3px 8px rgba(25, 41, 61, 0.06);
+
+    --border-subtle: rgba(42, 61, 84, 0.11);
+    --border-card: rgba(42, 61, 84, 0.07);
+
+    --shadow-card:
+        0 10px 30px rgba(35, 55, 82, 0.07),
+        0 2px 8px rgba(35, 55, 82, 0.035);
+
+    --shadow-card-hover:
+        0 18px 42px rgba(35, 55, 82, 0.10),
+        0 5px 14px rgba(35, 55, 82, 0.055);
+
+
+    /* ========================================================
+       LANDING / ABOUT
+       ======================================================== */
+
+    /*
+       Landing should be slightly warmer / softer than an
+       enterprise dashboard while remaining within Tabuney blue.
+    */
+
+    --landing-bg: #FAFCFE;
+    --landing-bg-soft: #F1F7FB;
+    --landing-bg-deep: #E5F0F7;
+
+    --landing-gradient-1: #E9F4FA;
+    --landing-gradient-2: #DDECF5;
+
+    --landing-text: #1D2B3F;
+    --landing-text-soft: #607187;
+    --landing-text-on-dark: #F7FAFC;
+
+    --landing-accent: #168BC3;
+    --landing-accent-soft: #55AFB3;
+    --landing-accent-warm: #D5A93D;
+
+    --landing-line: rgba(22, 139, 195, 0.14);
+
+    --landing-glow: rgba(22, 139, 195, 0.11);
+    --landing-glow-soft: rgba(85, 175, 179, 0.13);
+
+    --landing-surface: rgba(255, 255, 255, 0.70);
+
+
+    /* ========================================================
+       FAQ
+       ======================================================== */
+
+    --faq-bg: var(--landing-bg);
+    --faq-text: var(--landing-text);
+    --faq-text-soft: var(--landing-text-soft);
+
+    --faq-accent: var(--landing-accent);
+
+    --faq-border: rgba(36, 81, 115, 0.11);
+
+    --faq-item-bg: rgba(255, 255, 255, 0.82);
+
+
+    /* ========================================================
+       FLOWCHART — LIGHT
+       ========================================================
+
+       Visual philosophy:
+
+       Action:
+           neutral / white
+
+       Start:
+           soft teal
+
+       End:
+           soft rose
+
+       Decision:
+           soft blue
+
+       Simultaneous:
+           soft lavender
+
+       Phase:
+           soft warm cream
+
+       The node shape should remain the strongest semantic cue.
+       Colour is secondary.
+       ======================================================== */
+
+
+    /* --------------------------------------------------------
+       Canvas
+       -------------------------------------------------------- */
+
+    --fc-editor-bg: #F8FAFC;
+    --fc-editor-text: #344054;
+
+    /*
+       Generic fallback border used by components that do not
+       yet reference type-specific borders.
+    */
+    --fc-node-border: #CCD6E2;
+
+
+    /* --------------------------------------------------------
+       Standard action node
+       -------------------------------------------------------- */
+
+    --fc-action-bg: #FFFFFF;
+    --fc-action-text: #344054;
+    --fc-action-border: #CBD6E2;
+
+
+    /* --------------------------------------------------------
+       Start node
+       -------------------------------------------------------- */
+
+    --fc-oval-start-bg: #E6F6F2;
+    --fc-oval-start-text: #27695F;
+    --fc-oval-start-border: #8AC8BA;
+
+
+    /* --------------------------------------------------------
+       End node
+       -------------------------------------------------------- */
+
+    --fc-oval-end-bg: #FCEDEF;
+    --fc-oval-end-text: #94505A;
+    --fc-oval-end-border: #DEA1AA;
+
+
+    /*
+       Backward-compatible fallback if start/end currently use
+       one shared text variable.
+    */
+    --fc-oval-text: #344054;
+
+
+    /* --------------------------------------------------------
+       Decision node
+       -------------------------------------------------------- */
+
+    --fc-diamond-bg: #EAF2FC;
+    --fc-diamond-text: #3F6090;
+    --fc-diamond-border: #92AED2;
+
+
+    /* --------------------------------------------------------
+       Simultaneous / double node
+       -------------------------------------------------------- */
+
+    --fc-double-bg: #F1ECF8;
+    --fc-double-text: #705887;
+    --fc-double-border: #BBA9CE;
+
+
+    /* --------------------------------------------------------
+       Phase
+       -------------------------------------------------------- */
+
+    /*
+       Phase is intentionally understated.
+       It should organise the diagram, not compete with actions.
+    */
+
+    --fc-phase-bg: #FFF4D7;
+    --fc-phase-text: #80631D;
+    --fc-phase-border: #DFC26C;
+
+    /* Action node colours by phase: 1 Preparation, 2 Game Flow, 3 Endgame */
+    --fc-phase1-bg: #E8F4E5;
+    --fc-phase1-text: #2F6B3A;
+    --fc-phase1-border: #9CCB9F;
+    --fc-phase2-bg: #E3EEFA;
+    --fc-phase2-text: #2F5E8E;
+    --fc-phase2-border: #8FB3D9;
+    --fc-phase3-bg: #FBE9E7;
+    --fc-phase3-text: #8A4A44;
+    --fc-phase3-border: #E0A9A2;
+
+
+    /* --------------------------------------------------------
+       Legend
+       -------------------------------------------------------- */
+
+    --fc-legend-bg: #F3F6F9;
+    --fc-legend-title: #344054;
+    --fc-legend-content: #697586;
+
+    --fc-text-color: #344054;
+
+
+    /* --------------------------------------------------------
+       Edges
+       -------------------------------------------------------- */
+
+    /*
+       Default paths are intentionally lighter than node text.
+       This prevents dense charts becoming visually heavy.
+    */
+
+    --fc-edge-stroke: #8290A3;
+
+    /*
+       Yes / No retain green / rose semantics but are muted.
+    */
+    --fc-edge-yes: #4D9272;
+    --fc-edge-no: #BD6871;
+
+    --fc-edge-label-bg: rgba(248, 250, 252, 0.94);
+
+
+    /* --------------------------------------------------------
+       Optional node styling tokens
+       --------------------------------------------------------
+
+       These are new tokens for gradually modernising component
+       CSS. Existing code does not have to use them immediately.
+    */
+
+    --fc-node-shadow:
+        0 1px 2px rgba(29, 46, 70, 0.035),
+        0 3px 8px rgba(29, 46, 70, 0.025);
+
+    --fc-node-shadow-hover:
+        0 5px 14px rgba(29, 46, 70, 0.075);
+
+    --fc-node-selected-ring:
+        0 0 0 2px rgba(22, 139, 195, 0.18);
+
+    --fc-handle-bg: #95A4B7;
+
+    /* Selection outline / drop target, and empty-placeholder dashes */
+    --fc-select: #3F7FBF;
+    --fc-placeholder: #B7C2D0;
+
+    --fc-group-bg: rgba(234, 242, 252, 0.36);
+    --fc-group-border: #BDCCDC;
+}
+
+
+
+/* ============================================================
+   DARK THEME
+   ============================================================ */
+
+:root[data-theme="dark"] {
+
+    /* --------------------------------------------------------
+       Core brand
+       -------------------------------------------------------- */
+
+    --color-primary: #5EB5D8;
+    --color-primary-light: #80CFD2;
+    --color-secondary: #E4C665;
+
+
+    /* --------------------------------------------------------
+       General backgrounds
+       -------------------------------------------------------- */
+
+    --color-bg: #111823;
+    --color-bg-alt: #182231;
+    --color-bg-hover: #223144;
+
+    --color-bg-popup: #1B2635;
+
+
+    /* --------------------------------------------------------
+       General typography
+       -------------------------------------------------------- */
+
+    --color-text-main: #E5EBF2;
+    --color-text-minor: #B5C0CE;
+    --color-text-disabled: #7D8999;
+    --color-text-negative: #929DAC;
+
+    --color-link: var(--color-primary);
+    --color-link-hover: #83CBE7;
+
+
+    /* --------------------------------------------------------
+       General UI
+       -------------------------------------------------------- */
+
+    --shadow-sm:
+        0 1px 3px rgba(0, 0, 0, 0.28);
+
+    --overlay-hover: rgba(255, 255, 255, 0.045);
+
+    --toast-bg: rgba(245, 248, 252, 0.94);
+    --toast-text: #18212E;
+
+    --hamburger-line: #E8EDF4;
+
+    --btn-shadow:
+        0 2px 5px rgba(0, 0, 0, 0.24);
+
+    --btn-shadow-hover:
+        0 6px 18px rgba(0, 0, 0, 0.34);
+
+    --emoji-bg: #263242;
+    --emoji-border: #405066;
+
+    --popup-shadow:
+        0 18px 45px rgba(0, 0, 0, 0.48);
+
+    --color-price-note: #E3BC62;
+
+    --border-popup: #4A596D;
+
+    --shadow-dropdown:
+        0 14px 34px rgba(0, 0, 0, 0.42);
+
+    --border-subtle: rgba(221, 231, 244, 0.13);
+    --border-card: rgba(221, 231, 244, 0.075);
+
+    --shadow-card:
+        0 12px 32px rgba(0, 0, 0, 0.27),
+        0 3px 10px rgba(0, 0, 0, 0.17);
+
+    --shadow-card-hover:
+        0 20px 44px rgba(0, 0, 0, 0.37),
+        0 8px 18px rgba(0, 0, 0, 0.22);
+
+
+    /* ========================================================
+       LANDING / ABOUT — DARK
+       ======================================================== */
+
+    --landing-bg: #0C1420;
+    --landing-bg-soft: #121F2E;
+    --landing-bg-deep: #09101A;
+
+    --landing-gradient-1: #12283A;
+    --landing-gradient-2: #173247;
+
+    --landing-text: #EBF1F8;
+    --landing-text-soft: #AAB9C9;
+    --landing-text-on-dark: #F7FAFD;
+
+    --landing-accent: #64B9DC;
+    --landing-accent-soft: #7AC7C8;
+    --landing-accent-warm: #E5C15C;
+
+    --landing-line: rgba(100, 185, 220, 0.16);
+
+    --landing-glow: rgba(100, 185, 220, 0.13);
+    --landing-glow-soft: rgba(122, 199, 200, 0.14);
+
+    --landing-surface: rgba(255, 255, 255, 0.045);
+
+
+    /* ========================================================
+       FAQ — DARK
+       ======================================================== */
+
+    --faq-bg: var(--landing-bg);
+    --faq-text: var(--landing-text);
+    --faq-text-soft: var(--landing-text-soft);
+
+    --faq-accent: var(--landing-accent);
+
+    --faq-border: rgba(152, 190, 216, 0.14);
+
+    --faq-item-bg: rgba(255, 255, 255, 0.038);
+
+
+    /* ========================================================
+       FLOWCHART — DARK
+       ======================================================== */
+
+    /*
+       Dark mode follows the same semantic families as light
+       mode, but surfaces are restrained and slightly desaturated.
+    */
+
+
+    /* --------------------------------------------------------
+       Canvas
+       -------------------------------------------------------- */
+
+    --fc-editor-bg: #182231;
+    --fc-editor-text: #E3EAF2;
+
+    --fc-node-border: #526175;
+
+
+    /* --------------------------------------------------------
+       Standard action node
+       -------------------------------------------------------- */
+
+    --fc-action-bg: #263244;
+    --fc-action-text: #E2E9F1;
+    --fc-action-border: #526277;
+
+
+    /* --------------------------------------------------------
+       Start
+       -------------------------------------------------------- */
+
+    --fc-oval-start-bg: #21443F;
+    --fc-oval-start-text: #B9E1D8;
+    --fc-oval-start-border: #4C8E80;
+
+
+    /* --------------------------------------------------------
+       End
+       -------------------------------------------------------- */
+
+    --fc-oval-end-bg: #4A2D34;
+    --fc-oval-end-text: #F0C6CC;
+    --fc-oval-end-border: #A66771;
+
+    --fc-oval-text: #E4EAF1;
+
+
+    /* --------------------------------------------------------
+       Decision
+       -------------------------------------------------------- */
+
+    --fc-diamond-bg: #253A56;
+    --fc-diamond-text: #C7D9EF;
+    --fc-diamond-border: #5E7EA8;
+
+
+    /* --------------------------------------------------------
+       Simultaneous
+       -------------------------------------------------------- */
+
+    --fc-double-bg: #382F48;
+    --fc-double-text: #DCCDE9;
+    --fc-double-border: #806D98;
+
+
+    /* --------------------------------------------------------
+       Phase
+       -------------------------------------------------------- */
+
+    --fc-phase-bg: #4A4027;
+    --fc-phase-text: #F0DDA3;
+    --fc-phase-border: #958151;
+
+    /* Action node colours by phase: 1 Preparation, 2 Game Flow, 3 Endgame */
+    --fc-phase1-bg: #24412E;
+    --fc-phase1-text: #BFE3C6;
+    --fc-phase1-border: #5A9468;
+    --fc-phase2-bg: #1F3A57;
+    --fc-phase2-text: #BCD6F0;
+    --fc-phase2-border: #5C85B3;
+    --fc-phase3-bg: #4A2B2B;
+    --fc-phase3-text: #F0C4BF;
+    --fc-phase3-border: #A86A66;
+
+
+    /* --------------------------------------------------------
+       Legend
+       -------------------------------------------------------- */
+
+    --fc-legend-bg: #202B3A;
+    --fc-legend-title: #E5EBF2;
+    --fc-legend-content: #AFBBC9;
+
+    --fc-text-color: #E3EAF2;
+
+
+    /* --------------------------------------------------------
+       Edges
+       -------------------------------------------------------- */
+
+    --fc-edge-stroke: #9AA8B9;
+    --fc-edge-yes: #78B596;
+    --fc-edge-no: #D68A91;
+
+    --fc-edge-label-bg: rgba(24, 34, 49, 0.94);
+
+
+    /* --------------------------------------------------------
+       Optional modern flowchart tokens
+       -------------------------------------------------------- */
+
+    --fc-node-shadow:
+        0 2px 5px rgba(0, 0, 0, 0.18);
+
+    --fc-node-shadow-hover:
+        0 6px 16px rgba(0, 0, 0, 0.27);
+
+    --fc-node-selected-ring:
+        0 0 0 2px rgba(94, 181, 216, 0.24);
+
+    --fc-handle-bg: #8493A6;
+
+    /* Selection outline / drop target, and empty-placeholder dashes */
+    --fc-select: #5EB5D8;
+    --fc-placeholder: #526175;
+
+    --fc-group-bg: rgba(50, 71, 96, 0.26);
+    --fc-group-border: #556A83;
+}
+
+
+
+/* ============================================================
+   REACT FLOW LIBRARY OVERRIDES — LIGHT
+   ============================================================
+
+   React Flow declares its own --xy-* properties on .react-flow.
+   Defining these directly here gives our theme variables higher
+   specificity than the library defaults.
+   ============================================================ */
+
+:root[data-theme="default"] .react-flow {
+
+    --xy-background-color-default:
+        var(--fc-editor-bg);
+
+    --xy-background-pattern-dots-color-default:
+        #D7E0EA;
+
+    --xy-background-pattern-lines-color-default:
+        #DEE6EE;
+
+    --xy-background-pattern-cross-color-default:
+        #DEE6EE;
+
+
+    --xy-node-color-default:
+        var(--fc-action-text);
+
+    --xy-node-border-default:
+        1px solid var(--fc-node-border);
+
+    --xy-node-background-color-default:
+        var(--fc-action-bg);
+
+    --xy-node-boxshadow-hover-default:
+        var(--fc-node-shadow-hover);
+
+    --xy-node-boxshadow-selected-default:
+        var(--fc-node-selected-ring);
+
+
+    --xy-handle-background-color-default:
+        var(--fc-handle-bg);
+
+    --xy-handle-border-color-default:
+        #FFFFFF;
+
+
+    --xy-edge-stroke-default:
+        var(--fc-edge-stroke);
+
+    --xy-edge-stroke-selected-default:
+        var(--color-primary);
+
+
+    --xy-controls-button-background-color-default:
+        rgba(255, 255, 255, 0.94);
+
+    --xy-controls-button-background-color-hover-default:
+        #EFF5F9;
+
+    --xy-controls-button-color-default:
+        var(--color-text-main);
+
+    --xy-controls-button-border-color-default:
+        #D4DEE8;
+
+
+    --xy-edge-label-background-color-default:
+        var(--fc-edge-label-bg);
+
+    --xy-edge-label-color-default:
+        var(--fc-text-color);
+
+
+    --xy-minimap-background-color-default:
+        #F2F6F9;
+
+    --xy-minimap-mask-background-color-default:
+        rgba(231, 238, 244, 0.68);
+
+    --xy-minimap-node-background-color-default:
+        #A9B8C8;
+
+
+    --xy-attribution-background-color-default:
+        rgba(255, 255, 255, 0.74);
+}
+
+
+
+/* ============================================================
+   REACT FLOW LIBRARY OVERRIDES — DARK
+   ============================================================ */
+
+:root[data-theme="dark"] .react-flow {
+
+    --xy-background-color-default:
+        var(--fc-editor-bg);
+
+    --xy-background-pattern-dots-color-default:
+        #3C4A5B;
+
+    --xy-background-pattern-lines-color-default:
+        #344151;
+
+    --xy-background-pattern-cross-color-default:
+        #344151;
+
+
+    --xy-node-color-default:
+        var(--fc-action-text);
+
+    --xy-node-border-default:
+        1px solid var(--fc-node-border);
+
+    --xy-node-background-color-default:
+        var(--fc-action-bg);
+
+    --xy-node-boxshadow-hover-default:
+        var(--fc-node-shadow-hover);
+
+    --xy-node-boxshadow-selected-default:
+        var(--fc-node-selected-ring);
+
+
+    --xy-handle-background-color-default:
+        var(--fc-handle-bg);
+
+    --xy-handle-border-color-default:
+        var(--fc-editor-bg);
+
+
+    --xy-edge-stroke-default:
+        var(--fc-edge-stroke);
+
+    --xy-edge-stroke-selected-default:
+        var(--color-primary-light);
+
+
+    --xy-controls-button-background-color-default:
+        #202C3C;
+
+    --xy-controls-button-background-color-hover-default:
+        #2A394D;
+
+    --xy-controls-button-color-default:
+        var(--color-text-main);
+
+    --xy-controls-button-border-color-default:
+        #49596E;
+
+
+    --xy-edge-label-background-color-default:
+        var(--fc-edge-label-bg);
+
+    --xy-edge-label-color-default:
+        var(--fc-text-color);
+
+
+    --xy-minimap-background-color-default:
+        #202B3A;
+
+    --xy-minimap-mask-background-color-default:
+        rgba(12, 20, 32, 0.62);
+
+    --xy-minimap-node-background-color-default:
+        #718095;
+
+
+    --xy-attribution-background-color-default:
+        rgba(17, 24, 35, 0.72);
+}

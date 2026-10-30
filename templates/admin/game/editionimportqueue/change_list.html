@@ -1,0 +1,7 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+{% if has_add_permission %}<li><a href="{% url 'admin:game_editionimportqueue_batch_add' %}" class="addlink">批量新增</a></li>{% endif %}
+{% if perms.game.import_edition %}<li><a href="{% url 'admin:game_edition_import' %}">版本輸入</a></li>{% endif %}
+{{ block.super }}
+{% endblock %}

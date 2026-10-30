@@ -1,0 +1,28 @@
+{% comment %}
+會員自己的收藏狀態 / 喜好標記。收藏頁與搜尋頁共用同一份圖示對照，
+兩邊才不會各自漂移。
+
+用法：{% include "partials/interaction_badge.html" with status=... rating=... css_class="..." %}
+  status      past / owned / wish 或 None
+  rating      amazing / nice / nah / nightmare 或 None
+  css_class   呼叫端負責定位的額外 class（選填）
+
+兩者皆為 None 時不輸出任何東西 —— 空的容器仍會佔位。
+{% endcomment %}
+{% if status or rating %}
+<div class="interaction-badge {{ css_class }} status-{{ status|default_if_none:'none' }}">
+    {% if status == 'past' %}<i class="fa-solid fa-clock-rotate-left"></i>
+    {% elif status == 'owned' %}<i class="fa-solid fa-toolbox"></i>
+    {% elif status == 'wish' %}<i class="fa-regular fa-star"></i>
+    {% endif %}
+    {% if rating %}
+    <span class="interaction-badge-rating">
+        {% if rating == 'amazing' %}💘
+        {% elif rating == 'nice' %}👍
+        {% elif rating == 'nah' %}😕
+        {% elif rating == 'nightmare' %}💀
+        {% endif %}
+    </span>
+    {% endif %}
+</div>
+{% endif %}

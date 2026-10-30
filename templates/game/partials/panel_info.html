@@ -1,0 +1,105 @@
+{% load static %}
+{% load translate_tags %}
+{% comment %} Info 面板。一份 DOM 通吃所有視窗寬度。
+
+   縮圖與雷達圖在寬視窗並排、窄視窗堆疊，順序（縮圖→數據→雷達圖）由 edition_detail.css 用 display:contents + order 控制，不再靠兩份 DOM。 {% endcomment %}
+            <div class="tab-section-intro">
+                <p>{% t "game.info.h2_desc" %}</p>
+            </div>
+            <div class="info-card">
+                <div class="interaction-header">
+                    <div class="status-selector">
+                        <button class="status-toggle-btn icon-btn" title="Collection Status" data-status-emojis='{"past": "fa-solid fa-clock-rotate-left", "owned": "fa-solid fa-toolbox", "wish": "fa-regular fa-star"}'><i class="fa-solid fa-box-open"></i></button>
+                        <div class="status-options">
+                            <div class="status-option {% if user_interaction.status == 'past' %}active{% endif %}" data-status="past"><i class="fa-solid fa-clock-rotate-left"></i> {% t "game.collection.past" %}</div>
+                            <div class="status-option {% if user_interaction.status == 'owned' %}active{% endif %}" data-status="owned"><i class="fa-solid fa-toolbox"></i> {% t "game.collection.owned" %}</div>
+                            <div class="status-option {% if user_interaction.status == 'wish' %}active{% endif %}" data-status="wish"><i class="fa-regular fa-star"></i> {% t "game.collection.wish" %}</div>
+                        </div>
+                    </div>
+                    <div class="rating-bar-container">
+                        <div class="rating-bar">
+                            <div class="rating-track" style="width: {% if user_interaction.rating == 'amazing' %}calc(100% - 14px){% elif user_interaction.rating == 'nice' %}62.5%{% elif user_interaction.rating == 'nah' %}37.5%{% elif user_interaction.rating == 'nightmare' %}14px{% else %}0{% endif %};"></div>
+                            <div class="rating-emojis">
+                                <span class="rating-emoji {% if user_interaction.rating == 'nightmare' %}active{% endif %}" data-rating="nightmare" title="{% t 'game.preference.nightmare' %}">💀</span>
+                                <span class="rating-emoji {% if user_interaction.rating == 'nah' %}active{% endif %}" data-rating="nah" title="{% t 'game.preference.nah' %}">😕</span>
+                                <span class="rating-emoji {% if user_interaction.rating == 'nice' %}active{% endif %}" data-rating="nice" title="{% t 'game.preference.nice' %}">👍</span>
+                                <span class="rating-emoji {% if user_interaction.rating == 'amazing' %}active{% endif %}" data-rating="amazing" title="{% t 'game.preference.amazing' %}">💘</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="interaction-toast" data-default="{% t 'common.toast.saved' %}"></div>
+                </div>
+
+                <div class="info-card-columns">
+                    <div class="info-card-col-left">
+                        {% if edition.thumbnail %}
+                            <img src="{{ edition.thumbnail.url }}" alt="{{ edition.name }}" class="info-image" {% if user_interaction.rating == 'nightmare' %}style="filter: grayscale(0.5) opacity(0.8);"{% endif %}>
+                        {% else %}
+                            <div style="width:100%; aspect-ratio:1; background:var(--color-bg-alt); display:flex; align-items:center; justify-content:center; color:var(--color-text-minor);">
+                                <i class="fas fa-image" style="font-size: 3rem;"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    {% if has_skills %}
+                    <div class="info-card-col-right">
+                        {% if edition.game.cq is not None %}
+                        <div style="display:flex;justify-content:flex-end;margin-bottom:2px;">
+                            <span style="font-size:13px;color:var(--color-text-main);"><strong style="color:var(--color-primary);">CQ</strong>: {{ edition.game.cq|floatformat:2 }}</span>
+                        </div>
+                        {% endif %}
+                        <canvas id="radar-chart"
+                            data-adaptability="{{ edition.game.adaptability|default:0 }}"
+                            data-collaboration="{{ edition.game.collaboration|default:0 }}"
+                            data-communication="{{ edition.game.communication|default:0 }}"
+                            data-creativity="{{ edition.game.creativity|default:0 }}"
+                            data-critical-thinking="{{ edition.game.critical_thinking|default:0 }}"
+                            data-problem-solving="{{ edition.game.problem_solving|default:0 }}"
+                            style="max-width:100%;"></canvas>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="info-content">
+                    <div class="info-section">
+                        <div class="info-stats">
+                            {% if edition.game.min_players or edition.game.max_players %}
+                            <span>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="1.4em" height="1.4em" style="vertical-align:-0.125em"><title>{% t "game.label.players" %}</title><path d="M6.4,10.7c1.6,0,2.9-1.3,2.9-2.9S8,4.9,6.4,4.9S3.5,6.2,3.5,7.8S4.8,10.7,6.4,10.7z M5.9,11.6c-1.3,0-2.4,1.1-2.4,2.4v4.8c0,0.1,0,0.2,0,0.3c0,0.1,0,0.1,0,0.2c0,1.1,0.9,1.9,1.9,1.9h1.9v1.9h4.8v-3.3c0-0.1,0-0.2,0-0.3c0-0.1,0-0.1,0-0.2c0-1.1-0.9-1.9-1.9-1.9H8.3V14C8.3,12.7,7.2,11.6,5.9,11.6L5.9,11.6z M21.6,10.7c-1.6,0-2.9-1.3-2.9-2.9s1.3-2.9,2.9-2.9s2.9,1.3,2.9,2.9S23.2,10.7,21.6,10.7L21.6,10.7z M22.1,11.6c1.3,0,2.4,1.1,2.4,2.4v4.8c0,0.1,0,0.2,0,0.3c0,0.1,0,0.1,0,0.2c0,1.1-0.9,1.9-1.9,1.9h-1.9v1.9h-4.8v-3.3c0-0.1,0-0.2,0-0.3c0-0.1,0-0.1,0-0.2c0-1.1,0.9-1.9,1.9-1.9h1.9V14C19.7,12.7,20.8,11.6,22.1,11.6z M18.5,13.6h-9v2.2h9V13.6z" fill="#0E8EDD"/></svg>
+                                {% if edition.game.min_players == edition.game.max_players %}
+                                    {{ edition.game.min_players }}
+                                {% else %}
+                                    {{ edition.game.min_players }}-{{ edition.game.max_players }}
+                                {% endif %}
+                            </span>
+                            {% endif %}
+                            {% if edition.game.min_playtime or edition.game.max_playtime %}
+                            <span>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="1.4em" height="1.4em" style="vertical-align:-0.125em"><title>{% t "game.label.playtime" %}</title><path d="M14,3.3c-2.1,0-4.2,0.6-5.9,1.8C6.3,6.3,5,8,4.1,9.9c-0.8,1.9-1,4.1-0.6,6.2s1.4,4,2.9,5.5s3.4,2.5,5.5,2.9s4.2,0.2,6.2-0.6c1.9-0.8,3.6-2.2,4.8-3.9c1.2-1.8,1.8-3.8,1.8-5.9c0-2.8-1.1-5.5-3.1-7.5C19.5,4.5,16.8,3.3,14,3.3z M18.1,17.5c0,0.1-0.1,0.1-0.2,0.2c-0.1,0-0.2,0.1-0.2,0.1c-0.1,0-0.2,0-0.3,0c-0.1,0-0.2,0-0.2-0.1L13.3,15V9.2c0-0.2,0.1-0.3,0.2-0.5s0.3-0.2,0.5-0.2s0.3,0.1,0.5,0.2s0.2,0.3,0.2,0.5v5.1l3.3,2.3c0.1,0,0.1,0.1,0.2,0.2c0,0.1,0.1,0.2,0.1,0.2c0,0.1,0,0.2,0,0.3C18.2,17.3,18.2,17.4,18.1,17.5z M17.9,7.5c-0.9-0.6-2-0.9-3.1-1s-2.2,0-3.2,0.3s-2,0.9-2.8,1.7C8,9.2,7.4,10.1,7,11.1c-0.4,1-0.6,2.1-0.6,3.2s0.3,2.2,0.8,3.1c0.5,1,1.2,1.8,2.1,2.5s1.9,1.2,2.9,1.4l-0.2,1c-1.2-0.3-2.4-0.8-3.4-1.6S6.8,19.1,6.3,18c-0.6-1.1-0.9-2.3-1-3.6s0.2-2.5,0.6-3.7S7.1,8.5,8,7.6s2-1.5,3.2-1.9s2.5-0.5,3.7-0.4s2.4,0.6,3.5,1.2L17.9,7.5L17.9,7.5z" fill="#0E8EDD"/></svg>
+                                {% if edition.game.min_playtime == edition.game.max_playtime %}
+                                    {{ edition.game.min_playtime }}m
+                                {% else %}
+                                    {{ edition.game.min_playtime }}-{{ edition.game.max_playtime }}m
+                                {% endif %}
+                            </span>
+                            {% endif %}
+                            {% if edition.age %}
+                            <span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="1.4em" height="1.4em" style="vertical-align:-0.125em"><title>{% t "game.label.age" %}</title><path d="M9,4C7.9,4,7,4.9,7,6s0.9,2,2,2s2-0.9,2-2S10.1,4,9,4z M7,9c-1.1,0-2,0.9-2,2v5c0,0.6,0.4,1,1,1h1v7h5V13.6l2.5,4.4H17l1-1.3V24h4v-5c0.6,0,1-0.4,1-1v-2c0-1.1-0.9-2-2-2h-2.5c-0.6,0-1.1,0.3-1.5,0.7c-0.3,0.4-0.7,0.9-1,1.3h-0.3L12,9.7C11.8,9.4,11.2,9,10.5,9H7z M20,10c-0.8,0-1.5,0.7-1.5,1.5S19.2,13,20,13s1.5-0.7,1.5-1.5S20.8,10,20,10z" fill="#0E8EDD"/></svg> {{ edition.age }}+</span>
+                            {% endif %}
+                            {% include "game/partials/reading_density.html" %}
+                            {% include "game/partials/color_vision_friendly.html" %}
+                            {% if edition.barcode %}
+                            <span><i class="fas fa-barcode" title="{% t 'game.label.barcode' %}"></i> {{ edition.barcode }}</span>
+                            {% endif %}
+                            <span style="margin-left:auto;"><button class="info-legend-btn" style="background:none;border:none;cursor:pointer;font-size:16px;padding:2px;line-height:1;opacity:0.7;" title="{% t 'game.info.legend' %}">ℹ️</button></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% if edition.summary %}
+            <div class="info-section info-summary-outside">
+                <div class="info-section-title">{% t "common.heading.summary" %}</div>
+                <div style="line-height: 1.5; color: var(--color-text-main); text-align: justify;">
+                    {{ edition.summary }}
+                </div>
+            </div>
+            {% endif %}

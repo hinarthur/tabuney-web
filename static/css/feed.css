@@ -1,0 +1,657 @@
+/* 字型一律交給 ttoper.css 的 html, body 統一設定，這裡不要覆蓋 */
+body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-text-main);
+}
+
+.container {
+    max-width: 720px;
+    margin: auto;
+    padding: 12px;
+}
+
+h2 {
+    color: var(--color-text-main);
+    margin-bottom: 12px;
+}
+
+.feed-item {
+    background: var(--color-bg-alt);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.feed-item:hover {
+    background: var(--overlay-hover);
+}
+
+.feed-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.feed-header img {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: white;
+}
+
+.feed-title {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-text-main);
+}
+
+.feed-meta {
+    font-size: 12px;
+    color: var(--color-text-minor);
+    margin-top: 2px;
+}
+
+/* .feed-content {
+    display: none;
+    margin-top: 12px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--color-text-main);
+}
+
+.feed-content a {
+    color: var(--color-link);
+    text-decoration: none;
+}
+
+.feed-content a:hover {
+    color: var(--color-link-hover);
+    text-decoration: underline;
+}
+
+.feed-content img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin-top: 8px;
+} */
+
+.feed-cover img {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 8px;
+}
+
+.rss-logo {
+    width: 24px !important;
+    height: 24px !important;
+    max-width: 24px;
+    max-height: 24px;
+    object-fit: contain;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.loading {
+    text-align: center;
+    padding: 16px;
+    color: var(--color-text-minor);
+}
+
+.feed-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.feed-toolbar-left,
+.feed-toolbar-right {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.feed-toolbar button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid transparent; 
+    background: var(--color-bg-alt);
+    color: var(--color-text-main);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.feed-toolbar button:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-primary); 
+}
+
+.feed-toolbar button.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+.feed-preview {
+    margin-top: 6px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--color-text-minor);
+
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2; 
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* =====================================
+|          Magazine                     |
+======================================*/
+#feed-list[data-view="magazine"] .feed-item {
+    display: flex;
+    gap: 16px;
+}
+
+#feed-list[data-view="magazine"] .feed-cover {
+    flex: 0 0 160px;
+    /* ✅ 關鍵：固定封面寬 */
+}
+
+#feed-list[data-view="magazine"] .feed-cover img {
+    width: 160px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+#feed-list[data-view="magazine"] .feed-title {
+    font-size: 18px;
+}
+
+/* ==================================
+|          Card                     |
+===================================*/
+
+#feed-list[data-view="card"] {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+}
+
+#feed-list[data-view="card"] .feed-item {
+    display: block;
+}
+
+#feed-list[data-view="card"] .feed-cover img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+#feed-list[data-view="card"] .feed-title {
+    font-size: 16px;
+}
+
+#feed-list[data-view="card"] .feed-preview {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+}
+
+
+/* =====================================
+/* ===== Masonry / Waterfall Style ===== 
+======================================*/
+
+#feed-list[data-view="masonry"] {
+    column-count: 3;
+    column-gap: 14px;
+}
+
+@media (max-width: 768px) {
+    #view-magazine {
+        display: none;
+    }
+    #feed-list[data-view="masonry"] {
+        column-count: 1;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    #feed-list[data-view="masonry"] {
+        column-count: 2;
+    }
+}
+
+#feed-list[data-view="masonry"] .feed-item {
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 14px;
+}
+
+#feed-list[data-view="masonry"] .feed-cover img {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* ===== 列表項改為連結 ===== */
+a.feed-item {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+a.feed-item:hover {
+    text-decoration: none;
+}
+
+/* =====================================
+   詳細頁樣式
+   ===================================== */
+
+.feed-detail {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 16px 0;
+}
+
+.detail-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border, #eee);
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: var(--color-bg-alt);
+    color: var(--color-text-main);
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.btn-back:hover {
+    background: var(--color-text-minor);
+    text-decoration: none;
+}
+
+.detail-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-bookmark {
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border, #ddd);
+    background: var(--color-bg-alt);
+    color: var(--color-text-main);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-bookmark:hover,
+.btn-bookmark.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+.btn-bookmark.active svg {
+    fill: currentColor;
+}
+
+.detail-source {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.source-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    object-fit: contain;
+    background: white;
+}
+
+.source-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.source-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-main);
+}
+
+.source-date {
+    font-size: 12px;
+    color: var(--color-text-minor);
+}
+
+.detail-title {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--color-text-main);
+    margin: 0 0 20px 0;
+}
+
+.detail-cover {
+    margin-bottom: 24px;
+}
+
+.detail-cover img {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    display: block;
+}
+
+.detail-content {
+    font-size: 16px;
+    line-height: 1.8;
+    color: var(--color-text-main);
+}
+
+.detail-content p {
+    margin: 0 0 16px 0;
+}
+
+.detail-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 16px 0;
+    display: block;
+}
+
+.detail-content a {
+    color: var(--color-link);
+}
+
+.detail-content a:hover {
+    text-decoration: underline;
+}
+
+/* ===== 修復 figure 溢出問題 ===== */
+.detail-content figure {
+    margin: 16px 0;
+    padding: 0;
+    max-width: 100%;
+}
+
+.detail-content figure img {
+    max-width: 100%;
+    width: auto;
+    height: auto;
+}
+
+.detail-content figcaption {
+    font-size: 13px;
+    color: var(--color-text-minor);
+    margin-top: 6px;
+    text-align: center;
+}
+
+/* 確保所有內容元素不溢出 */
+.detail-content * {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* 處理可能的 iframe (影片嵌入) */
+.detail-content iframe {
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+}
+
+/* 處理 pre/code 區塊溢出 */
+.detail-content pre {
+    max-width: 100%;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.detail-cta {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--color-border, #eee);
+    text-align: center;
+}
+
+.btn-original {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    background: var(--color-primary);
+    color: white;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+
+.btn-original:hover {
+    opacity: 0.9;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .feed-detail {
+        padding: 12px 0;
+    }
+
+    .detail-title {
+        font-size: 22px;
+    }
+
+    .detail-content {
+        font-size: 15px;
+    }
+
+    .btn-original {
+        width: 100%;
+        justify-content: center;
+    }
+}
+/* ===== 統一 Action 按鈕樣式 ===== */
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border, #ddd);
+    background: var(--color-bg-alt);
+    color: var(--color-text-main);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.btn-action:hover {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+.btn-action.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+.btn-action.active svg {
+    fill: currentColor;
+}
+
+/* ===== Toast 提示 ===== */
+.toast {
+    position: fixed;
+    /* bottom: 20px; */
+    top: 40%;
+    left: 50%;
+    /* transform: translateX(-50%) translateY(20px); */
+    transform: translateX(-50%) translateY(-50%);
+    background: var(--toast-bg);
+    color: var(--toast-text);
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    opacity: 0;
+    transition: all 0.5s ease; /* slower fade */
+    z-index: 9999;
+    pointer-events: none;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ===== Feed Filter Modal ===== */
+.feed-filter-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+}
+
+.feed-filter-modal.show {
+    display: block;
+}
+
+.feed-filter-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.feed-filter-modal-content {
+    position: relative;
+    max-width: 360px;
+    max-height: 85vh;
+    margin: 7vh auto;
+    background: var(--color-bg-alt);
+    color: var(--color-text-main);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+}
+
+.feed-filter-modal-content h2 {
+    margin: 0 0 0.5rem 0;
+    flex-shrink: 0;
+}
+
+.feed-filter-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.feed-filter-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+.feed-filter-list li:hover {
+    background: var(--overlay-hover);
+}
+
+.feed-filter-list li.dimmed {
+    color: var(--color-text-minor);
+    opacity: 0.65;
+}
+
+.feed-filter-list li.dimmed .filter-icon {
+    color: var(--color-text-minor);
+}
+
+.feed-filter-list .filter-icon {
+    font-size: 1.1rem;
+    width: 20px;
+    text-align: center;
+}
+
+.feed-filter-list .feed-filter-empty {
+    color: var(--color-text-minor);
+    cursor: default;
+    padding: 1rem;
+}
+
+.feed-filter-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+    flex-shrink: 0;
+}
+
+/* Bookmark modal */
+.bookmark-modal { position: fixed; inset: 0; z-index: 1200; pointer-events: none; }
+.bookmark-modal[aria-hidden="true"] { visibility: hidden; opacity: 0; }
+.bookmark-modal[aria-hidden="false"] { visibility: visible; opacity: 1; }
+.bookmark-modal .bookmark-modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.45); pointer-events: auto;}
+.bookmark-modal .bookmark-modal-content { position: relative; max-width: 520px; margin: 80px auto; background: var(--color-bg-alt); border-radius: 10px; padding: 18px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); pointer-events: auto; }
+.bookmark-modal h2 { margin: 0 0 8px 0; font-size: 1.1rem; }
+.bookmark-modal .bookmark-modal-body { min-height: 40px; color: var(--color-text-main); }
+.bookmark-modal .bookmark-modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
+.bookmark-modal .btn-primary { padding:8px 12px; }
+.bookmark-modal .btn-secondary { padding:8px 12px; background:transparent; border:1px solid var(--color-border); }
+
+/* Feed list title */
+.feed-list-title { margin: 14px 0; font-size: 1.05rem; color: var(--color-text-main); }
+
+/* ===== Bookmark Modal ===== */
+/* 1) aria-hidden 控制顯示 */
+.bookmark-modal[aria-hidden="true"] { display: none; }
+.bookmark-modal[aria-hidden="false"] { display: block; }
+
+/* 2) modal 開啟時鎖背景（JS 也會用 position:fixed 方式鎖，這裡可作為保險） */
+body.modal-open { overflow: hidden; }

@@ -1,0 +1,87 @@
+services:
+  postgres:
+    image: postgres:17.7
+    container_name: postgres
+    restart: unless-stopped
+    # VPS 只有 1.8GB：每個容器設上限，失控時只殺那個容器，不會拖垮整台（含網路）
+    mem_limit: 350m
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      - pg_network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: always
+    mem_limit: 300m
+    ports:
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+    networks:
+      - pg_network
+
+  web:
+    build:
+      context: .
+      args:
+        WITH_HEAVY: "0"                    # 不裝系統 OCR 套件與 torch
+        REQ_FILE: requirements.base.txt    # 精簡相依集
+    container_name: django_app
+    # --max-requests：Python 吃到高峰後不會把記憶體還給 OS，定期重建 worker 才能回收；
+    # jitter 讓兩個 worker 不會同時重建。
+    command: bash -c "./wait-for-it.sh postgres:5432 -- python initialize_site.py && gunicorn TJsite.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120 --max-requests 200 --max-requests-jitter 30"
+    restart: unless-stopped
+    mem_limit: 700m
+    ports:
+      - "127.0.0.1:8000:8000"  # 只給本機的 nginx 打，不能讓全世界直接繞過 nginx 打 Gunicorn
+    depends_on:
+      - postgres
+    environment:
+      - TZ=Europe/London
+      - PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
+      - DJANGO_ENV=production  # 👈 Production 環境
+    env_file:
+      - .env
+    volumes:
+      - /srv/tablejourney/staticfiles:/app/staticfiles
+      - /srv/tablejourney/media:/app/media
+      # flowchart 翻譯走 DeepL（雲端，免本地模型）。
+    networks:
+      - pg_network
+
+  qcluster:
+    build:
+      context: .
+      args:
+        WITH_HEAVY: "0"
+        REQ_FILE: requirements.base.txt
+    command: bash -c "./wait-for-it.sh postgres:5432 -- python manage.py qcluster"
+    restart: unless-stopped
+    mem_limit: 300m
+    depends_on:
+      - postgres
+    environment:
+      - TZ=Europe/London
+      - Q_WORKERS=1  # VPS 只收 sync，重任務在本機跑，不需要 4 個 worker
+      - PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
+      - DJANGO_ENV=production
+    env_file:
+      - .env
+    volumes:
+      - /srv/tablejourney/staticfiles:/app/staticfiles
+      - /srv/tablejourney/media:/app/media
+    networks:
+      - pg_network
+
+networks:
+  pg_network:
+
+volumes:
+  postgres_data:

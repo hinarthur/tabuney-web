@@ -1,0 +1,151 @@
+{% extends "admin/change_form.html" %}
+{% load static static_v i18n %}
+
+{% block content %}
+{% if original %}
+{# 審核區要放在 block.super 之前：block.super 裡是整個 change form 的 <form>，表單不能巢狀 #}
+<div class="module" style="margin-bottom: 16px; padding: 10px 14px; border: 1px solid #ddd; border-radius: 4px;">
+  <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+    <strong>審核狀態：{{ review_state_label }}</strong>
+    {% if review_publication %}
+      <span style="color: #666;">公開版由 {{ review_publication.approved_by_name|default:"—" }} 於 {{ review_publication.approved_at|date:"Y-m-d H:i" }} 核准</span>
+    {% else %}
+      <span style="color: #666;">目前沒有公開版</span>
+    {% endif %}
+    <span style="color: #666;">最後編輯：{% if original.content_edited_by %}{{ original.content_edited_by.get_username }}{% else %}系統生成{% endif %}{% if original.content_edited_at %}（{{ original.content_edited_at|date:"Y-m-d H:i" }}）{% endif %}</span>
+    {% if review_can_review %}
+      <a class="button" href="{% url 'admin:game_rulebookflowchart_review' original.pk %}">前往審核</a>
+    {% endif %}
+  </div>
+  {% if text_batch_url %}
+  <div style="margin-top: 8px;">
+    文字翻譯：{% if text_pending_count %}<strong style="color:#cf1322;">{{ text_pending_count }} 段待翻譯</strong>{% else %}<span style="color:#389e0d;">已完整</span>{% endif %}
+    <a href="{{ text_batch_url }}" style="margin-left: 8px;">前往批次填寫</a>
+  </div>
+  {% endif %}
+  {% if preview_urls %}
+  <div style="margin-top: 8px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+    <span>在公開頁預覽草稿：</span>
+    {% for code, label, url in preview_urls %}
+      <a class="button" href="{{ url }}" target="_blank" rel="noopener" style="padding: 2px 10px;">{{ label }}</a>
+    {% endfor %}
+    <span style="color: #888; font-size: 11px;">預覽的是已存檔的草稿，請先在編輯器按 Save；訪客看不到。</span>
+  </div>
+  {% endif %}
+  {% if review_can_submit %}
+  <form id="submit-review-form" method="post" action="{% url 'admin:game_rulebookflowchart_submit_review' original.pk %}" style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
+    {% csrf_token %}
+    <input type="text" name="comment" placeholder="給 reviewer 的說明（選填）" style="width: 360px;">
+    <input type="submit" value="送審" class="default" style="float: none; margin: 0;">
+    <span style="color: #888; font-size: 11px;">送審前會自動存下編輯器裡未存的改動；送審後再改圖需要重新送審。</span>
+  </form>
+  {% endif %}
+  {% if review_can_restore %}
+  <form method="post" action="{% url 'admin:game_rulebookflowchart_restore_published' original.pk %}" style="margin-top: 8px; display: flex; gap: 8px; align-items: center;"
+        onsubmit="return confirm('確定要還原為目前的公開版？草稿上尚未核准的修改（包含編輯器裡未存的）都會被丟掉。');">
+    {% csrf_token %}
+    <input type="submit" value="還原為公開版" style="float: none; margin: 0;">
+    <span style="color: #888; font-size: 11px;">把草稿覆蓋回目前公開的內容，丟掉尚未核准的修改。</span>
+  </form>
+  {% endif %}
+  {% if review_can_withdraw %}
+  <form method="post" action="{% url 'admin:game_rulebookflowchart_withdraw_review' original.pk %}" style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
+    {% csrf_token %}
+    <input type="submit" value="收回送審" style="float: none; margin: 0;">
+    <span style="color: #888; font-size: 11px;">已送審、尚未審核。收回後回到草稿，可繼續編輯再重新送審。</span>
+  </form>
+  {% endif %}
+  {% if review_recent %}
+  <table style="margin-top: 8px; font-size: 12px; width: 100%;">
+    {% for r in review_recent %}
+    <tr>
+      <td style="white-space: nowrap; color: #888;">{{ r.created_at|date:"Y-m-d H:i" }}</td>
+      <td style="white-space: nowrap;">{{ r.get_action_display }}</td>
+      <td style="white-space: nowrap;">{{ r.actor.get_username|default:"—" }}</td>
+      <td style="white-space: nowrap; color: #888;">編輯者：{{ r.last_editor.get_username|default:"系統／未知" }}</td>
+      <td>{{ r.comment }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+</div>
+{% endif %}
+{{ block.super }}
+
+{% if original %}
+<div class="module" style="margin-top: 20px;">
+  <h2 style="padding: 8px 12px; background: #417690; color: #fff; margin: 0; border-radius: 4px 4px 0 0; font-size: 14px;">
+    🗺 Visual Flowchart Editor
+  </h2>
+
+  <div id="flowchart-editor-root" style="height: 700px;"></div>
+</div>
+
+<script>
+(function() {
+  var rfData = {{ react_flow_json|default:"null" }};
+  var adjData = {{ adjusted_json|default:"null" }};
+  window.FLOWCHART_EDITOR_CONFIG = {
+    reactFlowData: rfData,
+    adjustedJson: adjData,
+    adjustUrl: "{{ adjust_url }}",
+    csrfToken: "{{ csrf_token }}",
+    detail: "{{ original.detail }}",
+    rulebookTitle: {{ rulebook_title_json|safe }},
+    isAdjusted: {% if original.adjusted_json %}true{% else %}false{% endif %},
+    gameName: {{ game_name_json|safe }},
+    thumbnailUrl: {{ thumbnail_url_json|safe }},
+    logoUrl: "{% static 'img/tabuney_icon.png' %}"
+  };
+})();
+</script>
+<script>
+// 按 Django 的 Save 或「送審」前，先把編輯器裡尚未存的改動存起來（沒改動就不送）。
+// 存檔失敗就停下來，避免送審的是舊內容。
+(function() {
+  function hook(form) {
+    if (!form) return;
+    form.addEventListener('submit', function(e) {
+      if (form.dataset.autosaved === '1' || !window.flowchartEditorAutosave) return;
+      e.preventDefault();
+      var submitter = e.submitter;
+      window.flowchartEditorAutosave().then(function(ok) {
+        if (!ok) {
+          alert('流程圖存檔失敗，已取消送出。請先在編輯器按 Save 確認。');
+          return;
+        }
+        form.dataset.autosaved = '1';
+        // form.submit() 不會帶上按下的按鈕，補一個 hidden input 保留 _continue 等動作
+        if (submitter && submitter.name) {
+          var h = document.createElement('input');
+          h.type = 'hidden'; h.name = submitter.name; h.value = submitter.value;
+          form.appendChild(h);
+        }
+        form.submit();
+      });
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    hook(document.getElementById('rulebookflowchart_form'));
+    hook(document.getElementById('submit-review-form'));
+  });
+})();
+</script>
+<link rel="stylesheet" href="{% static_v 'css/theme.css' %}">
+<script>
+/* Django admin's theme.js rewrites <html data-theme> to auto/light/dark; theme.css only
+   knows default/dark, so map anything else to "default" and keep it that way. */
+(function () {
+  var root = document.documentElement;
+  function sync() {
+    var t = root.getAttribute('data-theme');
+    if (t !== 'default' && t !== 'dark') root.setAttribute('data-theme', 'default');
+  }
+  sync();
+  new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>
+<link rel="stylesheet" href="{% static_v 'game/admin/flowchart_editor/index.css' %}">
+<script type="module" src="{% static_v 'game/admin/flowchart_editor/index.js' %}"></script>
+{% endif %}
+{% endblock %}

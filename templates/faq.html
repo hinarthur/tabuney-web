@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load translate_tags %}
+{% block title %}{% t "faq.title" %} - Tabuney{% endblock %}
+{% block meta_description %}{% t "seo.faq.description" %}{% endblock meta_description %}
+{# og:title 不帶 " - Tabuney"，base.html 的 og:site_name 已經有品牌名 #}
+{% block og_title %}{% t "faq.title" %}{% endblock og_title %}
+{% block og_description %}{% t "seo.faq.description" %}{% endblock og_description %}
+{% block twitter_title %}{% t "faq.title" %}{% endblock twitter_title %}
+{% block twitter_description %}{% t "seo.faq.description" %}{% endblock twitter_description %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/faq.css' %}?v=6">
+{% endblock extrahead %}
+
+{% block content %}
+<div class="faq-page">
+    <h1>{% t "faq.title" %}</h1>
+
+    <nav class="faq-jumpnav" aria-label="{% t 'faq.title' %}">
+        <a href="#faq-website_platform">{% t "faq.category.website_platform" %}</a>
+        <a href="#faq-features_content">{% t "faq.category.features_content" %}</a>
+        <a href="#faq-account_support">{% t "faq.category.account_support" %}</a>
+    </nav>
+
+    <section id="faq-website_platform" class="faq-category">
+        <h2>{% t "faq.category.website_platform" %}</h2>
+        <div class="faq-list">
+            <details class="faq-item">
+                <summary>{% t "faq.publisher.question" %}</summary>
+                <p>{% t "faq.publisher.answer" %}</p>
+            </details>
+
+            <details class="faq-item">
+                <summary>{% t "faq.languages.question" %}</summary>
+                <p>{% t "faq.languages.answer" %}</p>
+            </details>
+
+            <details class="faq-item">
+                <summary>{% t "faq.game_not_found.question" %}</summary>
+                <p>{% t "faq.game_not_found.answer" %}</p>
+            </details>
+
+            <details class="faq-item">
+                <summary>{% t "faq.game_suggest.question" %}</summary>
+                <p>{% t "faq.game_suggest.answer" %}</p>
+            </details>
+
+            <details class="faq-item">
+                <summary>{% t "faq.free.question" %}</summary>
+                <p>{% t "faq.free.answer" %}</p>
+            </details>
+        </div>
+    </section>
+
+    <section id="faq-features_content" class="faq-category">
+        <h2>{% t "faq.category.features_content" %}</h2>
+        <div class="faq-list">
+            <details class="faq-item">
+                <summary>{% t "faq.rulesbot.question" %}</summary>
+                <p>{% t "faq.rulesbot.answer" %}</p>
+            </details>
+
+            <details class="faq-item">
+                <summary>{% t "faq.rulesbot_difference.question" %}</summary>
+                <div class="faq-table-wrapper">
+                    <table class="faq-table">
+                        <thead>
+                            <tr>
+                                <th>{% t "faq.rulesbot_difference.answer.comparison" %}</th>
+                                <th>{% t "faq.rulesbot_difference.answer.rulesbot" %}</th>
+                                <th>{% t "faq.rulesbot_difference.answer.generalai" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>{% t "faq.rulesbot_difference.answer.game_covered" %}</td>
+                                <td>{% t "faq.rulesbot_difference.answer.limited" %}</td>
+                                <td>{% t "faq.rulesbot_difference.answer.broad" %}</td>
+                            </tr>
+                            <tr>
+                                <td>{% t "faq.rulesbot_difference.answer.basis" %}</td>
+                                <td>{% t "faq.rulesbot_difference.answer.rulebook_only" %}</td>
+                                <td>{% t "faq.rulesbot_difference.answer.mix" %}</td>
+                            </tr>
+                            <tr>
+                                <td>{% t "faq.rulesbot_difference.answer.hallucination" %}</td>
+                                <td>{% t "faq.rulesbot_difference.answer.less_likely" %}</td>
+                                <td>{% t "faq.rulesbot_difference.answer.more_likely" %}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary>{% t "faq.rulesbot_accuracy.question" %}</summary>
+                <p>{% t "faq.rulesbot_accuracy.answer" %}</p>
+            </details>
+
+            <details class="faq-item">
+                <summary>{% t "faq.content_ai.question" %}</summary>
+                <p>{% t "faq.content_ai.answer" %}</p>
+            </details>
+
+            <details class="faq-item">
+                <summary>{% t "faq.flowchart.question" %}</summary>
+                <p>{% t "faq.flowchart.answer" %}</p>
+            </details>
+
+            <details class="faq-item">
+                <summary>{% t "faq.script.question" %}</summary>
+                <p>{% t "faq.script.answer" %}</p>
+            </details>
+        </div>
+    </section>
+
+    <section id="faq-account_support" class="faq-category">
+        <h2>{% t "faq.category.account_support" %}</h2>
+        <div class="faq-list">
+            <details class="faq-item">
+                <summary>{% t "faq.collection.question" %}</summary>
+                <p>{% t "faq.collection.answer" %}</p>
+            </details>
+
+            <details class="faq-item">
+                <summary>{% t "faq.privacy.question" %}</summary>
+                <p>{% t "faq.privacy.answer" %}</p>
+            </details>
+
+            <details class="faq-item">
+                <summary>{% t "faq.deleteaccount.question" %}</summary>
+                <p>{% t "faq.deleteaccount.answer" %}</p>
+            </details>
+        </div>
+    </section>
+</div>
+{% endblock content %}

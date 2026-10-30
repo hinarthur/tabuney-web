@@ -1,0 +1,122 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  .imp-text { width: 100%; box-sizing: border-box; min-height: 420px; font-family: monospace; font-size: 13px; }
+  .imp-actions { margin: 12px 0; display: flex; gap: 12px; align-items: center; }
+  .imp-report { margin: 16px 0; padding: 0; list-style: none; font-family: monospace; font-size: 13px; }
+  .imp-report li { padding: 2px 6px; border-left: 4px solid var(--hairline-color, #ccc); margin-bottom: 2px; }
+  .imp-report .lv-new  { border-color: #2e8b57; }
+  .imp-report .lv-fill { border-color: #2a6fdb; }
+  .imp-report .lv-same { border-color: #aaa; color: var(--body-quiet-color, #666); }
+  .imp-report .lv-skip { border-color: #aaa; color: var(--body-quiet-color, #666); }
+  .imp-report .lv-warn { border-color: #e0a800; background: rgba(224,168,0,.12); }
+  .imp-report .lv-error { border-color: #c62828; background: rgba(198,40,40,.12); font-weight: bold; }
+  .imp-summary { padding: 8px 12px; margin: 12px 0; border-radius: 4px; }
+  .imp-summary.bad { background: rgba(198,40,40,.15); }
+  .imp-summary.ok { background: rgba(46,139,87,.15); }
+  .imp-help pre { background: var(--darkened-bg, #f5f5f5); padding: 10px; overflow: auto; }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a> &rsaquo;
+  <a href="{% url 'admin:game_edition_changelist' %}">Editions</a> &rsaquo; 版本輸入
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <details class="imp-help"{% if not report %} open{% endif %}>
+    <summary><b>格式說明</b>（點開／收合）</summary>
+<pre>
+# 開頭是 # 的行是註解。行首空白會被忽略，不用管縮排。
+# [edition] 屬於上面最近的 [game]；[rulebook] 屬於上面最近的 [edition]。
+# 再寫一個 [game] 就是下一款遊戲。※ 必填
+
+[game]
+name: Catan                    # ※ 對應 canonical_name
+bgg_id: 13                     # 有填就優先用它找既有 Game
+kind: standalone               # standalone / expansion / variant / bundle
+parent:                        # 擴充/變體：主遊戲的 bgg_id 或名稱（要寫在它後面）
+players: 3-4                   # 單一人數寫 2
+playtime: 60-120               # 分鐘
+title: en | Catan *            # 語言代碼 | 標題；結尾 * = 主要標題；可寫多行
+title: zh | 卡坦島
+
+[edition]
+name: 繁中第五版                # ※
+language: zh                   # ※ Tribe 的語言代碼：en ja de fr es it nl pt ko zh
+release_year: 2023             # ※
+packaging_language: zh         # 可寫多行；只新增，不會移除既有的
+packaging_language: en
+region: TWN                    # Region 代碼：TWN HKG USA JPN KOR GBR DEU ESP FRA GLOBAL
+barcode: 4716000000000
+age: 10
+msrp: 1280 TWD                 # 金額 幣別碼
+primary: yes
+thumbnail: https://example.com/box.jpg    # 只在還沒有縮圖時下載，轉成 400px WebP
+publisher: Swan Panasia        # publisher / designer / artist 各可寫多行
+designer: Klaus Teuber
+artist: Michael Menzel
+summary: &lt;&lt;&lt;
+多行簡介寫在這裡，
+以單獨一行的 &gt;&gt;&gt; 結束
+&gt;&gt;&gt;
+
+[rulebook]
+title: 遊戲規則
+language: zh                   # ※
+url: https://example.com/catan-zh.pdf   # ※
+</pre>
+    <ul>
+      <li>已存在的資料<b>只補空白欄位，不覆蓋</b>；Edition 以 (遊戲, name, release_year) 判斷是否已存在，語言不同會報錯。</li>
+      <li>任何錯誤（缺必填、打錯 key、查無語言代碼…）都會<b>整批不寫入</b>，不會加一半。</li>
+      <li>先「預覽」才能「送審」；預覽後改過文字要重新預覽。</li>
+      <li>「送審」<b>不會寫入 DB</b>，只把文字存進所選的<a href="{% url 'admin:game_editionimportqueue_changelist' %}">Edition import queue</a>並改成待approval；在佇列按「寫入DB」才會真正寫入。</li>
+    </ul>
+  </details>
+
+  <form method="post">
+    {% csrf_token %}
+    <p>
+      <label for="queue_id"><b>桌遊名（必選）</b></label>
+      <select name="queue_id" id="queue_id" required>
+        <option value="">— 選擇佇列中的桌遊 —</option>
+        {% for q in queue_items %}
+        <option value="{{ q.pk }}"{% if q.pk|stringformat:"s" == queue_id %} selected{% endif %}>{{ q.name }}（{{ q.get_status_display }}）</option>
+        {% endfor %}
+      </select>
+      {% if not queue_items %}<span style="color:#c62828">佇列裡沒有待search／待approval的項目，請先到<a href="{% url 'admin:game_editionimportqueue_changelist' %}">Edition import queue</a>新增。</span>{% endif %}
+    </p>
+    <textarea name="text" class="imp-text" spellcheck="false" placeholder="[game]&#10;name: ...">{{ text }}</textarea>
+    <input type="hidden" name="preview_hash" value="{{ preview_hash }}">
+    <div class="imp-actions">
+      <button type="submit" name="action" value="preview" class="default">預覽</button>
+      {% if can_commit %}
+      <button type="submit" name="action" value="commit" style="background:#2e8b57;color:#fff;">送審</button>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if report %}
+    {% if committed %}
+      <div class="imp-summary ok">✅ 已送審（尚未寫入 DB）。到Edition import queue按「寫入DB」才會寫入。</div>
+    {% elif report.has_errors %}
+      <div class="imp-summary bad">❌ 有 {{ report.errors|length }} 個錯誤，<b>完全沒有寫入任何資料</b>。請修正後重新預覽。</div>
+    {% else %}
+      <div class="imp-summary ok">預覽正常（尚未寫入）{% if report.warnings %}，有 {{ report.warnings|length }} 個警告{% endif %}。確認無誤請按「送審」。</div>
+    {% endif %}
+    <ul class="imp-report">
+      {% for it in report.items %}
+      <li class="lv-{{ it.level }}" style="margin-left: {{ it.depth }}em">
+        {% if it.line %}<span style="opacity:.6">第 {{ it.line }} 行</span> {% endif %}
+        {% if it.level == "new" %}＋{% elif it.level == "fill" %}~{% elif it.level == "same" %}={% elif it.level == "skip" %}·{% elif it.level == "warn" %}⚠{% else %}✖{% endif %}
+        {{ it.text }}
+      </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</div>
+{% endblock %}

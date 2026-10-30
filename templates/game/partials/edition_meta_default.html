@@ -1,0 +1,8 @@
+{% load translate_tags %}{% comment %}版本詳細頁的預設 meta description。
+
+拆分前四個分頁共用這一段（就是原本 edition_detail.html 第 7 行那串）。現在它是
+info 分頁的描述——summary 本來就是在描述遊戲本身，那正是 info 這一頁的內容——
+其餘三頁各自在自己的 leaf template 蓋掉。
+
+一份 include 三處共用（meta / og / twitter），因為 Django 的 block 名在同一份
+template 內不能重複，{{ block.super }} 也只在同名 block 之間成立。{% endcomment %}{% if edition.summary %}{{ edition.summary|striptags|truncatewords:30 }}{% else %}{% firstof edition.name edition.game.canonical_name %}{% if edition.game.min_players %} · {{ edition.game.min_players }}-{{ edition.game.max_players }} {% t "game.label.players" %}{% endif %}{% if edition.game.min_playtime %} · {{ edition.game.min_playtime }}-{{ edition.game.max_playtime }} {% t "game.label.minutes" %}{% endif %} — {% t "seo.default.description" %}{% endif %}

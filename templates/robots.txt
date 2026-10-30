@@ -1,0 +1,33 @@
+# robots.txt 由 Django 渲染（見 home.views.RobotsView），不是靜態檔。
+#
+# robots.txt 的分組規則是「最精確的那一組獨贏」：只要爬蟲名稱對上具名的
+# User-agent，它就完全不看 User-agent: * 那一組。所以每一組都得自己把
+# Disallow 清單再寫一次 —— 共用清單抽在 robots_rules.txt，三組都 include
+# 同一份，改一次三組一起改，不會漏掉私人路徑。
+
+User-agent: *
+{% include "robots_rules.txt" %}
+# ── AI 助理的「即時檢索 / 引用」爬蟲 ──
+# 使用者當下問問題時才來抓，抓到的內容會直接附上出處連結回站上。
+# 這是 AI 時代的自然流量來源，一律歡迎，只是跟一般爬蟲守同一套私人路徑規則。
+User-agent: ChatGPT-User
+User-agent: OAI-SearchBot
+User-agent: Claude-User
+User-agent: Claude-SearchBot
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+Allow: /
+{% include "robots_rules.txt" %}
+# ── AI 訓練資料爬蟲 ──
+# 這些是拿內容去「訓練模型」的爬蟲，不會回連、不會帶流量，所以整組擋掉。
+# 注意 Google-Extended 只管 Gemini/Vertex 的訓練用途，跟 Googlebot 的
+# 一般搜尋索引完全是兩回事 —— 擋它不影響 Google 搜尋排名。
+# 同理擋 GPTBot 不影響 ChatGPT-User 的即時檢索與引用。
+User-agent: GPTBot
+User-agent: ClaudeBot
+User-agent: CCBot
+User-agent: Bytespider
+User-agent: Google-Extended
+Disallow: /
+
+Sitemap: {{ SITE_URL }}/sitemap.xml

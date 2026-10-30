@@ -1,0 +1,19 @@
+{% load translate_tags %}
+{% comment %}
+色覺友善：True 顯示線框圖（形狀可辨），False 顯示紅藍黃三圓（需辨色），None（尚未確認）不顯示。
+搜尋卡片與 edition_detail 桌機／手機三處共用。
+先擋 is not None 再判真假：Django template 裡 False 與 None 都是 falsy，單一 {% templatetag openblock %} if {% templatetag closeblock %} 分不出來。
+svg 的 fill / stroke 直接寫成屬性而非 class：一頁會 inline 二十份，class 會互撞。
+（{% templatetag openbrace %}# #{% templatetag closebrace %} 不支援跨行，跨行寫會整段被當文字印在頁面上。）
+{% endcomment %}
+{% if edition.color_vision_friendly is not None %}
+{% if edition.color_vision_friendly %}
+<span title="{% t "game.label.color_vision_friendly" %}" style="display:inline-flex;align-items:center;white-space:nowrap;">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="1.4em" height="1.4em" style="vertical-align:-0.125em" role="img"><title>{% t "game.label.color_vision_friendly" %}</title><g fill="none" stroke="#0E8EDD" stroke-width="32" stroke-miterlimit="100"><path d="m486.22 346.64l-131.97 139.47-139.46-131.97 131.96-139.46z"/><path d="m203.83 24.77l243.82 72.04-184.45 174.93z"/><path d="m132.15 368.38c-60.28-0.77-108.37-50.11-107.6-110.38 0.77-60.28 50.12-108.37 110.39-107.6 60.27 0.77 108.37 50.12 107.59 110.39-0.77 60.27-50.11 108.37-110.38 107.59z"/></g></svg>
+</span>
+{% else %}
+<span title="{% t "game.label.color_vision_friendly.no" %}" style="display:inline-flex;align-items:center;white-space:nowrap;">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="51 44 410 410" width="1.4em" height="1.4em" style="vertical-align:-0.125em" role="img"><title>{% t "game.label.color_vision_friendly.no" %}</title><path d="m256 262c-54.19 0-98-43.81-98-98 0-54.19 43.81-98 98-98 54.19 0 98 43.81 98 98 0 54.19-43.81 98-98 98z" fill="#ff0000"/><path d="m157 432c-54.19 0-98-43.81-98-98 0-54.19 43.81-98 98-98 54.19 0 98 43.81 98 98 0 54.19-43.81 98-98 98z" fill="#0000ff"/><path d="m355 432c-54.19 0-98-43.81-98-98 0-54.19 43.81-98 98-98 54.19 0 98 43.81 98 98 0 54.19-43.81 98-98 98z" fill="#ffff00"/></svg>
+</span>
+{% endif %}
+{% endif %}

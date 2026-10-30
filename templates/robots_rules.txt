@@ -1,0 +1,19 @@
+# 這兩條是舊的公開網址，現在 301 到 /games/。必須讓爬蟲進得去，
+# 它才看得到重導、才會把已收錄的舊網址換成新的。
+# 等 Search Console 顯示舊網址大致換完（通常數週），再把這兩行拿掉。
+Allow: /api/game/edition/
+Allow: /api/game/search/
+Disallow: /api/
+Disallow: /power/
+Disallow: /acct/
+Disallow: /feed_panel/
+Disallow: /tablejourney/
+Disallow: /commerce/
+Disallow: /interaction/
+# 個人頁與交易頁沒有收錄價值
+Disallow: /my/
+Disallow: /membership/
+Disallow: /*/my/
+Disallow: /*/membership/
+# 搜尋結果頁不收錄
+Disallow: /*?q=

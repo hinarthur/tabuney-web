@@ -1,0 +1,103 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}依文字長度縮到最小尺寸{% endblock %}
+
+{% block content %}
+<h1>依文字長度縮到最小尺寸</h1>
+
+<p>每個節點的外框會依它實際的文字重算，<strong>取原文與 6 語譯文中最寬的一版</strong>為準
+（公開頁會把文字換成 en/zh/ja/fr/de/es，德文/法文通常比原文長）。
+節點<strong>中心點保持不動</strong>，不會打亂既有排版。</p>
+
+<p style="color:#b8860b;">⚠️ 套用後，儲存在 edge 裡「已算好的線段路徑」（<code>data.d</code>、
+<code>viewLabelX/Y</code>）會被清除，手機 App 改用自行重算的幾何來畫線。</p>
+
+{% if rows %}
+  <p><strong>共 {{ rows|length }} 張流程圖、{{ total_nodes }} 個節點會被調整。</strong></p>
+
+  {% for row in rows %}
+    <div class="module" style="margin-bottom:22px;">
+      <h2>
+        {{ row.chart.rulebook.title }} — ruleset “{{ row.chart.ruleset }}”
+        <span style="font-weight:normal;">
+          （{{ row.plans|length }}/{{ row.node_count }} 個節點，平均面積 {{ row.avg_pct }}%
+          {% if row.grew_count %}
+            <span style="color:#c0392b;">・{{ row.grew_count }} 個變大</span>
+          {% endif %}）
+        </span>
+      </h2>
+      <table style="width:100%;">
+        <thead>
+          <tr>
+            <th style="width:14%;">節點</th>
+            <th style="width:9%;">類型</th>
+            <th>文字</th>
+            <th style="width:11%;">before</th>
+            <th style="width:11%;">after</th>
+            <th style="width:9%;">變化</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in row.plans %}
+            <tr class="{% cycle 'row1' 'row2' %}">
+              <td><code>{{ p.node_id }}</code></td>
+              <td>{{ p.node_type }}</td>
+              <td>{{ p.label|truncatechars:30|default:"—" }}</td>
+              <td>{{ p.old_w }}×{{ p.old_h }}</td>
+              <td>{{ p.new_w }}×{{ p.new_h }}</td>
+              {% if p.grew %}
+                <td style="color:#c0392b;font-weight:600;" title="目前的文字其實裝不下（或某個語言裝不下），套用等於順手修好">▲ +{{ p.delta_pct }}%</td>
+              {% else %}
+                <td style="color:#2d7a3e;">▼ {{ p.delta_pct }}%</td>
+              {% endif %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if row.groups %}
+        <p style="margin:8px 12px 12px;">
+          🗂 另有 {{ row.groups|length }} 個相位外框會跟著放大，以免子節點凸出去被
+          <code>extent:"parent"</code> 夾回框內：
+          {% for g in row.groups %}
+            <strong>{{ g.label|default:g.node_id }}</strong>
+            {{ g.old_w }}×{{ g.old_h }}→{{ g.new_w }}×{{ g.new_h }}{% if not forloop.last %}、{% endif %}
+          {% endfor %}
+        </p>
+      {% endif %}
+    </div>
+  {% endfor %}
+{% else %}
+  <p><strong>沒有任何節點需要調整。</strong></p>
+{% endif %}
+
+{% if skipped_same %}
+  <p>✅ 已經是最小尺寸，略過：
+    {% for c in skipped_same %}{{ c.rulebook.title }}（{{ c.ruleset }}）{% if not forloop.last %}、{% endif %}{% endfor %}
+  </p>
+{% endif %}
+
+{% if skipped_auto %}
+  <p>⏭ 尚未在編輯器存過（position 全是 0，載入時會重跑 dagre 自動排版，寫尺寸沒有意義），
+    請先開編輯器 Save 一次：
+    {% for c in skipped_auto %}{{ c.rulebook.title }}（{{ c.ruleset }}）{% if not forloop.last %}、{% endif %}{% endfor %}
+  </p>
+{% endif %}
+
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="shrink_nodes_to_fit">
+  {% for obj in queryset %}
+    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}">
+  {% endfor %}
+
+  <div style="margin-top: 20px;">
+    {% if rows %}
+      <input type="submit" name="apply_shrink" value="確認套用" class="default"
+        style="background:#417690; color:white; padding:8px 16px; border:none; cursor:pointer; font-size:14px;">
+      &nbsp;
+    {% endif %}
+    <a href="{% url 'admin:game_rulebookflowchart_changelist' %}" class="button cancel-link">Cancel</a>
+  </div>
+</form>
+{% endblock %}

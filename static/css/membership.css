@@ -1,0 +1,315 @@
+.membership-container {
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 20px;
+    background: var(--color-bg);
+    color: var(--color-text-main);
+}
+
+.membership-title {
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+}
+
+.tier-table-wrapper {
+    overflow-x: auto;
+}
+
+.tier-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    background: var(--color-bg-alt);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--color-text-disabled);
+}
+
+.tier-table th, .tier-table td {
+    padding: 15px 15px;
+    text-align: center;
+    border-bottom: 1px solid var(--color-text-disabled);
+    border-right: 1px solid var(--color-text-disabled);
+    color: var(--color-text-main);
+    word-wrap: break-word;
+    word-break: break-word;
+}
+
+.tier-table th:first-child,
+.tier-table td:first-child {
+    width: 22%;
+}
+
+.tier-table th:nth-child(2), .tier-table td:nth-child(2),
+.tier-table th:nth-child(3), .tier-table td:nth-child(3),
+.tier-table th:nth-child(4), .tier-table td:nth-child(4) {
+    width: 26%;
+}
+
+.tier-table th:last-child, .tier-table td:last-child {
+    border-right: none;
+}
+
+.tier-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.tier-table th {
+    background: var(--color-bg-hover);
+    font-weight: 700;
+    font-size: 1.2rem;
+    vertical-align: top;
+}
+
+.tier-table th:first-child {
+    text-align: left;
+    font-size: 1.1rem;
+    vertical-align: middle;
+}
+
+.tier-table td:first-child {
+    text-align: left;
+    font-weight: 600;
+}
+
+.current-plan-label {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 6px 12px;
+    background: var(--color-primary);
+    color: #ffffff;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.upgrade-btn {
+    display: inline-block;
+    margin-top: 0;
+    margin-left: 10px;
+    padding: 6px 14px;
+    background: var(--color-primary);
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 0.3s ease;
+}
+
+.th-subscriber-header {
+    /* display: flex; */
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+}
+
+.upgrade-btn:hover {
+    background: var(--color-primary-light);
+    color: #ffffff;
+}
+
+.check-icon {
+    color: var(--color-primary);
+    font-weight: bold;
+}
+
+.price-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.price-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    background: #ea4335;
+    color: #ffffff;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.price-original {
+    text-decoration: line-through;
+    color: var(--color-text-disabled);
+    font-size: 0.85rem;
+}
+
+.price-current {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.price-promo-label {
+    font-size: 0.8rem;
+    color: var(--color-text-main);
+    opacity: 0.75;
+}
+
+/* Responsive adjustments for mobile so table fits without horizontal scroll */
+@media (max-width: 768px) {
+    .membership-container {
+        padding: 15px 5px;
+    }
+    
+    .membership-title {
+        font-size: 1.6rem;
+        margin-bottom: 20px;
+    }
+
+    .tier-table th, .tier-table td {
+        padding: 10px 4px;
+        /* font-size: 0.85rem; */
+        word-wrap: break-word;
+        word-break: break-word;
+    }
+
+    .tier-table th {
+        font-size: 0.95rem;
+    }
+
+    .tier-table th:first-child {
+        font-size: 0.9rem;
+        min-width: 80px; /* keep first row slightly wider for labels */
+    }
+
+    .current-plan-label {
+        margin-top: 8px;
+        padding: 4px 6px;
+        font-size: 0.7rem;
+    }
+
+    .upgrade-btn {
+        margin-left: 0;
+        margin-top: 6px;
+        padding: 4px 8px;
+        font-size: 0.8rem;
+    }
+
+    .th-subscriber-header {
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .price-badge {
+        padding: 2px 8px;
+        font-size: 0.68rem;
+    }
+
+    .price-current {
+        font-size: 1rem;
+    }
+
+    .price-original,
+    .price-promo-label {
+        font-size: 0.72rem;
+    }
+}
+
+.cancel-btn {
+    background: var(--color-bg-hover);
+    color: var(--color-text-main);
+    border: 1px solid var(--color-text-disabled);
+}
+
+.cancel-btn:hover {
+    background: var(--color-text-disabled);
+    color: var(--color-text-main);
+}
+
+.resume-btn {
+    background: #34A853;
+    color: #ffffff;
+    border: none;
+}
+
+.resume-btn:hover {
+    background: #2b8b45;
+    color: #ffffff;
+}
+
+.subscription-status {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    font-weight: normal;
+    color: var(--color-text-main);
+    opacity: 0.85;
+}
+
+.subscription-warning {
+    color: #ea4335;
+    margin-top: 4px;
+    font-size: 0.9rem;
+}
+
+/* ── 我的永久解鎖清單 ─────────────────────────────────────────────────
+   每位會員免費 3 款 + US$1 加購（見 member.EditionUnlock）。權益不可逆，
+   這份清單是使用者唯一查得到自己用掉哪幾款的地方。 */
+.my-unlocks {
+    margin-top: 32px;
+}
+
+.my-unlocks h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.my-unlocks-quota {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text-minor);
+}
+
+.my-unlocks-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.my-unlocks-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.my-unlocks-source,
+.my-unlocks-empty {
+    font-size: 0.85rem;
+    color: var(--color-text-minor);
+}
+
+.my-unlocks-intro {
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: var(--color-text-minor);
+    text-align: justify;
+    margin: 0 0 8px;
+}
+
+.my-unlocks-intro + .my-unlocks-list,
+.my-unlocks-intro + .my-unlocks-empty {
+    margin-top: 14px;
+}

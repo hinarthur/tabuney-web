@@ -1,0 +1,70 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Duplicate script(s){% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  {{ form.media }}
+{% endblock %}
+
+{% block content %}
+<h1>Duplicate {{ queryset|length }} script(s)</h1>
+
+<p><strong>此為複製,不是共用連結。</strong>會為每一筆選取的講稿建立獨立的新草稿,
+把目前生效的標題與內容(含人工修改)複製過去當起點。新草稿預設<strong>未發布</strong>,
+需要人工調整/審核後再用 action 發布。</p>
+
+<p>下面兩個維度<strong>至少要選一項</strong>,兩項都選則取組合(每個 edition × 每個語言各一份):</p>
+<ul>
+  <li><strong>只選語言</strong> — 留在原 rulebook,建立其他語言的翻譯起點。</li>
+  <li><strong>只選 edition</strong> — 沿用原語言,複製給規則極相似的變異版本。目標 edition
+    若還沒有任何 rulebook,會自動建立一本佔位 rulebook 讓講稿有地方可掛;換了 rulebook 的
+    複本不會沿用原本的參考流程圖。</li>
+</ul>
+<p>已存在相同 (rulebook, ruleset, 語言) 的講稿會被跳過,不會建立重複資料。</p>
+
+<ul>
+  {% for obj in queryset %}
+    <li>{{ obj.rulebook.title }} — ruleset "{{ obj.ruleset }}" ({{ obj.language }})</li>
+  {% endfor %}
+</ul>
+
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="duplicate_script">
+  {% for obj in queryset %}
+    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}">
+  {% endfor %}
+
+  {% if form.non_field_errors %}
+    <ul class="errorlist">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  <fieldset class="module aligned">
+    <div class="form-row">
+      <label for="id_target_editions">Target Editions</label>
+      {{ form.target_editions }}
+      <p class="help">{{ form.target_editions.help_text }}</p>
+      {% if form.target_editions.errors %}
+        <ul class="errorlist">{% for e in form.target_editions.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+      {% endif %}
+    </div>
+    <div class="form-row">
+      <label>Target Languages</label>
+      {{ form.target_languages }}
+      <p class="help">{{ form.target_languages.help_text }}</p>
+      {% if form.target_languages.errors %}
+        <ul class="errorlist">{% for e in form.target_languages.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+      {% endif %}
+    </div>
+  </fieldset>
+
+  <div style="margin-top: 20px;">
+    <input type="submit" name="apply_duplicate" value="Confirm duplicate" class="default"
+      style="background:#417690; color:white; padding:8px 16px; border:none; cursor:pointer; font-size:14px;">
+    &nbsp;
+    <a href="{% url 'admin:game_rulebookscript_changelist' %}" class="button cancel-link">Cancel</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}問題分類測試{% endblock %}
+
+{% block content %}
+<h1>問題分類測試</h1>
+<p>
+  輸入一句玩家可能會問的規則問題，用 <code>gemini-3.1-flash-lite</code> 並排跑兩種分類器，
+  顯示各自分到哪一類、以及這次呼叫實際花了多少 token。<br>
+  純測試用途，<strong>不會寫入資料庫</strong>，也不需要選規則書——分類器只看問題文字，不看規則書內容。
+</p>
+<ul>
+  <li><strong>七類分類器</strong>：正式流程（chat_views.py）在用的那個。rules + 5 種 reasoning 子類（calc / combine / timing / legality / advice）+ other。</li>
+  <li><strong>簡化三類分類器</strong>（實驗性，尚未接進正式流程）：scenario / rules / other，決策順序固定——先判有沒有描述遊戲情境，沒有的話再判有沒有提到桌遊常用詞（dice, turn, round, card, effect, points, player, discard, board, joker, end, hand, icon, trick 等），都沒有才是 other。</li>
+</ul>
+
+<form method="post" style="max-width:640px;">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <input type="submit" value="送出分類" class="default"
+    style="background:#417690; color:white; padding:8px 16px; border:none; cursor:pointer; font-size:14px;">
+</form>
+
+{% if error %}
+<div style="margin-top:20px; padding:12px; border:1px solid #dc3545; background:#fdecea; color:#721c24; max-width:760px;">
+  <strong>發生錯誤：</strong>{{ error }}
+</div>
+{% endif %}
+
+{% if result or simple_result %}
+<div style="margin-top:24px; max-width:760px;">
+  <h2>結果</h2>
+  <p><strong>問題：</strong>{{ question }}</p>
+  <table style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th style="text-align:left; padding:8px; border:1px solid #ddd; background:#f8f8f8; width:160px;"></th>
+        <th style="text-align:left; padding:8px; border:1px solid #ddd; background:#f8f8f8;">七類分類器（正式流程在用）</th>
+        <th style="text-align:left; padding:8px; border:1px solid #ddd; background:#f8f8f8;">簡化三類分類器（實驗性）</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th style="text-align:left; padding:8px; border:1px solid #ddd; background:#f8f8f8;">分類結果</th>
+        <td style="padding:8px; border:1px solid #ddd;">
+          <code>{{ result.category }}</code>
+          {% if result.category_label != result.category %}
+            — {{ result.category_label }}
+          {% endif %}
+        </td>
+        <td style="padding:8px; border:1px solid #ddd;"><code>{{ simple_result.category }}</code></td>
+      </tr>
+      <tr>
+        <th style="text-align:left; padding:8px; border:1px solid #ddd; background:#f8f8f8;">Input tokens</th>
+        <td style="padding:8px; border:1px solid #ddd;">{{ result.prompt_tokens|default:"—" }}</td>
+        <td style="padding:8px; border:1px solid #ddd;">{{ simple_result.prompt_tokens|default:"—" }}</td>
+      </tr>
+      <tr>
+        <th style="text-align:left; padding:8px; border:1px solid #ddd; background:#f8f8f8;">Output tokens</th>
+        <td style="padding:8px; border:1px solid #ddd;">{{ result.completion_tokens|default:"—" }}</td>
+        <td style="padding:8px; border:1px solid #ddd;">{{ simple_result.completion_tokens|default:"—" }}</td>
+      </tr>
+      <tr>
+        <th style="text-align:left; padding:8px; border:1px solid #ddd; background:#f8f8f8;">總 tokens</th>
+        <td style="padding:8px; border:1px solid #ddd;"><strong>{{ result.total_tokens|default:"—" }}</strong></td>
+        <td style="padding:8px; border:1px solid #ddd;"><strong>{{ simple_result.total_tokens|default:"—" }}</strong></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,453 @@
+/* Scoped styles for the flowchart editor panel */
+#flowchart-editor-root {
+  border: 1px solid var(--fc-node-border, #ddd);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--fc-editor-bg, #fff);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Connection handles: a bigger dot plus an invisible, larger hit area so the
+   handle is easy to grab and to drop an edge onto. */
+#flowchart-editor-root .react-flow__handle {
+  width: 12px;
+  height: 12px;
+  background: var(--fc-select, #1677ff);
+  border: 2px solid var(--fc-editor-bg, #fff);
+  opacity: 0.55;
+  z-index: 5; /* above the label span (z-index:1) so tight text can't cover it */
+  cursor: crosshair;
+  transition: opacity .12s;
+}
+#flowchart-editor-root .react-flow__handle::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+}
+#flowchart-editor-root .react-flow__node:hover .react-flow__handle,
+#flowchart-editor-root .react-flow__node.selected .react-flow__handle,
+#flowchart-editor-root .react-flow__handle.connectingfrom,
+#flowchart-editor-root .react-flow__handle.connectingto { opacity: 1; }
+#flowchart-editor-root .react-flow__handle.connectingto,
+#flowchart-editor-root .react-flow__handle.valid { background: var(--fc-edge-yes, #52c41a); }
+
+/* React Flow overrides */
+.react-flow__node-oval,
+.react-flow__node-diamond,
+.react-flow__node-double,
+.react-flow__node-phase {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+/* A4/A5 print frames: React Flow puts `pointer-events: all` on every node
+   wrapper INLINE, so only !important can take it back. Without this the frame
+   (which can cover the whole diagram) eats every click meant for the edges
+   underneath — edges render in their own SVG layer below all nodes, so no
+   amount of node z-ordering helps. PageNode re-enables pointer events on its
+   border strips + label, which is all you need to select or drag the frame. */
+.react-flow__node-page {
+  pointer-events: none !important;
+}
+
+.react-flow__edge-label {
+  font-size: 11px;
+  background: var(--fc-edge-label-bg, rgba(255,255,255,0.85));
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+/* ===== Step-by-step tour (popup window) ===================================
+   One node is in focus at a time; everything else is pushed back with a blur
+   so the reader's eye lands on the current step. Edge className lands on the
+   <g class="react-flow__edge"> wrapper, so LabeledEdge's own SVG label blurs
+   along with its path — no extra rule needed for labels. */
+#flowchart-tour-root {
+  position: fixed;
+  inset: 0;
+}
+
+/* Tour turns off selecting/dragging, and React Flow then sets inline
+   pointer-events:none on every node wrapper — which also kills the legend
+   button. Re-enable it on the focused node only. */
+.react-flow__node.fc-tour-focus { pointer-events: all !important; }
+
+.react-flow__node.fc-tour-dim,
+.react-flow__edge.fc-tour-dim {
+  filter: blur(2.5px);
+  opacity: 0.35;
+  pointer-events: none;
+  transition: filter 0.35s ease, opacity 0.35s ease;
+}
+
+.react-flow__node.fc-tour-focus {
+  opacity: 1;
+  z-index: 10 !important;
+  transition: filter 0.35s ease, opacity 0.35s ease;
+}
+
+.react-flow__edge.fc-tour-edge-active {
+  opacity: 1;
+  transition: filter 0.35s ease, opacity 0.35s ease;
+}
+
+.fc-tour-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: min(92vw, 760px);
+  padding: 10px 14px;
+  border: 1px solid var(--color-text-disabled, #ccc);
+  border-radius: 10px;
+  background: var(--color-bg-alt, #fff);
+  color: var(--color-text-main, #333);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+}
+
+.fc-tour-nav {
+  display: flex;
+  gap: 6px;
+}
+
+.fc-tour-btn {
+  min-width: 42px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-text-disabled, #ccc);
+  border-radius: 6px;
+  background: var(--color-bg, #fff);
+  color: var(--color-text-main, #333);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.fc-tour-btn:hover:not(:disabled) { background: var(--color-bg-hover, #eee); }
+.fc-tour-btn:disabled { opacity: 0.35; cursor: default; }
+
+/* Branch choices at a decision node — one button per outgoing arrow label */
+.fc-tour-branches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.fc-tour-branches-label {
+  color: var(--color-text-minor, #666);
+  font-size: 12px;
+}
+.fc-tour-branch {
+  padding: 5px 12px;
+  border: 1px solid var(--color-primary, #0E8ED0);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-primary, #0E8ED0);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fc-tour-branch:hover {
+  background: var(--color-primary, #0E8ED0);
+  color: #fff;
+}
+
+/* Legend notes — one button per legend node, opens the text above the nav
+   without moving the viewport, so checking a note never loses your step */
+.fc-tour-notes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.fc-tour-notes-label {
+  margin-right: 2px;
+  color: var(--color-text-minor, #666);
+  font-size: 11px;
+}
+.fc-tour-note-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px dashed var(--color-text-disabled, #bbb);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-minor, #666);
+  font-size: 11px;
+  cursor: pointer;
+}
+.fc-tour-note-btn:hover { background: var(--color-bg-hover, #eee); }
+.fc-tour-note-btn.active {
+  border-style: solid;
+  border-color: var(--color-primary, #0E8ED0);
+  color: var(--color-primary, #0E8ED0);
+  font-weight: 600;
+}
+
+.fc-node-legend-btn {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  z-index: 5;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--fc-editor-bg, #fff);
+  border-radius: 50%;
+  background: var(--color-primary, #0E8ED0);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .35);
+}
+.fc-node-legend-btn:hover { filter: brightness(1.1); }
+
+.fc-tour-note {
+  position: relative;
+  width: 100%;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 10px 30px 10px 12px;
+  border: 1px solid var(--color-text-disabled, #ccc);
+  border-radius: 8px;
+  background: var(--color-bg, #fff);
+  text-align: left;
+}
+/* Note body is doubled (12px -> 24px) so it stays readable across a table
+   during a demo; the title is raised alongside it to still read as a heading. */
+.fc-tour-note-title {
+  margin-bottom: 6px;
+  color: var(--color-text-main, #333);
+  font-size: 24px;
+  font-weight: 700;
+}
+.fc-tour-note-text {
+  color: var(--color-text-minor, #666);
+  font-size: 18px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.fc-tour-note-close {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-minor, #666);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .fc-tour-panel { max-width: 96vw; padding: 8px 10px; font-size: 12px; }
+  .fc-tour-btn { min-width: 38px; padding: 5px 8px; }
+}
+
+/* ===== Print palette (ink saving) =========================================
+   printPane() in edition_detail_flowchart.html opens a window, copies the live
+   .react-flow DOM into it and links this stylesheet, so the node colours
+   arrive as inline styles — only !important can take them back.
+
+   Screen uses saturated fills; paper uses a pale fill + a dark outline + black
+   text, which reads the same but costs a fraction of the ink. Actions go plain
+   white (they are the bulk of any chart) and keep only their phase-coloured
+   outline, so the Preparation / Game Flow / Endgame grouping still survives on
+   paper for free. Applied only under .fc-print-ink, which printPane sets on the
+   print window's <body> — the on-screen chart and the fullscreen view are
+   untouched. The colours are --fc-print-* variables in theme.css; the print
+   window links theme.css and is forced to the light theme. */
+.fc-print-ink [data-fc-node] {
+  color: var(--fc-print-ink, #111111) !important;
+}
+.fc-print-ink [data-fc-node] span {
+  color: var(--fc-print-ink, #111111) !important;
+}
+
+/* start / end share one node type, so the kind attribute is what splits them */
+.fc-print-ink [data-fc-node="oval"][data-fc-kind="start"] {
+  background-color: var(--fc-print-start-bg, #FFFFFF) !important;
+  border: 2px solid var(--fc-print-start-border, #397463) !important;
+}
+.fc-print-ink [data-fc-node="oval"][data-fc-kind="end"] {
+  background-color: var(--fc-print-end-bg, #FFFFFF) !important;
+  border: 2px solid var(--fc-print-end-border, #9B535B) !important;
+}
+
+/* decision — the diamond is an SVG polygon: CSS beats the fill/stroke attrs */
+.fc-print-ink [data-fc-node="diamond"] polygon {
+  fill: var(--fc-print-diamond-bg, #FFFFFF) !important;
+  stroke: var(--fc-print-diamond-border, #347B78) !important;
+}
+
+/* parallel — keep the double border, it is this node's signature */
+.fc-print-ink [data-fc-node="double"] {
+  background-color: var(--fc-print-double-bg, #FFFFFF) !important;
+  border: 3px double var(--fc-print-double-border, #725987) !important;
+}
+
+.fc-print-ink [data-fc-node="phase"] {
+  background-color: var(--fc-print-phase-bg, #FFFFFF) !important;
+  border: 2px solid var(--fc-print-phase-border, #876D2B) !important;
+}
+
+/* action — white fill, phase-coloured outline kept as drawn */
+.fc-print-ink [data-fc-node="action"] {
+  background-color: var(--fc-print-action-bg, #ffffff) !important;
+}
+
+/* theme.css gives .react-flow a tinted editor background; paper stays white */
+.fc-print-ink .react-flow {
+  background: #fff !important;
+}
+
+/* Django admin styles bare <label> in a quiet grey; inside the editor every
+   label that doesn't set its own colour (e.g. checkbox rows) inherits instead. */
+#flowchart-editor-root label {
+  color: inherit;
+}
+
+/* ── Board button + popups ────────────────────────────────────────────────── */
+/* Sits on the opposite corner from .fc-node-legend-btn so both can show. */
+.fc-node-board-btn {
+  /* Read-only mounts (overview, tour) get inline pointer-events:none on every
+     node wrapper; a child can opt back in, so the button stays clickable. */
+  pointer-events: auto;
+  position: absolute;
+  top: -14px;
+  left: -14px;
+  z-index: 5;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--fc-editor-bg, #fff);
+  border-radius: 50%;
+  background: var(--color-primary, #0E8ED0);
+  color: #fff;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .35);
+}
+.fc-node-board-btn:hover { filter: brightness(1.1); }
+
+.fc-board-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--fc-modal-backdrop, rgba(15, 23, 42, .45));
+}
+.fc-board-modal {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--color-bg-popup, #fff);
+  color: var(--color-text-main, #333);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .3);
+}
+.fc-board-title { font-size: 18px; font-weight: 700; margin: 0 28px 8px 0; }
+.fc-board-scroll { overflow: auto; min-height: 0; }
+.fc-board-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-minor, #666);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.fc-board-view { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.fc-board-view svg { display: block; }
+.fc-board-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 12px; font-size: 12px; color: var(--color-text-minor, #666); }
+.fc-board-legend-item { display: inline-flex; align-items: center; gap: 4px; }
+.fc-board-swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--fc-board-line, #8C8577); }
+.fc-board-hit:hover { filter: brightness(1.12); stroke: var(--color-primary, #168BC3); }
+line.fc-board-hit:hover { stroke: var(--color-primary, #168BC3); stroke-opacity: .45; }
+circle.fc-board-hit:hover { fill: var(--color-primary, #168BC3); fill-opacity: .45; }
+
+/* Board editor */
+.fc-be {
+  width: min(1200px, 100%);
+  height: min(860px, 100%);
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--fc-editor-bg, #fff);
+  color: var(--fc-editor-text, #333);
+  font-size: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .3);
+}
+.fc-be button, .fc-be select, .fc-be input[type="text"], .fc-be input[type="number"] {
+  padding: 3px 8px;
+  font-size: 12px;
+  border: 1px solid var(--fc-node-border, #ccc);
+  border-radius: 4px;
+  background: var(--color-bg-popup, #fff);
+  color: var(--color-text-main, #333);
+}
+.fc-be button { cursor: pointer; }
+.fc-be input[type="number"] { width: 52px; }
+.fc-be-head, .fc-be-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--fc-node-border, #ddd);
+  background: var(--color-bg-alt, #f8f9fa);
+}
+.fc-be-head { font-size: 13px; }
+.fc-be-primary { background: var(--color-primary, #168BC3) !important; color: #fff !important; border-color: var(--color-primary, #168BC3) !important; }
+.fc-be-danger { color: var(--fc-edge-no, #ff4d4f) !important; }
+.fc-be-field { display: inline-flex; align-items: center; gap: 4px; color: var(--color-text-minor, #666); }
+.fc-be-col { flex-direction: column; align-items: stretch; }
+.fc-be-minor { color: var(--color-text-minor, #888); font-size: 11px; }
+.fc-be-seg { display: inline-flex; flex-wrap: wrap; }
+.fc-be-seg button { border-radius: 0; margin-left: -1px; }
+.fc-be-seg button:first-child { border-radius: 4px 0 0 4px; margin-left: 0; }
+.fc-be-seg button:last-child { border-radius: 0 4px 4px 0; }
+.fc-be-seg button.active { background: var(--color-bg-hover, #e6f4ff); border-color: var(--color-primary, #168BC3); color: var(--color-primary, #168BC3); position: relative; }
+.fc-be-body { flex: 1; display: flex; min-height: 0; }
+.fc-be-canvas-col { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.fc-be-hint { padding: 3px 12px; font-size: 10px; color: var(--color-text-disabled, #aaa); }
+.fc-be-canvas { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 12px; user-select: none; }
+.fc-be-side {
+  width: 260px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--fc-node-border, #ddd);
+  background: var(--color-bg-alt, #fafafa);
+}
+.fc-be-section { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--fc-node-border, #eee); }
+.fc-be-section-title { font-weight: 600; font-size: 12px; }
+.fc-be-pal-row { display: flex; align-items: center; gap: 4px; padding: 2px; border-radius: 4px; border: 1px solid transparent; cursor: pointer; }
+.fc-be-pal-row.active { border-color: var(--color-primary, #168BC3); background: var(--color-bg-hover, #e6f4ff); }
+.fc-be-pal-row input[type="text"] { flex: 1; min-width: 0; }
+.fc-be-pal-row input[type="color"], .fc-be-colors input[type="color"] { width: 26px; height: 24px; padding: 0; border: none; background: none; cursor: pointer; }
+.fc-be-colors { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.fc-be .fc-be-swatch { width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 2px solid var(--fc-node-border, #ccc); }
+.fc-be .fc-be-swatch.active { border-color: var(--color-primary, #168BC3); box-shadow: 0 0 0 2px var(--color-primary, #168BC3); }
+.fc-be-check { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+@media (max-width: 720px) {
+  .fc-be-body { flex-direction: column; }
+  .fc-be-side { width: auto; border-left: none; border-top: 1px solid var(--fc-node-border, #ddd); max-height: 40%; }
+}

@@ -1,0 +1,153 @@
+/* ============================================================
+   FLOWCHART NODE TEXTURES
+   ============================================================
+
+   Colours come from theme.css.
+   Node background colours themselves are set by nodes/index.tsx.
+
+   Textures are intentionally flat — there is no directional
+   highlight or simulated lighting.
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   ACTION
+   ------------------------------------------------------------ */
+
+[data-fc-node="action"] {
+  background-image:
+    var(--fc-action-texture, none);
+}
+
+
+/* ------------------------------------------------------------
+   START / END OVALS
+   ------------------------------------------------------------ */
+
+[data-fc-node="oval"] {
+  background-image:
+    var(--fc-oval-texture, none);
+
+  background-size:
+    var(--fc-oval-texture-size, auto);
+}
+
+
+/* ------------------------------------------------------------
+   SIMULTANEOUS / DOUBLE
+   ------------------------------------------------------------ */
+
+[data-fc-node="double"] {
+  background-image:
+    var(--fc-double-texture, none);
+}
+
+
+/* ------------------------------------------------------------
+   PHASE
+   ------------------------------------------------------------ */
+
+[data-fc-node="phase"] {
+  background-image:
+    var(--fc-phase-texture, none);
+}
+
+
+/* ------------------------------------------------------------
+   LEGEND
+   ------------------------------------------------------------ */
+
+[data-fc-node="legend"] {
+  background-image:
+    var(--fc-legend-texture, none);
+
+  background-size:
+    var(--fc-legend-texture-size, 8px 8px);
+}
+
+
+/* ------------------------------------------------------------
+   DECISION
+
+   The diamond itself is an SVG polygon, so its texture is a
+   separate CSS layer clipped to match the polygon.
+   ------------------------------------------------------------ */
+
+.fc-diamond-texture {
+  position: absolute;
+  inset: 0;
+
+  pointer-events: none;
+
+  background:
+    var(--fc-diamond-texture, none);
+
+  clip-path:
+    polygon(
+      50% 1%,
+      99% 50%,
+      50% 99%,
+      1% 50%
+    );
+}
+
+
+/* ============================================================
+   PRINT — INK-SAVING TEXTURES
+   ============================================================
+
+   Action nodes stay plain white because they are numerous.
+   Special semantic nodes use sparse monochrome patterns.
+
+   Shape and border remain sufficient if the browser does not
+   print background graphics.
+   ============================================================ */
+
+
+/* Actions: no background pattern */
+.fc-print-ink [data-fc-node="action"] {
+  background-image: none !important;
+}
+
+
+/* Start / End */
+.fc-print-ink [data-fc-node="oval"] {
+  background-image:
+    var(--fc-print-oval-texture, none) !important;
+
+  background-size:
+    var(--fc-print-oval-texture-size, 10px 10px) !important;
+}
+
+
+/* Simultaneous */
+.fc-print-ink [data-fc-node="double"] {
+  background-image:
+    var(--fc-print-double-texture, none) !important;
+}
+
+
+/* Phase */
+.fc-print-ink [data-fc-node="phase"] {
+  background-image:
+    var(--fc-print-phase-texture, none) !important;
+}
+
+
+/* Legend */
+.fc-print-ink [data-fc-node="legend"] {
+  background-image:
+    var(--fc-print-legend-texture, none) !important;
+
+  background-size:
+    var(--fc-print-legend-texture-size, 10px 10px) !important;
+}
+
+
+/* Decision */
+.fc-print-ink .fc-diamond-texture {
+  display: block !important;
+
+  background:
+    var(--fc-print-diamond-texture, none) !important;
+}

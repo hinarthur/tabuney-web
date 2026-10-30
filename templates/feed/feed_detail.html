@@ -1,0 +1,129 @@
+<!-- templates/feed/feed_detail.html -->
+{% extends 'base.html' %}
+{% load static %}
+{% load translate_tags %}
+{% load feed_extras %}
+
+{% block title %}{{ work.title }} - Tabuney{% endblock title %}
+
+{% block og_type %}article{% endblock og_type %}
+{% block og_title %}{{ work.title }}{% endblock og_title %}
+{% block meta_description %}{% if work.content %}{{ work.content|striptags|truncatewords:30 }}{% else %}{{ work.title }}{% endif %}{% endblock meta_description %}
+{% block og_description %}{% if work.content %}{{ work.content|striptags|truncatewords:30 }}{% else %}{{ work.title }}{% endif %}{% endblock og_description %}
+{% block twitter_title %}{{ work.title }}{% endblock twitter_title %}
+{% block twitter_description %}{% if work.content %}{{ work.content|striptags|truncatewords:30 }}{% else %}{{ work.title }}{% endif %}{% endblock twitter_description %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/feed.css' %}?v=2">
+{% endblock extrahead %}
+
+{% block content %}
+<div class="container">
+    <article class="feed-detail" data-share-title="{{ work.title|escapejs }}"
+        data-msg-link-copied="{% t 'msg.link-copied' %}" data-msg-bookmarked="{% t 'btn.bookmarked' %}"
+        data-msg-unbookmarked="Removed"
+        data-publishdate="{{ work.publishdate|date:'c' }}"
+        data-user-auth="{% if user.is_authenticated %}true{% else %}false{% endif %}" {% if user.is_authenticated %}data-member-tier="{{ user.member.tier_new.code }}" {% endif %}>
+        <!-- 頂部工具列 -->
+        <div class="detail-toolbar">
+            <a href="{% url 'feed:list' %}" class="btn-back" title="{% t 'btn.back' %}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+            </a>
+
+            <div class="detail-actions">
+                <!-- 瀏覽原文 -->
+                <a href="{{ work.url }}" target="_blank" rel="noopener" class="btn-action"
+                    title="{% t 'btn.browse-source' %}">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
+                    </svg>
+                </a>
+
+                <!-- 分享 -->
+                <button class="btn-action" id="btn-share" title="{% t 'btn.share' %}">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="18" cy="5" r="3" />
+                        <circle cx="6" cy="12" r="3" />
+                        <circle cx="18" cy="19" r="3" />
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                    </svg>
+                </button>
+
+                <!-- 收藏 -->
+                <button {% if saved %}class="btn-action active"{% else %}class="btn-action"{% endif %} id="btn-bookmark" data-work-id="{{ work.id }}" {% if saved_work_id %}data-saved-id="{{ saved_work_id }}"{% endif %}
+                    title="{% t 'btn.bookmark' %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor" fill-rule="evenodd"
+                            d="M20.12,3A2.4,2.4,0,0,0,17.72,0H6.48A2.4,2.4,0,0,0,4.08,3V21.87a2.4,2.4,0,0,0,3.7,2l4.34-2.81,4.35,2.81a2.4,2.4,0,0,0,3.7-2ZM18.52,3V21.87a0.8,0.8,0,0,1-1.23.67l-4.78-3.09a0.8,0.8,0,0,0-.87,0L6.86,22.54a0.8,0.8,0,0,1-1.23-.67V3a0.8,0.8,0,0,1,.8-0.8H17.72A0.8,0.8,0,0,1,18.52,3Z" />
+                        <path fill="currentColor" d="M11.3,4.46v4.32a0.8,0.8,0,1,0,1.6,0V4.46a0.8,0.8,0,0,0-1.6,0Z" />
+                        <path fill="currentColor" d="M14.26,5.82H9.94a0.8,0.8,0,0,0,0,1.6h4.32a0.8,0.8,0,0,0,0-1.6Z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- 來源資訊 -->
+        <div class="detail-source">
+            {% if work.rss.logo %}
+            <img src="{{ work.rss.logo.url }}" alt="" class="source-logo" loading="lazy">
+            {% endif %}
+            <div class="source-meta">
+                <span class="source-name">{{ work.rss.sitename }}</span>
+                <span class="source-date" title="{{ work.publishdate|date:'Y-m-d H:i' }}">{{
+                    work.publishdate|date:"Y-m-d H:i" }}</span>
+            </div>
+        </div>
+
+        <!-- 標題 -->
+        <h1 class="detail-title">{{ work.title }}</h1>
+
+        <!-- 內容 -->
+        <div class="detail-content">
+            {{ work.content|demote_h1 }}
+        </div>
+
+        <!-- 原文連結 -->
+        <div class="detail-cta">
+            <a href="{{ work.url }}" target="_blank" rel="noopener" class="btn-original">
+                {% t "btn.browse-source" %}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
+                </svg>
+            </a>
+        </div>
+    </article>
+</div>
+
+<!-- Bookmark Modal -->
+<div id="bookmark-modal" class="bookmark-modal" aria-hidden="true" 
+    data-msg-login-hint="{% t 'feed.add-to-bookmark.msg' %}" 
+    data-btn-signin="{% t 'auth.btn.google-login' %}"
+    data-msg-save-confirm="{% t 'feed.msg.save-confirm' %}"
+    data-btn-save="{% t 'btn.save' %}"
+    data-msg-save-failed="{% t 'feed.msg.save-failed' %}"
+    data-msg-remove-confirm="{% t 'feed.msg.confirm-unbookmark' %}"
+    data-msg-remove-failed="{% t 'feed.msg.unbookmark-failed' %}"
+    data-msg-unbookmarked="{% t 'feed.msg.unbookmarked' %}">
+  <div class="bookmark-modal-backdrop"></div>
+
+  <div class="bookmark-modal-content" role="dialog" aria-modal="true" tabindex="-1">
+    <h2>{% t "feed.title.add-to-bookmark" %}</h2>
+    <div id="bookmark-modal-body" class="bookmark-modal-body"></div>
+
+    <div id="bookmark-modal-actions" class="bookmark-modal-actions">
+      <button id="bookmark-modal-close" class="btn-secondary" data-modal-close>
+        {% t "cancel" %}
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/feed.js' %}"></script>
+{% endblock content %}

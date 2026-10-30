@@ -1,0 +1,42 @@
+# 忽略 .env 檔案（包含密碼、API 密鑰等機密資訊）
+.env
+.env.development
+.env.production
+
+# 忽略 Python 編譯檔案
+*.pyc
+*.pyo
+__pycache__/
+
+# 忽略 Docker 生成的檔案
+# docker-compose.override.yml
+# docker-compose.local.yml
+docker-compose.yml
+
+# 前端依賴（build 輸出在 static/game/admin/flowchart_editor，部署不需要 node_modules）
+node_modules/
+
+# 忽略 IDE 生成的檔案
+.vscode/
+.idea/
+
+#database files
+*.sql
+*.csv
+temp/
+
+#media files
+media/
+
+# Django migrations
+#**/migrations/*.py
+# !**/migrations/__init__.py
+
+# Qdrant local / VPS storage
+qdrant_storage/
+
+# collectstatic output (VPS runs collectstatic on deploy)
+staticfiles/
+
+# 本機資料備份
+glossary_backup.json

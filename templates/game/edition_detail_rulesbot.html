@@ -1,0 +1,59 @@
+{% extends "game/edition_detail.html" %}
+{% load static %}
+{% load translate_tags %}
+
+{% block meta_description %}{% include "game/partials/edition_meta_rulesbot.html" %}{% endblock meta_description %}
+{% block og_description %}{% include "game/partials/edition_meta_rulesbot.html" %}{% endblock og_description %}
+{% block twitter_description %}{% include "game/partials/edition_meta_rulesbot.html" %}{% endblock twitter_description %}
+
+{% block edition_head %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+{% endblock edition_head %}
+
+{% block panel %}{% include "game/partials/panel_rulesbot.html" %}{% endblock panel %}
+
+{% block edition_tail %}
+<!-- Lightbox：只有 chat 回答裡的插圖縮圖會用到，所以只留在這一頁 -->
+<!-- Lightbox -->
+<div id="lightbox">
+    <button id="lightbox-close">&times;</button>
+    <img id="lightbox-img" src="" alt="">
+    <div id="lightbox-caption"></div>
+</div>
+
+<script src="{% static 'js/edition_detail.js' %}?v=13"></script>
+{% if chat_status != 'not_ready' %}
+<script>
+// Initialize chat with edition ID and translations
+initializeChat('{{ edition.id }}', {
+    loading: '{% t "game.chat.loading" %}',
+    error: '{% t "game.chat.error" %}',
+    relatedFigures: '{% t "game.chat.related_figures" %}',
+    sources: '{% t "game.chat.sources" %}',
+    clearConfirm: '{% t "game.chat.clear.confirm" %}',
+    clearSuccess: '{% t "game.chat.clear.success" %}',
+    clearError: '{% t "game.chat.clear.error" %}',
+    feedbackInvite: '{% t "game.chat.feedback_invite" %}',
+    feedbackHelpful: '{% t "common.answer.yes" %}',
+    feedbackNotHelpful: '{% t "common.answer.no" %}',
+    limitRemainPrefix: '{% t "game.chat.remain.prefix" %}',
+    limitRemainSuffix: '{% t "game.chat.remain.suffix" %}',
+    limitReachLimit: '{% t "game.chat.reach_limit" %}',
+    btnUpgrade: '{% t "membership.btn.upgrade" %}',
+    membershipUrl: '{% url "account:membership" %}'
+}, '{{ request.lang }}');
+
+// Hook chat login button to AuthHandler
+document.querySelectorAll('.chat-login-trigger').forEach(btn => {
+    btn.addEventListener('click', () => {
+        if (window.authHandler) {
+            window.authHandler.handleLogin();
+        } else {
+            // Fallback
+            window.location.href = "{% url 'account_login' %}?next={{ request.path }}";
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock edition_tail %}

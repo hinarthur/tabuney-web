@@ -1,0 +1,66 @@
+{% extends 'tablejourney/base.html' %}
+{% block title %}Table Journey{% endblock %}
+{% block extrahead %}
+<!-- Google Identity Services is already loaded by base.html -->
+{% endblock extrahead %}
+
+{% block content %}
+
+<h1>用 Google 帳號登入</h1>
+
+<!-- Google Sign-In 按鈕，新版 GIS -->
+<div id="g_id_onload" data-client_id="{{ GOOGLE_CLIENT_ID }}" data-callback="handleGoogleCredentialResponse"
+    data-context="signin" data-ux_mode="popup">
+</div>
+<div class="g_id_signin" data-type="standard" data-size="large"></div>
+
+<script>
+    function handleGoogleCredentialResponse(response) {
+        const google_id_token = response.credential;
+        // 發送 id_token 給你API，依照你後端接收欄位"id_token"
+        fetch("{% url 'google-login' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken"), // Django預設安全性
+            },
+            body: JSON.stringify({
+                id_token: google_id_token
+                // 可加 language: "zh-Hant"（如需多語支援）
+            })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.access) {
+                    // 儲存 access token 或直接跳轉
+                    // localStorage.setItem('access_token', data.access);
+                    console.log("{% url 'dashboard' %}");
+                    window.location.href = "{% url 'dashboard' %}";
+                } else {
+                    alert("後端登入失敗: " + (data.error || data.message));
+                }
+            })
+            .catch(e => {
+                alert("Google 登入流程失敗: " + e);
+            });
+    }
+
+    // 取得 CSRF Token 的 utility function
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+            const cookies = document.cookie.split(";");
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // 前綴比對
+                if (cookie.substring(0, name.length + 1) === (name + "=")) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+
+{% endblock content %}

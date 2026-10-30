@@ -1,0 +1,492 @@
+{% load static static_v %}
+{% load translate_tags %}
+{% load jsonld_tags %}
+<!doctype html>
+<html lang="{{ request.lang|default:'en' }}" data-theme="default">
+
+<head>
+    <meta charset="utf-8">
+    {# 在任何 CSS 之前先決定主題，暗色使用者載入時才不會閃一下亮色。html 上的 data-theme="default" 是 JS 失效時的備援。 #}
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t !== 'default' && t !== 'dark') {
+                    t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default';
+                }
+                document.documentElement.dataset.theme = t;
+            } catch (e) {}
+        })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Tabuney{% endblock title %}</title>
+
+    {# ── SEO ── #}
+    <meta name="description" content="{% block meta_description %}{% t "seo.default.description" %}{% endblock meta_description %}">
+    <link rel="canonical" href="{% block canonical %}{{ canonical_url }}{% endblock canonical %}">
+    {% block robots %}{% endblock robots %}
+    {% for alt in hreflang_alternates %}<link rel="alternate" hreflang="{{ alt.code }}" href="{{ alt.url }}">
+    {% endfor %}{% if hreflang_alternates %}<link rel="alternate" hreflang="x-default" href="{{ hreflang_x_default }}">{% endif %}
+
+    <meta property="og:site_name" content="Tabuney">
+    <meta property="og:type" content="{% block og_type %}website{% endblock og_type %}">
+    <meta property="og:title" content="{% block og_title %}Tabuney{% endblock og_title %}">
+    <meta property="og:description" content="{% block og_description %}{% t "seo.default.description" %}{% endblock og_description %}">
+    <meta property="og:url" content="{{ canonical_url }}">
+    <meta property="og:image" content="{% block og_image %}{{ SITE_URL }}{% static 'img/favicon/apple-icon-180x180.png' %}{% endblock og_image %}">
+    <meta property="og:locale" content="{{ request.lang|default:'en' }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}Tabuney{% endblock twitter_title %}">
+    <meta name="twitter:description" content="{% block twitter_description %}{% t "seo.default.description" %}{% endblock twitter_description %}">
+    <meta name="twitter:image" content="{% block twitter_image %}{{ SITE_URL }}{% static 'img/favicon/apple-icon-180x180.png' %}{% endblock twitter_image %}">
+    {# 全站節點 + 各頁 view 放的 jsonld_nodes，合併成單一 @graph #}
+    {% jsonld_graph jsonld_base_nodes jsonld_nodes %}
+
+    <!-- Google OAuth Client ID -->
+    <meta name="google-client-id" content="{{ SOCIAL_AUTH_GOOGLE_CLIENT_ID }}">
+    <script>
+        window.GOOGLE_CLIENT_ID = "{{ SOCIAL_AUTH_GOOGLE_CLIENT_ID }}";
+        window.AUTH_I18N = {
+            loginFailedRetry: "{% t 'auth.error.login-failed-retry' %}",
+            loginFailedPrefix: "{% t 'auth.error.login-failed-prefix' %}",
+            popupBlocked: "{% t 'auth.error.popup-blocked' %}",
+            unknownError: "{% t 'auth.error.unknown' %}",
+        };
+    </script>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JHFSREEJ4R"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        // 非必要 cookie 預設為 denied（符合 GDPR）
+        gtag('consent', 'default', {
+            analytics_storage: 'denied',
+            ad_storage: 'denied',
+            ad_user_data: 'denied',
+            ad_personalization: 'denied',
+            wait_for_update: 500
+        });
+        gtag('js', new Date());
+        gtag('config', '{{ GA_MEASUREMENT_ID }}', {
+            anonymize_ip: true
+        });
+
+
+        /* ✅ 頁面初始化時：檢查使用者是否已同意 */
+        if (localStorage.getItem('analytics_consent') === 'granted') {
+            gtag('consent', 'update', {
+                analytics_storage: 'granted'
+            });
+        }
+    </script>
+
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" /> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="icon" type="image/x-icon" href="{% static 'img/favicon/favicon.ico' %}">
+    <link rel="apple-touch-icon" sizes="57x57" href="{% static 'img/favicon/apple-icon-57x57.png' %}">
+    <link rel="apple-touch-icon" sizes="60x60" href="{% static 'img/favicon/apple-icon-60x60.png' %}">
+    <link rel="apple-touch-icon" sizes="72x72" href="{% static 'img/favicon/apple-icon-72x72.png' %}">
+    <link rel="apple-touch-icon" sizes="76x76" href="{% static 'img/favicon/apple-icon-76x76.png' %}">
+    <link rel="apple-touch-icon" sizes="114x114" href="{% static 'img/favicon/apple-icon-114x114.png' %}">
+    <link rel="apple-touch-icon" sizes="120x120" href="{% static 'img/favicon/apple-icon-120x120.png' %}">
+    <link rel="apple-touch-icon" sizes="144x144" href="{% static 'img/favicon/apple-icon-144x144.png' %}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{% static 'img/favicon/apple-icon-152x152.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/favicon/apple-icon-180x180.png' %}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{% static 'img/favicon/android-icon-192x192.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="96x96" href="{% static 'img/favicon/favicon-96x96.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'img/favicon/favicon-16x16.png' %}">
+    <link rel="manifest" href="{% static 'img/favicon/manifest.json' %}">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="{% static 'img/favicon/ms-icon-144x144.png' %}">
+    <meta name="theme-color" content="#ffffff">
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static_v 'css/theme.css' %}">
+    <link rel="stylesheet" href="{% static 'css/ttoper.css' %}?v=15">
+    <link rel="stylesheet" href="{% static 'css/auth.css' %}?v=3">
+
+    {% block extrahead %}
+    {% endblock extrahead %}
+
+</head>
+
+<body>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <script src="{% static 'js/theme.js' %}?v=5"></script>
+    <script src="{% static 'js/privacy.js' %}?v=4"></script>
+    <script src="{% static 'js/header.js' %}?v=4"></script>
+    <script src="{% static 'js/auth.js' %}?v=5"></script>
+
+    <header id="site-header">
+        <div class="header-inner">
+            <!-- Logo + Slogan -->
+            <div class="logo-slogan">
+                <a href="{% url 'home' %}">
+                    <img src="{% static 'img/tabuney_logo.png' %}" alt="Logo" class="logo-img" width="1080" height="1080" />
+                    <span class="slogan">Tabuney</span>
+                </a>
+            </div>
+
+            <!-- 右：Hamburger -->
+            <button id="hamburger-btn" class="hamburger" aria-label="Open menu" aria-expanded="false">
+                <span class="hamburger-inner"></span>
+            </button>
+
+            <div class="header-right">
+                <!-- 主導覽 -->
+                <nav class="main-nav">                    
+                    <a href="{% url 'games:search' %}" 
+                    {% if request.resolver_match.url_name == 'game-search' %}class="active"{% endif %}>
+                    {% t "header.btn.games" %}
+                    </a>
+                    <a href="{% url 'feed:list' %}" 
+                    {% if 'feed' in request.resolver_match.namespace %}class="active"{% endif %}>
+                    {% t "news.title" %}
+                    </a>
+                    <a href="{% url 'about' %}" 
+                    {% if request.resolver_match.url_name == 'about' %}class="active"{% endif %}>
+                    {% t "about.title" %}
+                    </a>
+
+                    <!-- 主題切換按鈕 -->
+                    <button id="theme-toggle" class="header-btn theme-toggle-btn theme-toggle-desktop" title="Toggle theme">
+                        <i class="fa-solid fa-circle-half-stroke"></i>
+                    </button>
+
+                    <div class="lang-dropdown" id="lang-dropdown">
+                        <button class="header-btn" id="lang-btn" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-globe"></i>
+                            <span class="lang-code main-nav-text">
+                                {{ request.lang|upper|default:"EN" }}
+                            </span>
+                        </button>
+
+                        {% comment %}
+                        真正的 <a>：切語言等於跳到「同一頁的另一語言版」，而不是設 session 後重載。
+                        搜尋引擎也靠這些連結發現各語言版本。
+                        {% endcomment %}
+                        <ul class="lang-menu" role="menu">
+                            {% for alt in hreflang_alternates %}
+                            <li><a href="{{ alt.path }}" hreflang="{{ alt.code }}" data-lang="{{ alt.code }}"
+                                   {% if request.lang == alt.code %}class="active"{% endif %}>{{ alt.label }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <!-- 使用者頭像／登入按鈕 -->
+                    <div class="user-avatar-wrapper">
+                        {% if user.is_authenticated %}
+                        <!-- 已登入：顯示頭像 -->
+                        <div class="user-menu" id="user-menu">
+                            <button id="avatar-btn" class="avatar-btn" aria-label="User menu">
+                                {% if user.member.avatar %}
+                                <img src="{{ user.member.avatar }}" alt="{{ user.first_name }}" class="avatar-img">
+                                {% else %}
+                                <!-- <i class="fas fa-user-circle"></i> -->
+                                <i class="fa-solid fa-user"></i>
+                                {% endif %}
+                            </button>
+                            <div class="user-dropdown" id="user-dropdown" aria-hidden="true">
+                                <div class="user-info">
+                                    <p class="user-name">{{ user.first_name }} {{ user.last_name }}</p>
+                                    <p class="user-email">{{ user.email }}</p>
+                                </div>
+                            <!-- <a href="#" class="user-menu-item">{% t "Profile" %}</a>
+                            <a href="#" class="user-menu-item">{% t "Settings" %}</a>
+                            <hr> -->
+                            <button type="button" class="user-menu-item" onclick="window.location.href='{% url 'account:membership' %}'">{% t "membership.title" %}</button>
+                            <button type="button" class="user-menu-item" onclick="window.location.href='{% url 'collection:index' %}'">{% t "game.mycollection.title" %}</button>
+                            <button type="button" id="logout-btn" class="user-menu-item logout-btn">{% t "common.logout" %}</button>
+                            </div>
+                        </div>
+                        {% else %}
+                        <!-- 未登入：顯示訪客選單 -->
+                        <div class="user-menu" id="user-menu">
+                            <button id="avatar-btn" class="btn-login" aria-label="Guest menu">
+                                <img src="{% static 'img/person.svg' %}" alt="Guest" class="login-icon">
+                            </button>
+                            <!-- GSI 配置（隱藏） -->
+                            <div id="g_id_onload"
+                                data-client_id="{{ SOCIAL_AUTH_GOOGLE_CLIENT_ID }}"
+                                data-callback="handleGoogleCredential"
+                                data-auto_prompt="false"
+                                data-context="signin">
+                            </div>
+                            <div class="user-dropdown" id="user-dropdown" aria-hidden="true" style="min-width: 10rem;">
+                                <div style="display: flex; justify-content: center; padding: 0.5rem;">
+                                    <button type="button" id="login-btn" class="gsi-material-button" style="width: 100%;">
+                                      <div class="gsi-material-button-state"></div>
+                                      <div class="gsi-material-button-content-wrapper">
+                                        <div class="gsi-material-button-icon">
+                                          <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" xmlns:xlink="http://www.w3.org/1999/xlink" style="display: block;">
+                                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                                            <path fill="none" d="M0 0h48v48H0z"></path>
+                                          </svg>
+                                        </div>
+                                        <span class="gsi-material-button-contents">Sign in</span>
+                                        <span style="display: none;">Sign in with Google</span>
+                                      </div>
+                                    </button>
+                                </div>
+                                <button type="button" class="user-menu-item" onclick="window.location.href='{% url 'account:membership' %}'">{% t "membership.title" %}</button>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <nav class="mobile-nav" id="mobile-nav" aria-hidden="true">
+        <div class="mobile-nav-inner">
+
+            <!-- 主選單 -->                   
+                    <a href="{% url 'games:search' %}" 
+                    {% if request.resolver_match.url_name == 'game-search' %}class="active"{% endif %}>
+                    {% t "header.btn.games" %}
+                    </a>
+                    <a href="{% url 'feed:list' %}" 
+                    {% if 'feed' in request.resolver_match.namespace %}class="active"{% endif %}>
+                    {% t "news.title" %}
+                    </a>
+                    <a href="{% url 'about' %}" 
+                    {% if request.resolver_match.url_name == 'about' %}class="active"{% endif %}>
+                    {% t "about.title" %}
+                    </a>
+
+            <!-- Theme toggle -->
+            <button id="theme-toggle-mobile" class="header-btn theme-toggle-btn theme-toggle-mobile">
+                <i class="fa-solid fa-circle-half-stroke"></i>
+            </button>
+
+            <!-- Language -->
+            <div class="lang-mobile" id="lang-mobile">
+                <button class="header-btn lang-mobile-btn" id="lang-mobile-btn">
+                    <i class="fas fa-globe"></i>
+                    <span class="lang-code mobile-nav-text">
+                        {{ request.lang|upper|default:"EN" }}
+                    </span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+
+                <ul class="lang-mobile-menu">
+                    {% for alt in hreflang_alternates %}
+                    <li><a href="{{ alt.path }}" hreflang="{{ alt.code }}" data-lang="{{ alt.code }}"
+                           {% if request.lang == alt.code %}class="active"{% endif %}>{{ alt.label }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- 使用者選單 (mobile) -->
+            {% if user.is_authenticated %}
+            <div class="user-menu-mobile">
+                <p class="user-info-mobile">{{ user.first_name }} {{ user.last_name }}</p>
+                <!-- <a href="#">{% t "Profile" %}</a>
+                <a href="#">{% t "Settings" %}</a> -->
+                <button type="button" class="logout-btn-mobile" onclick="window.location.href='{% url 'account:membership' %}'" style="opacity: 1;">{% t "membership.title" %}</button>
+                <button type="button" class="logout-btn-mobile" onclick="window.location.href='{% url 'collection:index' %}'" style="opacity: 1;">{% t "game.mycollection.title" %}</button>
+                <button type="button" id="logout-btn-mobile" class="logout-btn-mobile">Logout</button>
+            </div>
+            {% else %}
+            <!-- 未登入：在側邊欄直接顯示選單項目 -->
+            <div class="user-menu-mobile">
+                <div style="display: flex; justify-content: center; padding: 0.5rem;">
+                    <button type="button" id="login-btn-mobile" class="gsi-material-button" style="width: 100%;">
+                        <div class="gsi-material-button-state"></div>
+                        <div class="gsi-material-button-content-wrapper">
+                            <div class="gsi-material-button-icon">
+                                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" xmlns:xlink="http://www.w3.org/1999/xlink" style="display: block;">
+                                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                                    <path fill="none" d="M0 0h48v48H0z"></path>
+                                </svg>
+                            </div>
+                            <span class="gsi-material-button-contents">Sign in</span>
+                            <span style="display: none;">Sign in with Google</span>
+                        </div>
+                    </button>
+                </div>
+                <button type="button" class="logout-btn-mobile" onclick="window.location.href='{% url 'account:membership' %}'" style="opacity: 1;">{% t "membership.title" %}</button>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <main class="page-content">
+        {% comment %}
+        django.contrib.messages 一直有裝（app / middleware / context processor 都在），
+        但在此之前沒有任何模板渲染它——view 呼叫 messages.error() 只會讓訊息堆在
+        session 裡，使用者什麼都看不到。永久解鎖的「名額已用完」「已定案不可變更」
+        這類回饋要靠它，所以在這裡統一輸出一次。
+        {% endcomment %}
+        {% if messages %}
+        <div class="page-messages">
+            {% for message in messages %}
+            <div class="page-message page-message-{{ message.level_tag }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% block content %}
+        {% endblock content %}
+    </main>
+
+    {% block extrascript %}
+    {% endblock extrascript %}
+
+    <footer>
+        {% block footer %}
+        {% endblock footer %}
+        Copyright © <span id="year">{% now "Y" %}</span> Tabuney |
+        All rights reserved.
+        <a href="{% url 'privacy' %}">{% t "privacy_policy" %}</a> |
+        <a href="{% url 'terms' %}">{% t "terms_of_use" %}</a> |
+        <a href="{% url 'faq' %}">{% t "footer.link.faq" %}</a> |
+        <a href="{% url 'principles' %}">{% t "footer.link.principles" %}</a> |
+        <a href="#" id="open-cookie-settings">{% t "cookie_settings" %}</a>
+        <br>
+        {% comment %}
+        <small>{% t "footer.declare-amazon-partner" %}</small>
+        {% endcomment %}
+    </footer>
+
+    <!-- Cookie Settings Modal -->
+    <div id="cookie-modal" class="cookie-modal" aria-hidden="true">
+        <div class="cookie-modal-backdrop"></div>
+
+        <div class="cookie-modal-content" role="dialog" aria-modal="true">
+            <h2>{% t "cookie_settings" %}</h2>
+
+            <p class="cookie-desc">
+                {% t "cookie.modal.description" %}
+            </p>
+
+            <div class="cookie-option">
+                <label>
+                    <input type="checkbox" id="consent-analytics">
+                    <strong>{% t "cookie.modal.analytics.title" %}</strong>
+                </label>
+                <p>{% t "cookie.modal.analytics.description" %}</p>
+            </div>
+
+            <div class="cookie-option">
+                <label>
+                    <input type="checkbox" id="consent-ads">
+                    <strong>{% t "cookie.modal.ads.title" %}</strong>
+                </label>
+                <p>{% t "cookie.modal.ads.description" %}</p>
+            </div>
+
+            <div class="cookie-actions">
+                <button id="save-cookie-settings" class="btn-primary">
+                    {% t "save" %}
+                </button>
+                <button id="close-cookie-settings" class="btn-secondary">
+                    {% t "cancel" %}
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            /* ===== 語言切換埋點 =====
+               後台首頁的語言點擊圖用的。credentials: 'omit' 是刻意的——這支端點
+               不需要也不想知道你是誰，只會把 (事件, 語言, 日期) 的計數 +1，
+               所以匿名訪客也能記，且全程不碰 cookie / session。 */
+            function trackLangClick(kind, lang) {
+                try {
+                    fetch('/api/stats/lang_click/', {
+                        method: 'POST',
+                        credentials: 'omit',
+                        headers: { 'Content-Type': 'application/json' },
+                        keepalive: true,   // 讓這個請求在頁面跳走後仍能送達
+                        body: JSON.stringify(lang ? { kind, lang } : { kind }),
+                    }).catch(() => { });
+                } catch (err) { }
+            }
+
+            /* ===== Desktop ===== */
+            const desktopDropdown = document.getElementById('lang-dropdown');
+            const desktopBtn = document.getElementById('lang-btn');
+
+            if (desktopDropdown && desktopBtn) {
+                desktopBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const willOpen = !desktopDropdown.classList.contains('open');
+                    if (willOpen) {
+                        document.dispatchEvent(new CustomEvent('header:dropdown-open', { detail: { source: 'lang' } }));
+                        trackLangClick('menu_open');   // 只算打開，關閉不算
+                    }
+                    desktopDropdown.classList.toggle('open');
+                });
+
+                document.addEventListener('click', () => {
+                    desktopDropdown.classList.remove('open');
+                });
+
+                // 別的 header submenu（例如 avatar 選單）打開時，把這個也關起來
+                document.addEventListener('header:dropdown-open', (e) => {
+                    if (e.detail?.source !== 'lang') {
+                        desktopDropdown.classList.remove('open');
+                    }
+                });
+            }
+
+            /* ===== Mobile ===== */
+            const mobileDropdown = document.getElementById('lang-mobile');
+            const mobileBtn = document.getElementById('lang-mobile-btn');
+
+            if (mobileDropdown && mobileBtn) {
+                mobileBtn.addEventListener('click', () => {
+                    // 手機和桌機都是「頂 bar 的語言鈕」，合併計為同一個 menu_open
+                    if (!mobileDropdown.classList.contains('open')) {
+                        trackLangClick('menu_open');
+                    }
+                    mobileDropdown.classList.toggle('open');
+                });
+            }
+
+            /* ===== Shared: language click =====
+               語言現在由網址前綴決定，連結本身（<a href="/ja/games/...">）就會帶使用者
+               過去，所以這裡不再 preventDefault、也不再改 ?lang=。
+               仍然把偏好寫回 Member，因為手機 App 會讀那個欄位。 */
+            document.querySelectorAll('[data-lang]').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const lang = item.dataset.lang;
+                    // 這一份匿名訪客也記得到，PATCH 那一份只對已登入者有效
+                    trackLangClick('select', lang);
+                    try {
+                        const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+                        const headers = { 'Content-Type': 'application/json', 'X-CSRFToken': csrf };
+                        const token = localStorage.getItem('access_token');
+                        if (token) headers['Authorization'] = 'Bearer ' + token;
+                        // keepalive：讓這個請求在頁面跳走後仍能送達
+                        fetch('/api/members/me/', {
+                            method: 'PATCH',
+                            credentials: 'include',
+                            headers,
+                            keepalive: true,
+                            body: JSON.stringify({ language: lang })
+                        }).catch(() => { });
+                    } catch (err) { }
+                    // 不擋預設行為，讓 <a href> 自己導航
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>
