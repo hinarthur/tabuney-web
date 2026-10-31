@@ -308,7 +308,6 @@ export function LegendNode({ data, selected }: NodeProps) {
           ? "2px solid var(--fc-select)"
           : `1.5px dashed ${borderColor(d, "var(--fc-node-border, #bbb)")}`,
         borderRadius: 6, padding: "6px 10px", fontSize: 11, userSelect: "none",
-        overflow: "hidden",
       }}>
         {d.title && (
           <div style={{ fontWeight: 700, marginBottom: 3, color: "var(--fc-legend-title, #444)", whiteSpace: "pre-wrap" }}>
@@ -340,7 +339,7 @@ export function TextNode({ data, selected }: NodeProps) {
         width: "100%", height: "100%", boxSizing: "border-box",
         display: "flex", alignItems: "center", justifyContent: justify,
         border: selected && !readOnly ? "1px dashed var(--fc-select)" : "1px solid transparent",
-        padding: "2px 8px", background: "transparent", userSelect: "none", overflow: "hidden",
+        padding: "2px 8px", background: "transparent", userSelect: "none",
       }}>
         <span style={{ fontSize, color, fontWeight, textAlign, lineHeight: 1.3, whiteSpace: "pre-wrap" }}>
           {d.label ?? "Text"}
