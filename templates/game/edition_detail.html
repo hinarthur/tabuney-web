@@ -51,7 +51,7 @@
         </h1>
         {% comment %} Edition Access 的 CTA。刻意不放進 script 分頁：Edition Access
            不含 GM 講稿，在那一頁擺這顆按鈕等於暗示買了就能看講稿。 {% endcomment %}
-        {% if initial_tab != 'script' %}
+        {% if initial_tab != 'script' and not beta_mode %}{# beta 期間全開放，沒有東西可解鎖 #}
         {% if initial_tab == 'info' %}{% include "game/partials/edition_access_cta.html" with cta_modal=1 %}{% else %}{% include "game/partials/edition_access_cta.html" %}{% endif %}
         {% endif %}
     </div>

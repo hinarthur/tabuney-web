@@ -13,7 +13,7 @@ from django.utils import timezone
 
 # 全站已知的兩處動態組 key，grep 抓不到字面字串，一律視為已使用。
 # 稽核紀錄見 migrations/0021_remove_app_only_strings.py 的 docstring。
-KNOWN_DYNAMIC_PREFIXES = ("membership.tier.", "chat.opening.")
+KNOWN_DYNAMIC_PREFIXES = ("membership.tier.", "chat.opening.", "checkout.consent.")
 
 _EXCLUDED_DIR_NAMES = {
     "migrations", "__pycache__", "static", "staticfiles", "media",

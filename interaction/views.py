@@ -82,6 +82,10 @@ class CollectionView(LoginRequiredMixin, View):
             .values_list("edition_id", "created_at")
         )
         unlocked_edition_ids = set(unlock_dates)
+        from member.beta import is_beta
+        if is_beta():
+            # beta 期間全站開放，版本專享沒有意義：緞帶與收錄來源都關掉
+            unlock_dates, unlocked_edition_ids = {}, set()
 
         # Build queryset
         interactions = Interaction.objects.filter(member=member)

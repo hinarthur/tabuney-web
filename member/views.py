@@ -8,6 +8,8 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
 from django.views.generic import View
+from django.utils.decorators import method_decorator
+from .beta import beta_closed
 from .models import EditionUnlock, Member, Tier
 from translation.models import Tribe
 from .oauth import (
@@ -289,6 +291,7 @@ class ActivityTrackView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@method_decorator(beta_closed, name='dispatch')
 class EditionUnlockPickView(View):
     """用一個免費名額永久解鎖一款 Edition。
 
@@ -339,6 +342,7 @@ class EditionUnlockPickView(View):
         return HttpResponseRedirect(back)
 
 
+@method_decorator(beta_closed, name='dispatch')
 class EditionUnlockReleaseView(View):
     """退回一個免費名額。
 
@@ -405,6 +409,7 @@ class MembershipCancelView(View):
     def get(self, request):
         return render(request, 'membership_cancel.html')
     
+@method_decorator(beta_closed, name='dispatch')
 class MembershipView(View):
     def get(self, request):
         log_page_visit(request, 'membership')

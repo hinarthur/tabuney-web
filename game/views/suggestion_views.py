@@ -330,7 +330,8 @@ class FlowchartSuggestionCreateView(View):
         # 自己解鎖過的 edition 配上別人的 flowchart_id 就能繞過。改成從
         # flowchart 自己的歸屬（rulebook 的 edition + linked_editions）反推，
         # 與解鎖集合取交集。
-        if not flowchart.initial and not (
+        from member.beta import is_beta
+        if not flowchart.initial and not is_beta() and not (
             member and (
                 member.can('flowchart_non_initial')
                 or _member_unlocked_flowchart(member, flowchart)

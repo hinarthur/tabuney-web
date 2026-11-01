@@ -110,6 +110,7 @@
             專享的版本一律列出來，即使它沒有任何收藏狀態或喜好。所以它與上面
             兩組是 OR 的關係，只有一個選項、沒有相反的那一項。
             {% endcomment %}
+            {% if not beta_mode %}
             <h3 class="sidebar-title">{% t "game.unlock.star" %}</h3>
             <div class="filter-group-vertical">
                 <div class="filter-item {% if access_included %}active{% endif %}" data-filter-type="access" data-filter-value="1">
@@ -117,6 +118,7 @@
                     <span>{% t "game.mycollection.access_only" %}</span>
                 </div>
             </div>
+            {% endif %}
 
             <!-- <h3 class="sidebar-title">{% t "common.title.sorting" %}</h3>
             <div class="sort-group-vertical">

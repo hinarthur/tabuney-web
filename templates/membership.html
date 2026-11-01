@@ -76,6 +76,15 @@
                             {% elif current_tier == 'subscriber' and subscription %}
                             <div class="subscription-status">
                                 <div>{% t "membership.subscription.valid_until" %} {{ subscription.current_period_end|date:"Y-m-d" }}</div>
+                                {% if subscription.status == 'past_due' %}
+                                {# 續費扣款失敗：Stripe 重試期間仍保有權限，提示更新付款方式 #}
+                                <div class="subscription-warning">{% t "membership.subscription.past_due" %}</div>
+                                <form action="{% url 'commerce:billing-portal' %}" method="POST" style="margin-top: 8px;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="lang" value="{{ request.lang }}">
+                                    <button type="submit" class="upgrade-btn" style="cursor: pointer; padding: 4px 12px; font-size: 13px;">{% t "membership.subscription.btn.update_payment" %}</button>
+                                </form>
+                                {% endif %}
                                 {% if not subscription.cancel_at_period_end %}
                                 <form action="{% url 'commerce:cancel-subscription' %}" method="POST" style="margin-top: 8px;">
                                     {% csrf_token %}

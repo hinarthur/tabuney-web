@@ -475,8 +475,9 @@ class WorkLabelViewSet(viewsets.ModelViewSet):
         except Member.DoesNotExist:
             raise PermissionDenied("尚未註冊成會員")
 
+        from member.beta import is_beta
         limit = member.limit('max_bookmark_category')
-        if limit != -1 and WorkLabel.objects.filter(member=member).count() >= limit:
+        if not is_beta() and limit != -1 and WorkLabel.objects.filter(member=member).count() >= limit:
             raise PermissionDenied(f"已達分類數量上限（{limit}）")
 
         serializer.save(member=member)

@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}{{ copy.title }} - Tabuney{% endblock %}
+{% block content %}
+<style>
+    .checkout-confirm { max-width: 720px; margin: 40px auto; padding: 80px 20px 40px; color: var(--color-text-main); line-height: 1.7; }
+    .checkout-confirm h1 { margin: 0 0 12px; font-size: 2rem; font-weight: 700; }
+    .checkout-confirm .confirmation-product { display: inline-block; margin: 0 0 16px; padding: 4px 14px; border-radius: 999px; background: var(--color-bg-hover); border: 1px solid var(--border-subtle); font-weight: 600; }
+    .checkout-confirm .confirmation-intro { margin: 0 0 24px; color: var(--color-text-minor); }
+    .checkout-confirm .confirmation-error { margin: 0 0 20px; padding: 12px 16px; border-radius: 8px; border-left: 4px solid var(--color-secondary); background: var(--color-bg-alt); }
+    .checkout-confirm label { display: flex; align-items: flex-start; gap: 14px; margin: 0 0 14px; padding: 16px 18px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--color-bg-alt); box-shadow: var(--shadow-card); cursor: pointer; }
+    .checkout-confirm label:hover { background: var(--color-bg-hover); }
+    .checkout-confirm input[type="checkbox"] { flex-shrink: 0; width: 20px; height: 20px; margin-top: 4px; accent-color: var(--color-primary); }
+    .checkout-confirm a { color: var(--color-link); text-decoration: underline; }
+    .checkout-confirm a:hover { color: var(--color-link-hover); }
+    .checkout-confirm .confirmation-note { margin: 24px 0 8px; font-size: 0.9rem; color: var(--color-text-minor); }
+    .checkout-confirm .confirmation-policy { margin: 0 0 28px; font-size: 0.9rem; }
+    .checkout-confirm .confirmation-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; }
+    .checkout-confirm button { padding: 12px 28px; border: 0; border-radius: 8px; background: var(--color-primary); color: #fff; font: inherit; font-weight: 600; cursor: pointer; box-shadow: var(--btn-shadow); transition: background 0.3s ease; }
+    .checkout-confirm button:hover { background: var(--color-primary-light); box-shadow: var(--btn-shadow-hover); }
+    .checkout-confirm .confirmation-back { color: var(--color-text-minor); }
+    @media (max-width: 600px) {
+        .checkout-confirm { margin: 0 auto; padding-top: 60px; }
+        .checkout-confirm h1 { font-size: 1.6rem; }
+        .checkout-confirm button { width: 100%; }
+    }
+</style>
+<section class="checkout-confirm" lang="{{ wording_lang }}" aria-labelledby="confirmation-title">
+    <h1 id="confirmation-title">{{ copy.title }}</h1>
+    <p class="confirmation-product">{{ product_label }}</p>
+    <p class="confirmation-intro">{{ copy.intro }}</p>
+    {% if error %}<p class="confirmation-error" role="alert">{{ error }}</p>{% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="lang" value="{{ lang }}">
+        <input type="hidden" name="edition_id" value="{{ product_id }}">
+        <input type="hidden" name="consent_token" value="{{ consent_token }}">
+        {% if ask_digital %}
+        <label><input type="checkbox" name="digital_content_consent" value="yes" required>
+            <span>{{ copy.digital }}</span></label>
+        {% endif %}
+        {% if ask_service %}
+        <label><input type="checkbox" name="service_start_consent" value="yes" required>
+            <span>{{ copy.service }}</span></label>
+        {% endif %}
+        <label><input type="checkbox" name="accept_terms" value="yes" required>
+            <span>{{ copy.terms }} <a href="{{ terms_url }}" target="_blank" rel="noopener">{{ copy.terms_label }}</a></span></label>
+        <p class="confirmation-note">{{ copy.note }}</p>
+        <p class="confirmation-policy"><a href="{{ privacy_url }}" target="_blank" rel="noopener">{{ copy.privacy_label }}</a></p>
+        <div class="confirmation-actions">
+            <button type="submit">{{ copy.button }}</button>
+            <a class="confirmation-back" href="{{ back_url }}">{{ copy.back }}</a>
+        </div>
+    </form>
+</section>
+{% endblock content %}

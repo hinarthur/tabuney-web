@@ -4,13 +4,14 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from game.models import Rulebook, ChatSession, ChatMessage
 from game.rag.rag_service import get_rag_service
 from game.selectors import resolve_chat_bundle
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.utils import timezone
 from datetime import timedelta
@@ -18,7 +19,8 @@ from datetime import timedelta
 import logging
 logger = logging.getLogger(__name__)
 
-from game.rag.throttling import ChatSustainedThrottle
+from game.rag.throttling import ChatSustainedThrottle, anon_chat_limits, consume_anon_chat
+from member.beta import is_beta
 
 # API：/api/game/edition/<uuid>/chat/
 def _eligible_rulebooks(mode):
@@ -54,8 +56,9 @@ def get_chat_limits(user, edition_id=None):
     注意這裡只管每週配額。防濫用的每日硬上限是另一層（rag/throttling.py 的
     ChatSustainedThrottle），解鎖不會豁免它。
     """
-    # staff / superuser 一律視為無限，不受 tier prompt_per_week 限制
-    if user.is_staff or user.is_superuser:
+    # staff / superuser 一律視為無限，不受 tier prompt_per_week 限制；
+    # beta 期間所有登入者也一樣（未登入者走 anon_chat_limits，不經過這裡）
+    if user.is_staff or user.is_superuser or is_beta():
         return dict(UNLIMITED)
 
     member = getattr(user, 'member', None)
@@ -121,12 +124,32 @@ class ChatView(APIView):
     authentication_classes = [SessionAuthentication, JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
+    def get_permissions(self):
+        # beta 期間未登入者也能問（每日 ANON_CHAT_PER_DAY 題，見 _limits_for）
+        if is_beta():
+            return [AllowAny()]
+        return super().get_permissions()
+
     def get_throttles(self):
         if self.request.method == 'POST':
             return [ChatSustainedThrottle()]
         return []
 
+    @staticmethod
+    def _limits_for(request, edition_id):
+        if request.user.is_authenticated:
+            return get_chat_limits(request.user, edition_id)
+        return anon_chat_limits(request)
+
     def get(self, request, edition_id):
+        if not request.user.is_authenticated:
+            # 匿名不發 cookie，沒有辦法認出「上次那個人」，所以沒有歷史可回
+            return Response({
+                "session_id": None, "messages": [],
+                "limits": anon_chat_limits(request),
+            })
+
+
         # 找該用戶最近一次對該 Edition 的對話（已清除的 session 是 soft delete，
         # 排除掉才不會讓使用者又看到「已清除」的歷史）
         session = ChatSession.objects.filter(
@@ -177,27 +200,37 @@ class ChatView(APIView):
             force_provider = None
 
         # 0b. Check Limits
-        limits = get_chat_limits(request.user, edition_id)
+        is_anon = not request.user.is_authenticated
+        limits = self._limits_for(request, edition_id)
         if limits["total"] != -1 and limits["remaining"] <= 0:
             return Response({
                 "error": "Prompt limit reached.",
-                "limits": limits
+                "limits": limits,
+                "login_required": is_anon,
             }, status=429)
 
         # 1. 取得 / 建立 session
         session_id = request.data.get("session_id")
         session = None
-        
+        # 匿名的 session 只能憑 session_id 接續（UUID 猜不到），而且只認
+        # user 為空的那些，拿不到登入者的對話
+        session_owner = (
+            Q(user__isnull=True, edition=edition) if is_anon else Q(user=request.user)
+        )
+
         if session_id:
             try:
                 # 排除已清除的 session：前端在清除成功後會把自己的 sessionId 重設成
                 # null，正常流程不會走到這裡；這裡是防呆，避免舊分頁殘留的
                 # session_id 讓「已清除」的對話又被接續下去。
                 session = ChatSession.objects.get(
-                    pk=session_id, user=request.user, deleted_at__isnull=True,
+                    session_owner, pk=session_id, deleted_at__isnull=True,
                 )
-            except ChatSession.DoesNotExist:
+            except (ChatSession.DoesNotExist, ValueError, ValidationError):
                 session = None
+
+        if not session and is_anon:
+            session = ChatSession.objects.create(edition=edition, user=None, user_name="")
 
         if not session:
             # 優先找該用戶最近一次對該 Edition 的對話
@@ -337,6 +370,10 @@ class ChatView(APIView):
             mode=mode,
         )
 
+        # 匿名配額只在成功回答後才扣（上面 503 提早 return 不會走到這裡）
+        if is_anon:
+            consume_anon_chat(request)
+
         # 7. 回傳
         return Response(
             {
@@ -359,7 +396,7 @@ class ChatView(APIView):
                     {"index": i, "id": str(rb.id), "title": rb.title}
                     for i, rb in enumerate(target_rulebooks, start=1)
                 ],
-                "limits": get_chat_limits(request.user, edition_id)
+                "limits": self._limits_for(request, edition_id)
             },
             status=status.HTTP_200_OK,
         )

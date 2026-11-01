@@ -8,7 +8,7 @@
 """
 
 import hashlib
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from urllib.parse import urlsplit
 
 from django.conf import settings
@@ -18,7 +18,7 @@ from django.utils import timezone
 from TJsite.context_processors import LANGUAGE_LABELS
 
 from .models import (
-    SearchLog, PageVisit, LanguageClick, ErrorLog, ErrorAlertAck, ServerSample,
+    SearchLog, PageVisit, LanguageClick, ErrorLog, ErrorAlertAck, ServerSample, EmailLog,
 )
 
 
@@ -517,4 +517,98 @@ def server_insights(days=7):
             'mem_available_min_pct': _SERVER_MEM_AVAIL_MIN_PCT,
             'swap_max_mb': _SERVER_SWAP_MAX_MB,
         },
+    }
+
+
+# =============================
+# 寄信用量
+# =============================
+
+# 達到額度的這個比例就亮黃燈／紅燈。寄信失敗的後果比一般功能重：付款 webhook 會因為
+# 寄不出確認信而一直重試，所以紅燈要留足反應時間，不能等到 100% 才叫。
+_EMAIL_WARN_PCT = 70
+_EMAIL_CRITICAL_PCT = 90
+# 月初樣本太少，線性推估會亂跳；至少過了幾天才拿推估值當警示依據
+_EMAIL_PROJECT_MIN_DAYS = 5
+
+
+def email_usage(days=30):
+    """
+    近 N 天每天的寄信量，加上今日／本月用量、額度比例與升級建議。
+
+    資料來自 EmailLog（stats.email_backend 寫入），只涵蓋這台 Django 寄出的信；
+    如果在寄信服務的後台或別的程式另外寄信，那些不在這裡。額度的天界線以 UTC 午夜
+    為準（settings.TIME_ZONE = 'UTC'，localdate 即 UTC 日期）。
+    """
+    now = timezone.localtime()
+    today = now.date()
+    start = today - timedelta(days=days - 1)
+    month_start = today.replace(day=1)
+
+    # 圖要涵蓋 N 天，月累計要涵蓋整個當月；取兩者較早的起點一次查完
+    since = timezone.make_aware(datetime.combine(min(start, month_start), time.min))
+    per_day = {}
+    for created_at, count in EmailLog.objects.filter(created_at__gte=since).values_list(
+            'created_at', 'recipient_count'):
+        d = timezone.localtime(created_at).date()
+        per_day[d] = per_day.get(d, 0) + count
+
+    daily = [
+        {'date': (start + timedelta(days=i)).isoformat(),
+         'count': per_day.get(start + timedelta(days=i), 0)}
+        for i in range(days)
+    ]
+    today_count = per_day.get(today, 0)
+    month_count = sum(c for d, c in per_day.items() if d >= month_start)
+
+    daily_limit = settings.EMAIL_DAILY_LIMIT
+    monthly_limit = settings.EMAIL_MONTHLY_LIMIT
+    daily_pct = round(today_count / daily_limit * 100, 1) if daily_limit else 0
+    monthly_pct = round(month_count / monthly_limit * 100, 1) if monthly_limit else 0
+
+    days_in_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1) - month_start
+    projected = None
+    if today.day >= _EMAIL_PROJECT_MIN_DAYS:
+        projected = round(month_count / today.day * days_in_month.days)
+
+    alerts = []
+    level = 'ok'
+
+    def raise_level(new):
+        nonlocal level
+        if new == 'critical' or level == 'ok':
+            level = new
+
+    if daily_limit and daily_pct >= _EMAIL_CRITICAL_PCT:
+        raise_level('critical')
+        alerts.append(f'今天已寄 {today_count} 封，達每日上限 {daily_limit} 封的 {daily_pct:.0f}%')
+    elif daily_limit and daily_pct >= _EMAIL_WARN_PCT:
+        raise_level('warning')
+        alerts.append(f'今天已寄 {today_count} 封，是每日上限 {daily_limit} 封的 {daily_pct:.0f}%')
+    if monthly_limit and monthly_pct >= _EMAIL_CRITICAL_PCT:
+        raise_level('critical')
+        alerts.append(f'本月已寄 {month_count} 封，達每月上限 {monthly_limit} 封的 {monthly_pct:.0f}%')
+    elif monthly_limit and monthly_pct >= _EMAIL_WARN_PCT:
+        raise_level('warning')
+        alerts.append(f'本月已寄 {month_count} 封，是每月上限 {monthly_limit} 封的 {monthly_pct:.0f}%')
+    elif monthly_limit and projected is not None and projected >= monthly_limit:
+        raise_level('warning')
+        alerts.append(f'照目前速度，本月預計寄 {projected} 封，會超過每月上限 {monthly_limit} 封')
+
+    advice = ''
+    if level != 'ok':
+        advice = ('超過額度後信會寄不出去，而付款確認信失敗會讓 Stripe webhook 一直重試，'
+                  '付了錢的用戶可能拿不到內容。建議在額度用完前升級寄信方案。')
+
+    peak = max(daily, key=lambda d: d['count'])
+    first = EmailLog.objects.order_by('created_at').values_list('created_at', flat=True).first()
+    return {
+        'today': today_count, 'daily_limit': daily_limit, 'daily_pct': daily_pct,
+        'month': month_count, 'monthly_limit': monthly_limit, 'monthly_pct': monthly_pct,
+        'projected_month': projected,
+        'level': level, 'alerts': alerts, 'advice': advice,
+        'daily': daily,
+        'peak': peak if peak['count'] else None,
+        'tracking_since': timezone.localtime(first).date().isoformat() if first else None,
+        'thresholds': {'warn_pct': _EMAIL_WARN_PCT, 'critical_pct': _EMAIL_CRITICAL_PCT},
     }

@@ -12,6 +12,7 @@
 
 {% block edition_tail %}
 <!-- Edition Access Modal：標題列右上角 CTA 打開，詳文與動作都在這裡 -->
+{% if not beta_mode %}
 <div id="edition-access-modal" role="dialog" aria-modal="true" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;padding:16px;">
     <div style="background:var(--color-bg);border-radius:12px;padding:24px 24px 20px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.35);color:var(--color-text-main);">
         <button type="button" id="edition-access-close" aria-label="Close" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:24px;line-height:1;cursor:pointer;color:var(--color-text-minor);">&times;</button>
@@ -19,6 +20,7 @@
         {% include "game/partials/edition_unlock_panel.html" %}
     </div>
 </div>
+{% endif %}
 <script>
 (function() {
     var modal = document.getElementById('edition-access-modal');
@@ -110,10 +112,12 @@
                     <p style="font-weight:700;margin-bottom:4px;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="51 44 410 410" width="1.2em" height="1.2em" style="vertical-align:-0.2em;margin-right:4px;"><path d="m256 262c-54.19 0-98-43.81-98-98 0-54.19 43.81-98 98-98 54.19 0 98 43.81 98 98 0 54.19-43.81 98-98 98z" fill="#ff0000"/><path d="m157 432c-54.19 0-98-43.81-98-98 0-54.19 43.81-98 98-98 54.19 0 98 43.81 98 98 0 54.19-43.81 98-98 98z" fill="#0000ff"/><path d="m355 432c-54.19 0-98-43.81-98-98 0-54.19 43.81-98 98-98 54.19 0 98 43.81 98 98 0 54.19-43.81 98-98 98z" fill="#ffff00"/></svg>{% t "game.label.color_vision_friendly.no" %}</p>
                     <p style="color:var(--color-text-minor);text-align:justify;">{% t "game.label.color_vision_friendly.no.def" %}</p>
                 </div>
+                {% if not beta_mode %}
                 <div>
                     <p style="font-weight:700;margin-bottom:4px;"><span style="display:inline-block;margin-right:4px;">{% include "game/partials/edition_access_icon.html" with access_size="1.2em" %}</span>{% t "game.unlock.star" %}</p>
                     <p style="color:var(--color-text-minor);text-align:justify;">{% t "game.unlock.star.def" %}</p>
                 </div>
+                {% endif %}
             </div>
 
             <div class="legend-tab-panel" data-panel="competency" style="font-size:13px;line-height:1.65;">

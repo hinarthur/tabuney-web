@@ -2,19 +2,52 @@ import stripe
 import datetime
 import logging
 from django.conf import settings
+from django.core.mail import send_mail
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from .models import Transaction, Subscription
+from .checkout_consent import prepare_checkout, consent_metadata, confirm_paid_checkout
 from member.models import Member, Tier
+from member.beta import beta_closed
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 logger = logging.getLogger(__name__)
+
+# 這些狀態代表 Stripe 上還有一份會（繼續）扣款的訂閱，不可再開第二份。
+LIVE_SUBSCRIPTION_STATUSES = ('active', 'trialing', 'past_due', 'unpaid')
+
+
+def _alert_admin(subject, body):
+    """通知站長處理。寄信失敗也不能讓呼叫端出錯（log 已經留了）。"""
+    try:
+        send_mail(f'[Tabuney billing] {subject}', body, settings.DEFAULT_FROM_EMAIL,
+                  [settings.CONTACT_NOTIFY_EMAIL], fail_silently=False)
+    except Exception:
+        logger.exception('Admin alert email failed: %s | %s', subject, body)
+
+
+def _text(request, key, default, lang=None):
+    """翻譯表有就用，沒有就退回內建英文（_unlock_msg 查不到會回 key 本身）。"""
+    value = _unlock_msg(request, key, lang)
+    return default if value == key else value
+
+
+def _has_live_subscription(member):
+    """本地紀錄或 Stripe 上已有有效訂閱。本地漏記（如 webhook 失敗）時以 Stripe 為準。"""
+    sub = getattr(member, 'subscription', None)
+    if sub and sub.status in LIVE_SUBSCRIPTION_STATUSES:
+        return True
+    if member.stripe_customer_id:
+        listing = stripe.Subscription.list(customer=member.stripe_customer_id, status='all', limit=20)
+        return any(item.get('status') in LIVE_SUBSCRIPTION_STATUSES for item in listing.auto_paging_iter())
+    return False
+
 
 # 站上語言碼 → Stripe Checkout 的 locale。付款頁本身也要跟著使用者的語言，
 # 否則使用者在 /zh/ 點購買、卻落到英文的 Stripe 頁面。
@@ -26,6 +59,7 @@ STRIPE_LOCALES = {
 }
 
 
+@beta_closed
 @login_required
 def create_checkout_session(request):
     if request.method == 'POST':
@@ -39,6 +73,19 @@ def create_checkout_session(request):
             with translation.override(lang):
                 home_url = reverse('home')
                 membership_url = reverse('account:membership')
+
+            # 伺服器端擋重複訂閱：前端藏按鈕擋不住直接 POST，重複購買會雙重扣款
+            if _has_live_subscription(request.user.member):
+                messages.info(request, _text(
+                    request, 'membership.subscription.msg.already',
+                    'You already have an active subscription.', lang))
+                return redirect(membership_url)
+
+            response, consent = prepare_checkout(
+                request, 'subscription', lang, back_url=membership_url,
+            )
+            if response is not None:
+                return response
 
             # Prepare arguments
             kwargs = {
@@ -55,14 +102,19 @@ def create_checkout_session(request):
                 'cancel_url': request.build_absolute_uri(membership_url),
                 'locale': STRIPE_LOCALES.get(lang, 'auto'),
                 'client_reference_id': str(request.user.id),
+                'metadata': consent_metadata(consent),
             }
             if request.user.member.stripe_customer_id:
                 kwargs['customer'] = request.user.member.stripe_customer_id
             else:
                 kwargs['customer_email'] = request.user.email
 
-            checkout_session = stripe.checkout.Session.create(**kwargs)
-            return redirect(checkout_session.url, code=303)
+            checkout_session = stripe.checkout.Session.create(
+                **kwargs, idempotency_key=f'checkout-consent-{consent.pk}',
+            )
+            consent.stripe_session_id = checkout_session.id
+            consent.save(update_fields=['stripe_session_id'])
+            return HttpResponseRedirect(checkout_session.url, status=303)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return HttpResponse(status=405)
@@ -70,6 +122,7 @@ def create_checkout_session(request):
 EDITION_UNLOCK_KIND = 'edition_unlock'
 
 
+@beta_closed
 @login_required
 def create_edition_unlock_session(request):
     """US$1 永久解鎖一款 Edition（一次性付款）。
@@ -126,7 +179,14 @@ def create_edition_unlock_session(request):
         # metadata 是唯一能把「這筆錢買的是哪一款」帶回 webhook 的載體
         # （client_reference_id 只帶得動 user id）。session 與 payment_intent
         # 兩邊都寫，退款查帳時在 Stripe 後台才看得到買的是什麼。
-        meta = {'kind': EDITION_UNLOCK_KIND, 'edition_id': str(edition.id)}
+        response, consent = prepare_checkout(
+            request, EDITION_UNLOCK_KIND, lang, product_id=str(edition.id),
+            product_label=str(edition), back_url=back_url,
+        )
+        if response is not None:
+            return response
+        meta = {'kind': EDITION_UNLOCK_KIND, 'edition_id': str(edition.id),
+                **consent_metadata(consent)}
         kwargs = {
             'line_items': [{'price': price_id, 'quantity': 1}],
             'mode': 'payment',
@@ -145,8 +205,12 @@ def create_edition_unlock_session(request):
         else:
             kwargs['customer_email'] = request.user.email
 
-        checkout_session = stripe.checkout.Session.create(**kwargs)
-        return redirect(checkout_session.url, code=303)
+        checkout_session = stripe.checkout.Session.create(
+            **kwargs, idempotency_key=f'checkout-consent-{consent.pk}',
+        )
+        consent.stripe_session_id = checkout_session.id
+        consent.save(update_fields=['stripe_session_id'])
+        return HttpResponseRedirect(checkout_session.url, status=303)
     except Exception:
         logger.exception("建立 edition unlock checkout session 失敗 edition=%s", edition.id)
         messages.error(request, _unlock_msg(request, 'game.unlock.error.generic', lang))
@@ -266,8 +330,17 @@ def fulfil_edition_unlock_from_session(member, edition, session_id):
     ):
         return False
 
-    txn = _ensure_transaction(session, member)
-    _grant_edition_unlock(session, member, txn)
+    try:
+        confirm_paid_checkout(session)
+    except Exception:
+        logger.exception("Checkout confirmation failed; awaiting webhook retry session=%s", session_id)
+        return False
+    try:
+        txn = _ensure_transaction(session, member)
+        _grant_edition_unlock(session, member, txn)
+    except Exception:
+        # 已記 log 並通知；webhook 重試會補發，這裡別讓成功頁 500
+        return False
     member.invalidate_unlocked_cache()
     return member.has_unlocked(edition.id)
 
@@ -312,6 +385,12 @@ def _grant_edition_unlock(session, member, txn):
             "edition_unlock 建立失敗（已收款！）session=%s member=%s edition=%s",
             session.get('id'), member.pk, edition_id,
         )
+        _alert_admin(
+            'Edition unlock failed after payment',
+            f'session={session.get("id")} member={member.pk} edition={edition_id}',
+        )
+        # 往外拋：webhook 會回 500 讓 Stripe 重試（get_or_create 冪等）
+        raise
 
 
 @csrf_exempt
@@ -331,8 +410,15 @@ def stripe_webhook(request):
     except Exception as e:
         return HttpResponse(status=400)
 
-    if event['type'] == 'checkout.session.completed':
+    if event['type'] in ('checkout.session.completed', 'checkout.session.async_payment_succeeded'):
         session = event['data']['object']
+        if session.get('payment_status') not in ('paid', 'no_payment_required'):
+            return HttpResponse(status=200)
+        try:
+            confirm_paid_checkout(session)
+        except Exception:
+            logger.exception('Checkout confirmation failed for event %s', event.get('id'))
+            return HttpResponse(status=500)
         
         client_reference_id = session.get('client_reference_id')
         customer_id = session.get('customer')
@@ -398,6 +484,19 @@ def stripe_webhook(request):
                         if not period_end:
                             period_end = 0
                             
+                        # 已有另一份有效訂閱時（入口擋不住的競態），不能覆蓋舊的紀錄：
+                        # 舊訂閱在 Stripe 仍會續扣。保留舊紀錄、通知人工退掉其中一份。
+                        existing = Subscription.objects.filter(member=member).first()
+                        if (existing and existing.stripe_subscription_id != sub_id
+                                and existing.status in LIVE_SUBSCRIPTION_STATUSES):
+                            _alert_admin(
+                                'Duplicate subscription paid',
+                                f'member={member.pk} already has {existing.stripe_subscription_id} '
+                                f'({existing.status}); new {sub_id} was NOT recorded. '
+                                'Cancel/refund one of them in Stripe.',
+                            )
+                            return HttpResponse(status=200)
+
                         # Use update_or_create keyed on member since it's a OneToOneField
                         Subscription.objects.update_or_create(
                             member=member,
@@ -417,12 +516,26 @@ def stripe_webhook(request):
 
                 _grant_edition_unlock(session, member, txn)
             except Member.DoesNotExist:
-                pass
+                # 重送也不會自己好，回 200 避免無限重試；但已收款，必須通知人工處理。
+                logger.error("checkout 付款對應不到 Member client_reference_id=%s", client_reference_id)
+                _alert_admin(
+                    'Paid checkout has no matching member',
+                    f'event={event.get("id")} session={session.get("id")} '
+                    f'client_reference_id={client_reference_id}. Customer paid but nobody was provisioned.',
+                )
             except Exception:
+                # 回 500 讓 Stripe 重試（開通動作皆冪等），並通知人工，
+                # 不能再回 200：那會變成「已扣款、未開通、Stripe 不再重試」。
                 logger.exception(
                     "Failed to process checkout.session.completed for event %s",
                     event.get('id')
                 )
+                _alert_admin(
+                    'Provisioning failed after payment (Stripe will retry)',
+                    f'event={event.get("id")} session={session.get("id")} '
+                    f'member={client_reference_id}. See server log for the traceback.',
+                )
+                return HttpResponse(status=500)
 
     elif event['type'] in ['customer.subscription.updated', 'customer.subscription.deleted']:
         subscription_obj = event['data']['object']
@@ -460,9 +573,50 @@ def stripe_webhook(request):
                 except Tier.DoesNotExist:
                     pass
                 member.save()
-                
+            elif sub.status in ('active', 'trialing'):
+                # 欠款（unpaid）後補繳恢復 active 時要把權限還回來；
+                # past_due 是 Stripe 的重試寬限期，維持現有權限不動。
+                member = sub.member
+                tier_sub = Tier.objects.filter(code='subscriber').first()
+                if tier_sub and member.tier_new_id != tier_sub.id:
+                    member.tier_new = tier_sub
+                    member.save()
+
         except Subscription.DoesNotExist:
             pass
+        except Exception:
+            logger.exception('Failed to process %s for event %s', event['type'], event.get('id'))
+            _alert_admin('Subscription sync failed (Stripe will retry)',
+                         f'event={event.get("id")} subscription={sub_id}')
+            return HttpResponse(status=500)
+
+    elif event['type'] == 'invoice.payment_failed':
+        invoice = event['data']['object']
+        sub_id = invoice.get('subscription')
+        try:
+            sub = Subscription.objects.get(stripe_subscription_id=sub_id)
+        except Subscription.DoesNotExist:
+            return HttpResponse(status=200)
+        except Exception:
+            logger.exception('invoice.payment_failed lookup failed event=%s', event.get('id'))
+            return HttpResponse(status=500)
+        sub.status = 'past_due'
+        sub.save(update_fields=['status', 'updated_at'])
+        _alert_admin('Subscription renewal payment failed',
+                     f'member={sub.member_id} subscription={sub_id} invoice={invoice.get("id")}')
+        # 通知會員去更新付款方式；寄信失敗不影響 webhook（Stripe 本身也會寄催繳信）
+        try:
+            user = sub.member.id
+            if user.email:
+                send_mail(
+                    'Tabuney — your subscription payment failed',
+                    'We could not charge your payment method for your Tabuney subscription. '
+                    'Please update your payment method on the membership page to keep your access. '
+                    'Stripe will retry the payment automatically for a few days.',
+                    settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False,
+                )
+        except Exception:
+            logger.exception('payment_failed notice email failed member=%s', sub.member_id)
 
     elif event['type'] == 'invoice.payment_succeeded':
         invoice = event['data']['object']
@@ -494,39 +648,59 @@ def stripe_webhook(request):
 
     return HttpResponse(status=200)
 
+def _set_cancel_at_period_end(request, cancel):
+    """取消／恢復自動續訂。Stripe 成功才改本地，並明確告訴使用者成敗。"""
+    from django.utils import translation
+    lang = _page_lang(request)
+    sub = getattr(request.user.member, 'subscription', None)
+    if request.method == 'POST' and sub and sub.stripe_subscription_id             and sub.cancel_at_period_end != cancel:
+        try:
+            stripe_sub = stripe.Subscription.modify(
+                sub.stripe_subscription_id, cancel_at_period_end=cancel,
+            )
+            sub.cancel_at_period_end = bool(stripe_sub.get('cancel_at_period_end', cancel))
+            sub.save(update_fields=['cancel_at_period_end', 'updated_at'])
+            messages.success(request, _text(
+                request, 'membership.subscription.msg.cancelled' if cancel else 'membership.subscription.msg.resumed',
+                'Auto-renewal is turned off. Your access continues until the end of the current period.'
+                if cancel else 'Auto-renewal is turned back on.', lang))
+        except Exception:
+            logger.exception('Subscription cancel_at_period_end=%s failed member=%s', cancel, request.user.pk)
+            messages.error(request, _text(
+                request, 'membership.subscription.msg.error',
+                'Something went wrong and your subscription was not changed. Please try again later or contact info@tabuney.com.',
+                lang))
+    with translation.override(lang):
+        return redirect('account:membership')
+
+
 @login_required
 def cancel_subscription(request):
-    if request.method == 'POST':
-        try:
-            # Safely check if subscription exists
-            sub = getattr(request.user.member, 'subscription', None)
-            if sub and sub.stripe_subscription_id and not sub.cancel_at_period_end:
-                stripe.Subscription.modify(
-                    sub.stripe_subscription_id,
-                    cancel_at_period_end=True
-                )
-                sub.cancel_at_period_end = True
-                sub.save()
-        except Exception:
-            pass
-    from django.utils import translation
-    with translation.override(_page_lang(request)):
-        return redirect('account:membership')
+    return _set_cancel_at_period_end(request, True)
+
 
 @login_required
 def resume_subscription(request):
-    if request.method == 'POST':
-        try:
-            sub = getattr(request.user.member, 'subscription', None)
-            if sub and sub.stripe_subscription_id and sub.cancel_at_period_end:
-                stripe.Subscription.modify(
-                    sub.stripe_subscription_id,
-                    cancel_at_period_end=False
-                )
-                sub.cancel_at_period_end = False
-                sub.save()
-        except Exception:
-            pass
+    return _set_cancel_at_period_end(request, False)
+
+
+@login_required
+def billing_portal(request):
+    """導向 Stripe Customer Portal，讓會員更新付款方式（續費失敗時用）。"""
     from django.utils import translation
-    with translation.override(_page_lang(request)):
-        return redirect('account:membership')
+    lang = _page_lang(request)
+    with translation.override(lang):
+        membership_url = reverse('account:membership')
+    customer_id = request.user.member.stripe_customer_id
+    if request.method == 'POST' and customer_id:
+        try:
+            portal = stripe.billing_portal.Session.create(
+                customer=customer_id, return_url=request.build_absolute_uri(membership_url),
+            )
+            return HttpResponseRedirect(portal.url, status=303)
+        except Exception:
+            logger.exception('Billing portal creation failed member=%s', request.user.pk)
+            messages.error(request, _text(
+                request, 'membership.subscription.msg.error',
+                'Something went wrong. Please try again later or contact info@tabuney.com.', lang))
+    return redirect(membership_url)

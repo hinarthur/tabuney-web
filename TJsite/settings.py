@@ -199,6 +199,11 @@ VPS_API_USERNAME = os.environ.get("VPS_API_USERNAME")
 VPS_API_PASSWORD = os.environ.get("VPS_API_PASSWORD")
 VPS_SYNC_BASE_URL = os.environ.get("VPS_SYNC_BASE_URL", "https://tabuney.com")
 
+# Beta 模式：隱藏所有付費 UI／入口，flowchart、GM 講稿全面開放，
+# Rulesbot 登入者無限、未登入者每日 ANON_CHAT_PER_DAY 題（game/rag/constants.py）。
+# 付費程式碼完全保留，設回 0 即恢復原行為。程式端一律透過 member.beta.is_beta() 讀。
+BETA_MODE = os.getenv("BETA_MODE", "0") == "1"
+
 # Stripe 配置
 STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
@@ -236,6 +241,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 "member.context_processors.google_client_id",
+                "member.context_processors.beta_mode",
                 "TJsite.context_processors.seo",
             ],
         },
@@ -384,17 +390,25 @@ CACHES = {
 }
 
 # =============================================================================
-# Email (Zoho SMTP)
+# Email (Resend SMTP)
 # =============================================================================
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.zoho.eu'
+# Resend 的 SMTP 帳號固定是字面字串 "resend"，密碼是 API key，所以寄件地址不能再
+# 沿用 EMAIL_HOST_USER（舊的 Zoho 設定兩者是同一個值），獨立成 DEFAULT_FROM_EMAIL。
+# 寄件網域要先在 Resend 後台驗證過（SPF/DKIM），否則寄不出去或進垃圾信匣。
+# 包一層 SMTP 後端，每封成功寄出的信記一列 EmailLog，admin 首頁的寄信用量圖用
+EMAIL_BACKEND = 'stats.email_backend.LoggingSMTPBackend'
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.resend.com')
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_TIMEOUT = 10
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'info@ttoper.com')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'resend')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER', 'info@ttoper.com')
-CONTACT_NOTIFY_EMAIL = 'info@ttoper.com'
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'info@tabuney.com')
+# 寄信服務的額度（Resend 免費方案：每天 100、每月 3000 封，每日以 UTC 午夜重置）。
+# 升級方案後改這兩個數字，admin 首頁的用量百分比才會跟著對。
+EMAIL_DAILY_LIMIT = int(os.getenv('EMAIL_DAILY_LIMIT', '100'))
+EMAIL_MONTHLY_LIMIT = int(os.getenv('EMAIL_MONTHLY_LIMIT', '3000'))
+CONTACT_NOTIFY_EMAIL = 'info@tabuney.com'
 
 if DEBUG:
     # 開發一律走 localhost：Google OAuth 的 redirect URI 只接受 https，
@@ -456,7 +470,3 @@ FLOWCHART_TRANSLATORS = [
     s.strip() for s in os.getenv("FLOWCHART_TRANSLATORS", "deepl").split(",") if s.strip()
 ]
 
-# ========================
-# Google Analytics 追蹤 ID
-# 建議使用 python-decouple 或 environ 套件
-GA_MEASUREMENT_ID = os.getenv('GA_MEASUREMENT_ID', '')

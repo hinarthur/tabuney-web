@@ -425,9 +425,11 @@ class EditionDetailView(DetailView):
         # 最後一處 tier 字串比對，而且會把 admin tier 誤判成有配額。判準改成
         # 與 get_chat_limits() 同源，兩邊才不會一個說無限、一個畫進度條。
         user = self.request.user
+        from member.beta import is_beta
         context['chat_unlimited_here'] = bool(
             user.is_authenticated and (
-                user.is_staff or user.is_superuser
+                is_beta()
+                or user.is_staff or user.is_superuser
                 or (member and (
                     member.has_unlocked(edition.id)
                     or member.limit('prompt_per_week') == -1
@@ -494,7 +496,9 @@ class EditionDetailView(DetailView):
         interface_lang = self._interface_lang()
 
         member = self._member()
-        unlocked = bool(member and member.has_unlocked(edition.id))
+        from member.beta import is_beta
+        # beta 期間所有人（含未登入）一律視同已解鎖
+        unlocked = is_beta() or bool(member and member.has_unlocked(edition.id))
         can_fc_non_initial = unlocked or bool(member and member.can('flowchart_non_initial'))
         context['can_flowchart_fullscreen'] = unlocked or bool(member and member.can('flowchart_fullscreen'))
         context['can_flowchart_print'] = unlocked or bool(member and member.can('flowchart_print'))
@@ -644,7 +648,8 @@ class EditionDetailView(DetailView):
         interface_lang = self._interface_lang()
 
         member = self._member()
-        can_view_script = bool(member and member.can('script'))
+        from member.beta import is_beta
+        can_view_script = is_beta() or bool(member and member.can('script'))
 
         script_data = None
         try:

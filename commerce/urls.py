@@ -9,4 +9,5 @@ urlpatterns = [
     path('webhook/', views.stripe_webhook, name='stripe-webhook'),
     path('cancel-subscription/', views.cancel_subscription, name='cancel-subscription'),
     path('resume-subscription/', views.resume_subscription, name='resume-subscription'),
+    path('billing-portal/', views.billing_portal, name='billing-portal'),
 ]

@@ -326,7 +326,7 @@
 window.FLOWCHART_VIEWER_CONFIGS = JSON.parse(
     document.getElementById('fc-viewer-data').textContent
 );
-var FC_MEMBERSHIP_URL = "{% url 'account:membership' %}";
+var FC_MEMBERSHIP_URL = "{% if not beta_mode %}{% url 'account:membership' %}{% endif %}";
 
 function _setupFcRulesetSwitch(listId) {
     var list = document.getElementById(listId);

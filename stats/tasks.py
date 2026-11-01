@@ -8,7 +8,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 
-from .models import ServerSample
+from .models import EmailLog, ServerSample
 
 # 跟 deploy/vps/mem-snapshot.sh 的保留量無關：那邊是出事當下的細節，這裡只看走勢
 KEEP_DAYS = 14
@@ -40,4 +40,8 @@ def sample_server():
     )
     ServerSample.objects.filter(
         created_at__lt=timezone.now() - timedelta(days=KEEP_DAYS)
+    ).delete()
+    # 寄信用量只需要涵蓋當月與上月，留 90 天綽綽有餘
+    EmailLog.objects.filter(
+        created_at__lt=timezone.now() - timedelta(days=90)
     ).delete()

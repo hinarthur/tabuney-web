@@ -1,5 +1,34 @@
 from django.db import models
 from django.utils import timezone
+from django.conf import settings
+import uuid
+
+
+class CheckoutConsent(models.Model):
+    """Immutable wording and policy copies accepted for one checkout attempt."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    request_key = models.CharField(max_length=64, unique=True)
+    kind = models.CharField(max_length=32)
+    product_id = models.CharField(max_length=64, blank=True)
+    product_label = models.TextField()
+    language = models.CharField(max_length=10)
+    version = models.CharField(max_length=32)
+    digital_text = models.TextField()
+    service_text = models.TextField()
+    terms_text = models.TextField()
+    terms_html = models.TextField()
+    privacy_html = models.TextField()
+    confirmed_at = models.DateTimeField(default=timezone.now, editable=False)
+    stripe_session_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    confirmation_email = models.EmailField()
+    confirmation_sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-confirmed_at']
+
+    def __str__(self):
+        return f'{self.kind}: {self.stripe_session_id or self.pk}'
 
 class TimeStampedModel(models.Model):
     created_at = models.DateTimeField(default=timezone.now, editable=False)

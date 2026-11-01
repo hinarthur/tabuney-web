@@ -91,6 +91,20 @@ body {
     opacity: 0.95;
 }
 
+/* beta 模式（settings.BETA_MODE）logo 旁的標籤 */
+.beta-badge {
+    margin-left: 6px;
+    padding: 1px 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    vertical-align: super;
+    color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    border-radius: 4px;
+}
+
 .header-right {
     display: flex;
     align-items: center;
@@ -408,74 +422,6 @@ footer a:hover {
     .theme-toggle-mobile {
         display: none;
     }
-}
-
-/* ===== Cookie Settings Modal ===== */
-
-.cookie-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    display: none;
-}
-
-.cookie-modal.show {
-    display: block;
-}
-
-.cookie-modal-backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-}
-
-.cookie-modal-content {
-    position: relative;
-    max-width: 420px;
-    margin: 10vh auto;
-    background: var(--color-bg-alt);
-    color: var(--color-text-main);
-    border-radius: 8px;
-    padding: 1.5rem;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
-}
-
-.cookie-modal-content h2 {
-    margin-bottom: 0.5rem;
-}
-
-.cookie-desc {
-    font-size: 0.9rem;
-    color: var(--color-text-minor);
-    margin-bottom: 1rem;
-}
-
-.cookie-option {
-    margin-bottom: 1rem;
-}
-
-.cookie-option label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
-}
-
-.cookie-option input[type="checkbox"] {
-    accent-color: var(--color-primary);
-}
-
-.cookie-option p {
-    font-size: 0.85rem;
-    color: var(--color-text-minor);
-    margin-left: 1.6rem;
-}
-
-.cookie-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    margin-top: 1.25rem;
 }
 
 .btn-primary {

@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from .models import (
-    ViewLog, SearchLog, PageVisit, LanguageClick, ErrorLog, ErrorAlertAck, ServerSample,
+    ViewLog, SearchLog, PageVisit, LanguageClick, ErrorLog, ErrorAlertAck, ServerSample, EmailLog,
 )
 
 # 統計摘要與排行榜在 admin 首頁（stats/reports.py + templates/admin/index.html），
@@ -249,3 +249,20 @@ class ServerSampleAdmin(admin.ModelAdmin):
     ]
     date_hierarchy = 'created_at'
     list_per_page = 100
+
+
+# =============================
+# EmailLog Admin（寄信明細，唯讀；用量圖在 admin 首頁）
+# =============================
+@admin.register(EmailLog)
+class EmailLogAdmin(admin.ModelAdmin):
+    list_display = ['created_at', 'recipient_count', 'subject']
+    date_hierarchy = 'created_at'
+    list_per_page = 100
+    readonly_fields = ['created_at', 'recipient_count', 'subject']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

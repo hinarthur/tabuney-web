@@ -609,6 +609,11 @@ def annotate_member_interactions(editions_list, member):
         # request 內後續的查詢直接吃 Member 實例上的快取。
         unlocked_ids = member.unlocked_edition_ids()
 
+    from member.beta import is_beta
+    if is_beta():
+        # beta 期間全站開放，不畫版本專享緞帶
+        unlocked_ids = set()
+
     for ed in editions_list:
         ed.member_status, ed.member_rating = status_map.get(ed.id, (None, None))
         ed.search_is_unlocked = ed.id in unlocked_ids

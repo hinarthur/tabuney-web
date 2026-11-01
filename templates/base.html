@@ -54,33 +54,6 @@
         };
     </script>
 
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JHFSREEJ4R"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        // 非必要 cookie 預設為 denied（符合 GDPR）
-        gtag('consent', 'default', {
-            analytics_storage: 'denied',
-            ad_storage: 'denied',
-            ad_user_data: 'denied',
-            ad_personalization: 'denied',
-            wait_for_update: 500
-        });
-        gtag('js', new Date());
-        gtag('config', '{{ GA_MEASUREMENT_ID }}', {
-            anonymize_ip: true
-        });
-
-
-        /* ✅ 頁面初始化時：檢查使用者是否已同意 */
-        if (localStorage.getItem('analytics_consent') === 'granted') {
-            gtag('consent', 'update', {
-                analytics_storage: 'granted'
-            });
-        }
-    </script>
-
     <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
         integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
         crossorigin="anonymous" referrerpolicy="no-referrer" /> -->
@@ -106,7 +79,7 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="{% static_v 'css/theme.css' %}">
-    <link rel="stylesheet" href="{% static 'css/ttoper.css' %}?v=15">
+    <link rel="stylesheet" href="{% static 'css/ttoper.css' %}?v=16">
     <link rel="stylesheet" href="{% static 'css/auth.css' %}?v=3">
 
     {% block extrahead %}
@@ -118,7 +91,6 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script src="{% static 'js/theme.js' %}?v=5"></script>
-    <script src="{% static 'js/privacy.js' %}?v=4"></script>
     <script src="{% static 'js/header.js' %}?v=4"></script>
     <script src="{% static 'js/auth.js' %}?v=5"></script>
 
@@ -129,6 +101,7 @@
                 <a href="{% url 'home' %}">
                     <img src="{% static 'img/tabuney_logo.png' %}" alt="Logo" class="logo-img" width="1080" height="1080" />
                     <span class="slogan">Tabuney</span>
+                    {% if beta_mode %}<span class="beta-badge">{% t "site.beta" %}</span>{% endif %}
                 </a>
             </div>
 
@@ -199,7 +172,7 @@
                             <!-- <a href="#" class="user-menu-item">{% t "Profile" %}</a>
                             <a href="#" class="user-menu-item">{% t "Settings" %}</a>
                             <hr> -->
-                            <button type="button" class="user-menu-item" onclick="window.location.href='{% url 'account:membership' %}'">{% t "membership.title" %}</button>
+                            {% if not beta_mode %}<button type="button" class="user-menu-item" onclick="window.location.href='{% url 'account:membership' %}'">{% t "membership.title" %}</button>{% endif %}
                             <button type="button" class="user-menu-item" onclick="window.location.href='{% url 'collection:index' %}'">{% t "game.mycollection.title" %}</button>
                             <button type="button" id="logout-btn" class="user-menu-item logout-btn">{% t "common.logout" %}</button>
                             </div>
@@ -236,7 +209,7 @@
                                       </div>
                                     </button>
                                 </div>
-                                <button type="button" class="user-menu-item" onclick="window.location.href='{% url 'account:membership' %}'">{% t "membership.title" %}</button>
+                                {% if not beta_mode %}<button type="button" class="user-menu-item" onclick="window.location.href='{% url 'account:membership' %}'">{% t "membership.title" %}</button>{% endif %}
                             </div>
                         </div>
                         {% endif %}
@@ -292,7 +265,7 @@
                 <p class="user-info-mobile">{{ user.first_name }} {{ user.last_name }}</p>
                 <!-- <a href="#">{% t "Profile" %}</a>
                 <a href="#">{% t "Settings" %}</a> -->
-                <button type="button" class="logout-btn-mobile" onclick="window.location.href='{% url 'account:membership' %}'" style="opacity: 1;">{% t "membership.title" %}</button>
+                {% if not beta_mode %}<button type="button" class="logout-btn-mobile" onclick="window.location.href='{% url 'account:membership' %}'" style="opacity: 1;">{% t "membership.title" %}</button>{% endif %}
                 <button type="button" class="logout-btn-mobile" onclick="window.location.href='{% url 'collection:index' %}'" style="opacity: 1;">{% t "game.mycollection.title" %}</button>
                 <button type="button" id="logout-btn-mobile" class="logout-btn-mobile">Logout</button>
             </div>
@@ -317,7 +290,7 @@
                         </div>
                     </button>
                 </div>
-                <button type="button" class="logout-btn-mobile" onclick="window.location.href='{% url 'account:membership' %}'" style="opacity: 1;">{% t "membership.title" %}</button>
+                {% if not beta_mode %}<button type="button" class="logout-btn-mobile" onclick="window.location.href='{% url 'account:membership' %}'" style="opacity: 1;">{% t "membership.title" %}</button>{% endif %}
             </div>
             {% endif %}
         </div>
@@ -352,52 +325,13 @@
         <a href="{% url 'privacy' %}">{% t "privacy_policy" %}</a> |
         <a href="{% url 'terms' %}">{% t "terms_of_use" %}</a> |
         <a href="{% url 'faq' %}">{% t "footer.link.faq" %}</a> |
-        <a href="{% url 'principles' %}">{% t "footer.link.principles" %}</a> |
-        <a href="#" id="open-cookie-settings">{% t "cookie_settings" %}</a>
+        <a href="{% url 'principles' %}">{% t "footer.link.principles" %}</a>
+
         <br>
         {% comment %}
         <small>{% t "footer.declare-amazon-partner" %}</small>
         {% endcomment %}
     </footer>
-
-    <!-- Cookie Settings Modal -->
-    <div id="cookie-modal" class="cookie-modal" aria-hidden="true">
-        <div class="cookie-modal-backdrop"></div>
-
-        <div class="cookie-modal-content" role="dialog" aria-modal="true">
-            <h2>{% t "cookie_settings" %}</h2>
-
-            <p class="cookie-desc">
-                {% t "cookie.modal.description" %}
-            </p>
-
-            <div class="cookie-option">
-                <label>
-                    <input type="checkbox" id="consent-analytics">
-                    <strong>{% t "cookie.modal.analytics.title" %}</strong>
-                </label>
-                <p>{% t "cookie.modal.analytics.description" %}</p>
-            </div>
-
-            <div class="cookie-option">
-                <label>
-                    <input type="checkbox" id="consent-ads">
-                    <strong>{% t "cookie.modal.ads.title" %}</strong>
-                </label>
-                <p>{% t "cookie.modal.ads.description" %}</p>
-            </div>
-
-            <div class="cookie-actions">
-                <button id="save-cookie-settings" class="btn-primary">
-                    {% t "save" %}
-                </button>
-                <button id="close-cookie-settings" class="btn-secondary">
-                    {% t "cancel" %}
-                </button>
-            </div>
-        </div>
-    </div>
-
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {

@@ -274,3 +274,24 @@ class ServerSample(models.Model):
 
     def __str__(self):
         return f"{self.created_at}: avail {self.mem_available_mb}MB, swap {self.swap_used_mb}MB"
+
+
+class EmailLog(models.Model):
+    """
+    每封成功寄出的信一列，由 stats.email_backend.LoggingSMTPBackend 寫入。
+
+    用來對照寄信服務（Resend 免費方案：每天 100、每月 3000 封）的額度，admin 首頁
+    的「寄信用量」讀這張表。只記成功交給 SMTP 的信：失敗的不算額度。
+    recipient_count 是收件人數（to + cc + bcc）：寄信服務是依收件人計費，一封信寄給
+    兩個人算兩封。只留 90 天（一個完整月份加緩衝），由 sample_server 順手清。
+    """
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    recipient_count = models.PositiveIntegerField(default=1)
+    subject = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.created_at}: {self.recipient_count} × {self.subject}"

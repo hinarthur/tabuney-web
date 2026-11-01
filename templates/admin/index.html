@@ -184,6 +184,36 @@
         --srv-swap: #d95926;
         --srv-threshold: #e35d5d;
     }
+
+    /* 寄信用量圖：長條用分類色盤第一格（藍），每日上限線用警示紅；
+       快到上限的那幾天長條改用警示紅，不只靠顏色——長條上有數字 title，上限線有圖例文字 */
+    .em-chart-wrap {
+        --em-bar: #2a78d6;
+        --em-hot: #ba2121;
+        --em-limit: #ba2121;
+    }
+    @media (prefers-color-scheme: dark) {
+        html:not([data-theme="light"]) .em-chart-wrap {
+            --em-bar: #3987e5;
+            --em-hot: #e35d5d;
+            --em-limit: #e35d5d;
+        }
+    }
+    html[data-theme="dark"] .em-chart-wrap {
+        --em-bar: #3987e5;
+        --em-hot: #e35d5d;
+        --em-limit: #e35d5d;
+    }
+    .em-meter {
+        height: 10px;
+        border-radius: 5px;
+        background: var(--darkened-bg, #f0f0f0);
+        overflow: hidden;
+        margin: 4px 0 10px;
+        max-width: 420px;
+    }
+    .em-meter > span { display: block; height: 100%; background: var(--em-bar, #2a78d6); }
+    .em-meter > span.hot { background: var(--em-hot, #ba2121); }
 </style>
 
 <div class="module" id="stats-source-module">
@@ -213,6 +243,10 @@
     </a>
     <a class="todo-tile zero" id="todo-error" href="#system">
         <span class="todo-num">—</span><span class="todo-label">錯誤紀錄</span><span class="todo-sub"></span>
+    </a>
+    {# 寄信用量：數字是今日已寄封數，快到上限（黃燈以上）才轉紅色，平常是中性灰 #}
+    <a class="todo-tile zero" id="todo-email" href="#system">
+        <span class="todo-num">—</span><span class="todo-label">今日寄信</span><span class="todo-sub"></span>
     </a>
 </div>
 <div class="todo-grid">
@@ -556,6 +590,36 @@
         <code>journalctl -t net-watchdog</code>（網路斷線紀錄）、
         <code>sar -r</code>（長期記憶體歷史）。
     </p>
+</div>
+
+{# ── 寄信用量 ──────────────────────────────────────────────────
+   資料來自 stats.EmailLog（stats.email_backend 每封成功寄出的信記一列）。
+   額度與警示規則都在後端：settings.EMAIL_*_LIMIT、stats/reports.py email_usage()。 #}
+<div class="module">
+    <h2>寄信用量（Resend）</h2>
+    <p id="email-alert">載入中…</p>
+    <p id="email-advice" class="err-note"></p>
+    <table>
+        <thead>
+            <tr><th>今日（UTC）</th><th>本月</th><th>本月預估</th><th>近 30 天單日最高</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td id="em-today"></td>
+                <td id="em-month"></td>
+                <td id="em-projected"></td>
+                <td id="em-peak"></td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="err-note" style="margin-top:10px;">今日用量</p>
+    <div class="em-meter em-chart-wrap"><span id="em-meter-day" style="width:0"></span></div>
+    <p class="err-note">本月用量</p>
+    <div class="em-meter em-chart-wrap"><span id="em-meter-month" style="width:0"></span></div>
+    <h3>近 30 天每日寄信量</h3>
+    <div id="email-legend" class="em-chart-wrap pv-legend"></div>
+    <div id="email-chart" class="em-chart-wrap"></div>
+    <p class="err-note" id="email-note"></p>
 </div>
 
 {# ── 錯誤 ───────────────────────────────────────────── #}
@@ -1436,6 +1500,182 @@
         container.appendChild(svg);
     }
 
+    // ── 寄信用量 ─────────────────────────────────────────────────
+    // 門檻、額度與建議文字都由後端 stats/reports.py email_usage() 決定，這裡只負責畫。
+    const RESEND_PRICING_URL = 'https://resend.com/pricing';
+
+    function renderEmailUsage(u) {
+        const alertEl = document.getElementById('email-alert');
+        const adviceEl = document.getElementById('email-advice');
+        const container = document.getElementById('email-chart');
+        const legend = document.getElementById('email-legend');
+        const note = document.getElementById('email-note');
+        alertEl.textContent = '';
+        alertEl.className = '';
+        adviceEl.textContent = '';
+        container.textContent = '';
+        legend.textContent = '';
+        note.textContent = '';
+        ['em-today', 'em-month', 'em-projected', 'em-peak'].forEach(id => {
+            document.getElementById(id).textContent = '-';
+        });
+        ['em-meter-day', 'em-meter-month'].forEach(id => {
+            const bar = document.getElementById(id);
+            bar.style.width = '0';
+            bar.classList.remove('hot');
+        });
+
+        // 正式站還沒部署時，代理回來的資料沒有這個 key：講清楚，不要留白成「一切正常」
+        if (!u) {
+            alertEl.textContent = '這個來源的版本還沒有寄信用量功能。';
+            alertEl.className = 'err-note';
+            return;
+        }
+
+        document.getElementById('em-today').textContent = `${u.today} / ${u.daily_limit}（${u.daily_pct}%）`;
+        document.getElementById('em-month').textContent = `${u.month} / ${u.monthly_limit}（${u.monthly_pct}%）`;
+        document.getElementById('em-projected').textContent =
+            u.projected_month === null ? '月初樣本不足' : `${u.projected_month} 封`;
+        document.getElementById('em-peak').textContent =
+            u.peak ? `${u.peak.count} 封（${u.peak.date.slice(5)}）` : '-';
+
+        const meters = [['em-meter-day', u.daily_pct], ['em-meter-month', u.monthly_pct]];
+        meters.forEach(([id, pct]) => {
+            const bar = document.getElementById(id);
+            bar.style.width = Math.min(100, pct) + '%';
+            bar.classList.toggle('hot', pct >= u.thresholds.warn_pct);
+        });
+
+        if (u.level === 'ok') {
+            const ok = document.createElement('span');
+            ok.className = 'err-clear';
+            ok.textContent = '✅ 用量正常';
+            alertEl.appendChild(ok);
+        } else {
+            u.alerts.forEach(msg => {
+                const badge = document.createElement('span');
+                badge.className = 'err-badge ' + (u.level === 'critical' ? 'critical' : 'warning');
+                badge.textContent = msg;
+                alertEl.appendChild(badge);
+                alertEl.appendChild(document.createTextNode(' '));
+            });
+            adviceEl.appendChild(document.createTextNode(u.advice + ' '));
+            const link = document.createElement('a');
+            link.href = RESEND_PRICING_URL;
+            link.target = '_blank';
+            link.rel = 'noopener';
+            link.textContent = '查看 Resend 方案與價格';
+            adviceEl.appendChild(link);
+        }
+
+        const trackNote = u.tracking_since
+            ? `統計從 ${u.tracking_since} 開始（這個功能上線前寄出的信不在內）。`
+            : '還沒有任何寄信紀錄。';
+        note.textContent = trackNote
+            + '只計算這個網站透過 SMTP 寄出的信，每個收件人算一封；在 Resend 後台直接寄的不在內，'
+            + '實際數字以 Resend 後台為準。每日額度以 UTC 午夜重置。';
+
+        const daily = u.daily || [];
+        if (daily.length < 2) { return; }
+
+        const warnAt = u.daily_limit * u.thresholds.warn_pct / 100;
+        [
+            { label: '每日寄信量', color: 'var(--em-bar)' },
+            { label: `接近上限（≥ ${u.thresholds.warn_pct}%）`, color: 'var(--em-hot)' },
+            { label: `每日上限 ${u.daily_limit} 封`, color: 'var(--em-limit)' },
+        ].forEach(item => {
+            const el = document.createElement('div');
+            el.className = 'pv-legend-item';
+            const swatch = document.createElement('span');
+            swatch.className = 'pv-legend-swatch';
+            swatch.style.background = item.color;
+            const label = document.createElement('span');
+            label.textContent = item.label;
+            el.appendChild(swatch);
+            el.appendChild(label);
+            legend.appendChild(el);
+        });
+
+        const width = 700, height = 220;
+        const padL = 40, padR = 12, padT = 10, padB = 24;
+        const plotW = width - padL - padR;
+        const plotH = height - padT - padB;
+        // y 軸上限至少到每日額度，這樣上限線永遠在圖裡，看得出離天花板多遠
+        const maxY = Math.max(u.daily_limit, ...daily.map(d => d.count), 1);
+        const step = plotW / daily.length;
+        const barW = Math.max(2, step * 0.7);
+        const xAt = i => padL + step * i + step / 2;
+        const yAt = v => padT + plotH - (plotH * v) / maxY;
+
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', height);
+        svg.style.maxWidth = '700px';
+        svg.style.display = 'block';
+
+        [0, 0.5, 1].forEach(f => {
+            const v = Math.round(maxY * f);
+            const y = yAt(v);
+            const line = document.createElementNS(svgNS, 'line');
+            line.setAttribute('x1', padL);
+            line.setAttribute('x2', width - padR);
+            line.setAttribute('y1', y);
+            line.setAttribute('y2', y);
+            line.setAttribute('stroke', 'var(--hairline-color, #e8e8e8)');
+            line.setAttribute('stroke-width', '1');
+            svg.appendChild(line);
+            const t = document.createElementNS(svgNS, 'text');
+            t.setAttribute('x', padL - 6);
+            t.setAttribute('y', y + 3);
+            t.setAttribute('text-anchor', 'end');
+            t.setAttribute('font-size', '10');
+            t.setAttribute('fill', 'var(--body-quiet-color, #666)');
+            t.textContent = v;
+            svg.appendChild(t);
+        });
+
+        [0, Math.floor((daily.length - 1) / 2), daily.length - 1].forEach(i => {
+            const label = document.createElementNS(svgNS, 'text');
+            label.setAttribute('x', xAt(i));
+            label.setAttribute('y', height - 6);
+            label.setAttribute('text-anchor', i === 0 ? 'start' : (i === daily.length - 1 ? 'end' : 'middle'));
+            label.setAttribute('font-size', '10');
+            label.setAttribute('fill', 'var(--body-quiet-color, #666)');
+            label.textContent = daily[i].date.slice(5);
+            svg.appendChild(label);
+        });
+
+        const baseline = padT + plotH;
+        daily.forEach((d, i) => {
+            if (d.count === 0) { return; }
+            const rect = document.createElementNS(svgNS, 'rect');
+            rect.setAttribute('x', xAt(i) - barW / 2);
+            rect.setAttribute('y', yAt(d.count));
+            rect.setAttribute('width', barW);
+            rect.setAttribute('height', Math.max(1, baseline - yAt(d.count)));
+            rect.setAttribute('fill', d.count >= warnAt ? 'var(--em-hot)' : 'var(--em-bar)');
+            const title = document.createElementNS(svgNS, 'title');
+            title.textContent = `${d.date}：${d.count} 封`;
+            rect.appendChild(title);
+            svg.appendChild(rect);
+        });
+
+        // 每日上限線畫在長條之上，虛線，避免被長條蓋住
+        const limitLine = document.createElementNS(svgNS, 'line');
+        limitLine.setAttribute('x1', padL);
+        limitLine.setAttribute('x2', width - padR);
+        limitLine.setAttribute('y1', yAt(u.daily_limit));
+        limitLine.setAttribute('y2', yAt(u.daily_limit));
+        limitLine.setAttribute('stroke', 'var(--em-limit)');
+        limitLine.setAttribute('stroke-width', '1.5');
+        limitLine.setAttribute('stroke-dasharray', '5 4');
+        svg.appendChild(limitLine);
+
+        container.appendChild(svg);
+    }
+
     // ── 待辦色塊 ─────────────────────────────────────────────────
     // value 不是數字＝這個來源沒有這個欄位（正式站還沒部署），顯示「—」而不是 0：
     // 0 會被讀成「沒事」，那是最糟的誤讀。
@@ -1467,9 +1707,16 @@
         setTile('todo-flowchart-check', data['rulebook_flowchart_unpublished_count'],
             `未發布（其中待審 ${data['rulebook_flowchart_pending_review_count'] ?? '-'}）`);
 
-        // 系統分頁上的紅點：紅燈錯誤＋VPS 警示，切到別的分頁時也看得到
+        // 寄信額度：數字是今日已寄封數；黃燈以上才轉紅，提早提醒升級
+        const em = data['email_usage'];
+        setTile('todo-email', em ? em.today : undefined,
+            em ? `今日上限 ${em.daily_limit}｜本月 ${em.month}/${em.monthly_limit}` : '',
+            em && em.level !== 'ok');
+
+        // 系統分頁上的紅點：紅燈錯誤＋VPS 警示＋寄信額度，切到別的分頁時也看得到
         const serverAlerts = ((data['server_insights'] || {})['alerts'] || []).length;
-        const systemCount = (c ? c.critical : 0) + serverAlerts;
+        const emailAlert = em && em.level !== 'ok' ? 1 : 0;
+        const systemCount = (c ? c.critical : 0) + serverAlerts + emailAlert;
         const badge = document.getElementById('tab-badge-system');
         badge.textContent = systemCount;
         badge.hidden = systemCount === 0;
@@ -1608,6 +1855,7 @@
             renderScript(data['script_insights']);
             renderErrorInsights(data['error_insights']);
             renderServer(data['server_insights']);
+            renderEmailUsage(data['email_usage']);
             renderTodo(data);
         }
         )

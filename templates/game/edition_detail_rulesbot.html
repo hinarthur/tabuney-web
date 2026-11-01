@@ -21,7 +21,7 @@
     <div id="lightbox-caption"></div>
 </div>
 
-<script src="{% static 'js/edition_detail.js' %}?v=13"></script>
+<script src="{% static 'js/edition_detail.js' %}?v=14"></script>
 {% if chat_status != 'not_ready' %}
 <script>
 // Initialize chat with edition ID and translations
@@ -40,7 +40,10 @@ initializeChat('{{ edition.id }}', {
     limitRemainSuffix: '{% t "game.chat.remain.suffix" %}',
     limitReachLimit: '{% t "game.chat.reach_limit" %}',
     btnUpgrade: '{% t "membership.btn.upgrade" %}',
-    membershipUrl: '{% url "account:membership" %}'
+    isAnonymous: {% if user.is_authenticated %}false{% else %}true{% endif %},
+    anonLimitLogin: '{% t "game.chat.anon.limit_login" as v %}{{ v|escapejs }}',
+    btnLogin: '{% t "auth.btn.google-login" as v %}{{ v|escapejs }}',
+    membershipUrl: {% if beta_mode %}null{% else %}'{% url "account:membership" %}'{% endif %}
 }, '{{ request.lang }}');
 
 // Hook chat login button to AuthHandler

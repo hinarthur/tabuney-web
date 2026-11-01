@@ -16,7 +16,7 @@ from feed.models import Work, Rss
 from game.models import Rulebook, RulebookFlowchart, RulebookScript, Game, GameSuggestion, GameSuggestionStatus, FlowchartSuggestion
 from stats.reports import (
     search_insights, all_page_visit_insights, language_click_insights,
-    error_insights, server_insights, alert_ack_key,
+    error_insights, server_insights, email_usage, alert_ack_key,
 )
 from stats.models import ErrorAlertAck
 from game.selectors import rulesbot_ready_rulebooks
@@ -345,6 +345,7 @@ class AdminStatsView(APIView):
         data['script_insights'] = script_insights()
         data['error_insights'] = error_insights()
         data['server_insights'] = server_insights()
+        data['email_usage'] = email_usage()
 
         # context = locals()
         # return render(request, 'admin/stats_dashboard.html', context)

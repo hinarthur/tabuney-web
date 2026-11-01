@@ -165,7 +165,8 @@ function initializeChat(editionId, translations, pageLang) {
         const suffix = translations.limitRemainSuffix !== "game.chat.remain.suffix" ? translations.limitRemainSuffix : "prompts";
         const reach = translations.limitReachLimit !== "game.chat.reach_limit" ? translations.limitReachLimit : "Limit reached. Resets at:";
         const btnUpgrade = translations.btnUpgrade !== "membership.btn.upgrade" ? translations.btnUpgrade : "Upgrade";
-        const urlUpgrade = translations.membershipUrl || "/member/membership/";
+        // beta 模式不輸出 membershipUrl：沒有升級可買，就不畫升級按鈕
+        const urlUpgrade = translations.membershipUrl;
 
         if (limits.remaining <= 0) {
             disableInput = true;
@@ -178,14 +179,28 @@ function initializeChat(editionId, translations, pageLang) {
                 });
             }
             message = `${reach} ${resetDateStr}`;
-            message += ` <a href="${urlUpgrade}" style="margin-left: 8px; padding: 2px 8px; font-size: 0.9em; background: var(--color-primary, #007bff); color: white; border-radius: 4px; text-decoration: none; display: inline-block;">${btnUpgrade}</a>`;
+            const actionStyle = 'margin-left: 8px; padding: 2px 8px; font-size: 0.9em; background: var(--color-primary, #007bff); color: white; border: none; border-radius: 4px; text-decoration: none; display: inline-block; cursor: pointer;';
+            if (translations.isAnonymous) {
+                // 未登入（beta）：登入後就不限題數
+                message = `${translations.anonLimitLogin} <button type="button" class="chat-limit-login" style="${actionStyle}">${translations.btnLogin}</button>`;
+            } else if (urlUpgrade) {
+                message += ` <a href="${urlUpgrade}" style="${actionStyle}">${btnUpgrade}</a>`;
+            }
             if (infoEl) infoEl.style.color = "red";
         } else {
             message = `${prefix} ${limits.remaining} ${suffix}`;
             if (infoEl) infoEl.style.color = "var(--color-text-minor, gray)";
         }
 
-        if (infoEl) infoEl.innerHTML = message;
+        if (infoEl) {
+            infoEl.innerHTML = message;
+            const loginBtn = infoEl.querySelector('.chat-limit-login');
+            if (loginBtn) {
+                loginBtn.addEventListener('click', () => {
+                    if (window.authHandler) window.authHandler.handleLogin();
+                });
+            }
+        }
 
         if (userInput) userInput.disabled = disableInput;
         if (sendBtn) sendBtn.disabled = disableInput;
@@ -250,6 +265,10 @@ function initializeChat(editionId, translations, pageLang) {
                 updateChatLimits(data.limits);
             }
             
+            if (response.status === 429 && data.login_required) {
+                // 配額列已經換成登入提示，不再多冒一個錯誤泡泡
+                return;
+            }
             if (!response.ok) throw new Error(data.error || 'Server error');
 
             sessionId = data.session_id;
@@ -371,8 +390,9 @@ function initializeChat(editionId, translations, pageLang) {
             </div>`;
         }
 
-        // Feedback
-        if (isBot && messageId) {
+        // Feedback（MessageFeedbackView 限登入，未登入者不畫）
+        const canFeedback = isBot && messageId && !translations.isAnonymous;
+        if (canFeedback) {
             const likeActive = feedback === 1 ? ' active' : '';
             const dislikeActive = feedback === -1 ? ' active' : '';
             html += `
@@ -394,7 +414,7 @@ function initializeChat(editionId, translations, pageLang) {
         window.scrollTop = window.scrollHeight;
 
         // Attach feedback listeners
-        if (isBot && messageId) {
+        if (canFeedback) {
             const container = div.querySelector('.feedback-container');
             const btns = container.querySelectorAll('.feedback-btn');
             const textArea = container.querySelector('.feedback-text-area');

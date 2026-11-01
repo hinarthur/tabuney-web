@@ -30,7 +30,9 @@
                         </span>
                         {% endif %}
                         {% include "game/partials/rulebook_source_btn.html" with btn_class="icon-btn" %}
+                        {% if user.is_authenticated %}{# 清除 API 限登入；匿名本來就沒有可清的歷史 #}
                         <button id="clear-chat-btn" class="icon-btn clear-chat-btn" title="{% t 'game.chat.clear_history' %}"><i class="fa-solid fa-trash-can"></i></button>
+                        {% endif %}
                     </div>
                 </div>
                 
@@ -47,7 +49,7 @@
                 </div>
                 
                 {% if chat_status != 'not_ready' %}
-                    {% if user.is_authenticated %}
+                    {% if user.is_authenticated or beta_mode %}{# beta：未登入者每日限量可問 #}
                     <div class="chat-input-area" style="flex-wrap: wrap;">
                         {% comment %}
                         配額列。判準由 _rulesbot_context() 的 chat_unlimited_here 提供，
