@@ -161,7 +161,7 @@ class SurveyAdmin(admin.ModelAdmin):
     inlines = [SurveyQuestionInline]
     list_display = ("name", "kind", "is_active", "question_count", "response_count", "missing", "results_link")
     list_filter = ("kind", "is_active")
-    actions = ["fill_translations"]
+    actions = ["fill_translations", "sync_to_vps"]
 
     fieldsets = (
         (None, {
@@ -201,6 +201,28 @@ class SurveyAdmin(admin.ModelAdmin):
     def results_link(self, obj):
         url = reverse("admin:feedback_survey_results", args=[obj.pk])
         return format_html('<a href="{}">📊 看結果</a>', url)
+
+    @admin.action(description="📤 Sync selected surveys to VPS (questions and choices included)")
+    def sync_to_vps(self, request, queryset):
+        from game.sync_service import GameSyncService
+
+        sync_log = GameSyncService().sync_surveys(queryset)
+        names = ", ".join(queryset.values_list("name", flat=True))
+
+        if sync_log.status == "success":
+            if sync_log.records_sent == 0:
+                self.message_user(request, "沒有選取任何問卷，未送出。", level=messages.INFO)
+            else:
+                self.message_user(
+                    request,
+                    f"✅ 已同步 {queryset.count()} 份問卷（共 {sync_log.records_sent} 筆）到 VPS：{names}。"
+                    "若其中有啟用中的，VPS 上同種類的另一份已被停用。",
+                    level=messages.SUCCESS,
+                )
+        elif sync_log.status == "partial":
+            self.message_user(request, f"⚠️ 問卷同步部分成功: {sync_log.error}", level=messages.WARNING)
+        else:
+            self.message_user(request, f"❌ 問卷同步失敗: {sync_log.error}", level=messages.ERROR)
 
     @admin.action(description="🌐 用 DeepL 補齊缺的語言（標題、題目、選項）")
     def fill_translations(self, request, queryset):

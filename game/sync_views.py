@@ -160,6 +160,36 @@ def drop_superseded(Model, new_pk, superseded):
     )
 
 
+# 問卷（feedback.Survey / SurveyQuestion / SurveyChoice）：本機是唯一的編輯處，用 admin action
+# 以 sync_type="survey" 推上來。回答資料（SurveyResponse / SurveyAnswer）只存在 VPS，不會被碰。
+SURVEY_SYNC_TYPE = "survey"
+
+
+def deactivate_competing_surveys(Model, obj):
+    """
+    同一種問卷同時只能有一份啟用中（uq_survey_one_active_per_kind）。推上來的這份是
+    啟用的，VPS 上同種類的另一份就先停用，否則寫入必撞唯一限制。停用不刪除，
+    它底下的回答都還在。
+    """
+    if Model.__name__ != "Survey" or not obj.is_active:
+        return
+    Model.objects.filter(kind=obj.kind, is_active=True).exclude(pk=obj.pk).update(is_active=False)
+
+
+def prune_survey_orphans(model_label, saved_pks, survey_ids):
+    """
+    本機刪掉的題目／選項，VPS 上也要拿掉，否則已經改過的問卷會殘留舊題目。
+    已經有人回答的（SurveyAnswer 以 PROTECT 指向）不能刪，留著不動。
+    """
+    Model = apps.get_model(model_label)
+    if model_label.lower() == "feedback.surveyquestion":
+        qs = Model.objects.filter(survey_id__in=survey_ids)
+    else:
+        qs = Model.objects.filter(question__survey_id__in=survey_ids)
+    deleted, _ = qs.exclude(pk__in=saved_pks).filter(answers__isnull=True).delete()
+    return deleted
+
+
 def apply_sync_layers(layers, sync_type):
     """
     把一包 layers（Django 序列化格式）upsert 進目前這個資料庫。
@@ -172,6 +202,7 @@ def apply_sync_layers(layers, sync_type):
     total_updated = 0
     total_deleted = 0
     errors = []
+    survey_ids = set()   # sync_type="survey" 時，這一包涉及的問卷
 
     for layer_group in layers:
         for entry in layer_group:
@@ -195,6 +226,7 @@ def apply_sync_layers(layers, sync_type):
                         # 還佔著 unique constraint，而上面的 pk-based exists 檢查
                         # 看不到它。先清掉，否則寫入必撞 IntegrityError。
                         drop_natural_key_conflicts(Model, deserialized_obj.object)
+                        deactivate_competing_surveys(Model, deserialized_obj.object)
 
                         # RulebookFlowchart / RulebookScript：重新產生會換新 PK，
                         # 舊 row 的 natural key 還佔著位子（見 SUPERSEDE_RULES）
@@ -212,11 +244,18 @@ def apply_sync_layers(layers, sync_type):
                             drop_superseded(Model, pk, superseded)
 
                         saved_pks.add(pk)
+                        if Model.__name__ == "Survey":
+                            survey_ids.add(pk)
 
                         if exists:
                             total_updated += 1
                         else:
                             total_created += 1
+
+                    if sync_type == SURVEY_SYNC_TYPE and model_label.lower() in (
+                        "feedback.surveyquestion", "feedback.surveychoice",
+                    ):
+                        total_deleted += prune_survey_orphans(model_label, saved_pks, survey_ids)
 
                     # Full sync: delete records not in the payload
                     if sync_type == "full" and saved_pks and data:

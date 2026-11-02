@@ -1,3 +1,5 @@
+import re
+
 from django.views import View
 from django.http import HttpResponse
 from django.views.generic import TemplateView
@@ -9,6 +11,20 @@ from stats.utils import log_page_visit
 #         if getattr(request, 'subdomain', '') == '':
 #             return HttpResponse("Hello from ttoper.com")
 #         return HttpResponse(status=404)
+
+# RSS 抓到的配圖常是來源站產生的縮圖（WordPress 的 "-300x150"、Blogger 的 "/s72-w315-h400-c/"），
+# 放大到卡片寬度就糊。這裡推回原圖網址；猜錯（原圖不存在）時前端會退回存的縮圖網址。
+_WP_THUMB = re.compile(r'-\d{2,4}x\d{2,4}(?=\.(?:jpe?g|png|webp|gif)(?:\?|$))', re.I)
+_BLOGGER_THUMB = re.compile(r'/s\d+(?:-[a-z0-9-]+)?/', re.I)
+
+
+def _full_size_image(url):
+    if not url:
+        return url
+    if 'googleusercontent.com' in url or 'blogger.com' in url:
+        return _BLOGGER_THUMB.sub('/s1200/', url, count=1)
+    return _WP_THUMB.sub('', url, count=1)
+
 
 class HomeView(TemplateView):
     template_name = "index.html"
@@ -55,6 +71,8 @@ class HomeView(TemplateView):
         works = pick(lang)
         if len(works) < limit and lang != 'en':
             works += pick('en')[:limit - len(works)]
+        for work in works:
+            work.hi_image = _full_size_image(work.image)
         return works
 
 

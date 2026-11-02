@@ -295,3 +295,55 @@ class SurveyApiTests(EditionUnlockTestBase):
         self.q_text.save()
         texts = [q["text"] for q in Client().get(self.get_url, params).json()["survey"]["questions"]]
         self.assertIn("Changed?", texts)
+
+
+class SurveySyncReceiverTests(EditionUnlockTestBase):
+    """VPS 端收到問卷同步包（sync_type="survey"）的行為。"""
+
+    def _payload(self, surveys):
+        from django.core import serializers
+
+        from feedback.models import SurveyChoice, SurveyQuestion
+
+        questions = SurveyQuestion.objects.filter(survey__in=surveys)
+        choices = SurveyChoice.objects.filter(question__in=questions)
+        return [[
+            {"model": label, "count": qs.count(), "data": json.loads(serializers.serialize("json", qs))}
+            for label, qs in (
+                ("feedback.survey", surveys),
+                ("feedback.surveyquestion", questions),
+                ("feedback.surveychoice", choices),
+            )
+        ]]
+
+    def test_push_deactivates_competing_survey_and_prunes_removed_questions(self):
+        from game.sync_views import apply_sync_layers
+
+        # 「本機」：只有 new 啟用，題目只有 keep 一題
+        new = Survey.objects.create(kind=Survey.Kind.EDITION, name="new", is_active=True)
+        keep = SurveyQuestion.objects.create(survey=new, qtype="single", text={"en": "Keep?"})
+        c1 = SurveyChoice.objects.create(question=keep, text={"en": "Yes"})
+        layers = self._payload(Survey.objects.filter(pk=new.pk))
+
+        # 回到「VPS」的狀態：new 還停用、另一份 old 啟用中（不處理就會撞唯一限制）、
+        # 多一題本機已刪的題目、以及一題已經有人回答的（不能刪）
+        new.is_active = False
+        new.save()
+        old = Survey.objects.create(kind=Survey.Kind.EDITION, name="old", is_active=True)
+        stale = SurveyQuestion.objects.create(survey=new, qtype="text", text={"en": "Removed locally"})
+        answered = SurveyQuestion.objects.create(survey=new, qtype="text", text={"en": "Has answers"})
+        resp = SurveyResponse.objects.create(survey=new)
+        SurveyAnswer.objects.create(response=resp, question=answered, text="x")
+
+        created, updated, deleted, errors = apply_sync_layers(layers, "survey")
+
+        self.assertEqual(errors, [])
+        old.refresh_from_db()
+        new.refresh_from_db()
+        self.assertFalse(old.is_active)
+        self.assertTrue(new.is_active)
+        self.assertFalse(SurveyQuestion.objects.filter(pk=stale.pk).exists())
+        self.assertTrue(SurveyQuestion.objects.filter(pk=answered.pk).exists())
+        self.assertTrue(SurveyQuestion.objects.filter(pk=keep.pk).exists())
+        self.assertTrue(SurveyChoice.objects.filter(pk=c1.pk).exists())
+        self.assertEqual(SurveyResponse.objects.count(), 1)

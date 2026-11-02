@@ -615,6 +615,75 @@ class GameSyncService:
 
         return sync_log
 
+    def sync_surveys(self, survey_queryset):
+        """
+        把問卷（題目與選項一起）推上 VPS。問卷在本機編輯，VPS 只負責收回答。
+
+        用 sync_type="survey" 送出，接收端：
+          * 只 upsert 這幾份問卷，不動其他問卷，也不碰 SurveyResponse / SurveyAnswer
+          * 這份是啟用中的話，VPS 上同種類的另一份啟用中問卷會被停用（同種類只能有一份）
+          * 本機已刪除的題目／選項在 VPS 上一併移除，但已經有人回答的會留著
+
+        PK 直接沿用本機的：題目與選項被回答記錄用 PK 指著，所以問卷請只在本機建立，
+        不要在 VPS 的 admin 另外建（兩邊的 PK 會對不上）。
+        """
+        from feedback.models import SurveyChoice, SurveyQuestion
+
+        sync_log = GameSyncLog.objects.create(sync_type="manual", since=None)
+
+        try:
+            surveys = survey_queryset
+            count = surveys.count()
+            if count == 0:
+                sync_log.mark_success(
+                    records_sent=0, media_sent=0, qdrant_synced=False, details={"models": {}},
+                )
+                return sync_log
+
+            questions = SurveyQuestion.objects.filter(survey__in=surveys)
+            choices = SurveyChoice.objects.filter(question__in=questions)
+
+            # 即使沒有題目／選項也要送空的 entry，接收端才會據此清掉 VPS 上殘留的
+            layer = [
+                {
+                    "model": label,
+                    "count": qs.count(),
+                    "data": json.loads(django_serializers.serialize("json", qs)),
+                }
+                for label, qs in (
+                    ("feedback.survey", surveys),
+                    ("feedback.surveyquestion", questions),
+                    ("feedback.surveychoice", choices),
+                )
+            ]
+
+            token = self._get_auth_token()
+            ok, msg = self._send_db_records(token, {"layers": [layer]}, "survey")
+            total = sum(e["count"] for e in layer)
+            details = {
+                "models": {
+                    "feedback.Survey": layer[0]["count"],
+                    "feedback.SurveyQuestion": layer[1]["count"],
+                    "feedback.SurveyChoice": layer[2]["count"],
+                },
+                "surveys": list(surveys.values_list("name", flat=True)),
+                "db_sync": msg,
+            }
+            if ok:
+                sync_log.mark_success(
+                    records_sent=total, media_sent=0, qdrant_synced=False, details=details,
+                )
+            else:
+                sync_log.mark_partial(
+                    error_msg=f"DB sync: {msg}", records_sent=0, media_sent=0,
+                    qdrant_synced=False, details=details,
+                )
+        except Exception as e:
+            logger.exception("Manual survey sync failed")
+            sync_log.mark_failed(str(e))
+
+        return sync_log
+
     def sync_groups(self, group_queryset):
         """
         Push auth.Group（名稱＋權限）到 VPS。只送群組本身，不送 User 與其成員關係。

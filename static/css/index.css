@@ -776,11 +776,39 @@ body:has(.main-header) {
     background: var(--landing-bg-deep);
 }
 
+.world-img {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .world-img img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center 30%;
     display: block;
+}
+
+/* 原圖還是偏小（home_news.js 判定）：不用 cover 硬撐滿寬，改成依容器高度等比顯示，
+   左右由同圖的模糊放大版補滿；放大倍率因此只取決於高度，比撐滿寬度小得多 */
+.world-img.is-small::before {
+    content: '';
+    position: absolute;
+    inset: -24px;
+    background: var(--world-bg) center / cover no-repeat;
+    filter: blur(18px) saturate(1.1);
+    opacity: 0.85;
+}
+
+.world-img.is-small img {
+    position: relative;
+    width: auto;
+    height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
 }
 
 .world-body {

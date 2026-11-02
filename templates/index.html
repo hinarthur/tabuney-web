@@ -12,7 +12,7 @@
 
 {% block extrahead %}
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="{% static 'css/index.css' %}?v=28">
+<link rel="stylesheet" href="{% static 'css/index.css' %}?v=30">
 {% endblock extrahead %}
 
 {% block content %}
@@ -195,7 +195,7 @@
     <div class="world-grid">
         {% for work in news_works %}
         <a class="world-card" href="{% url 'feed:detail' work.pk %}">
-            <div class="world-img"><img src="{{ work.image }}" alt="" loading="lazy" referrerpolicy="no-referrer"></div>
+            <div class="world-img"><img src="{{ work.hi_image }}" data-fallback="{{ work.image }}" alt="" loading="lazy" referrerpolicy="no-referrer"></div>
             <div class="world-body">
                 {% if work.publishdate %}<time class="world-date" datetime="{{ work.publishdate|date:'Y-m-d' }}">{{ work.publishdate|date:"M j, Y" }}</time>{% endif %}
                 <h3>{{ work.title }}</h3>
@@ -229,6 +229,7 @@
 
 {% block extrascript %}
 <script src="{% static 'js/home_hero.js' %}?v=7" defer></script>
+<script src="{% static 'js/home_news.js' %}?v=2" defer></script>
 {% endblock extrascript %}
 
 {% block footer %}
