@@ -97,6 +97,7 @@ INSTALLED_APPS = [
     'interaction.apps.InteractionConfig',
     'tablejourney.apps.TablejourneyConfig',
     'messaging.apps.MessagingConfig',
+    'feedback.apps.FeedbackConfig',
     'django_q',
     
     # system

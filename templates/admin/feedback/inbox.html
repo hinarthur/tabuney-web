@@ -1,0 +1,61 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}回饋總覽{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a> &rsaquo; Feedback inbox
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+  .fi-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 14px; }
+  .fi-chip { padding: 4px 12px; border: 1px solid var(--hairline-color); border-radius: 999px; text-decoration: none; }
+  .fi-chip.active { background: var(--secondary); color: var(--header-link-color); border-color: var(--secondary); }
+  .fi-table { width: 100%; }
+  .fi-table td { vertical-align: top; }
+  .fi-content { white-space: pre-wrap; max-width: 520px; }
+  .fi-quiet { color: var(--body-quiet-color); font-size: 12px; }
+  .fi-src { white-space: nowrap; font-size: 12px; font-weight: 600; }
+</style>
+
+<h1>回饋總覽</h1>
+<p class="fi-quiet">
+  各種用戶回饋依時間合併的只讀清單，處理請點連結回原本的頁面。每個來源最多列出最近 {{ per_source_limit }} 筆。
+  問卷的選擇題統計請看各問卷的「📊 看結果」。
+</p>
+
+<form method="get" class="fi-bar">
+  <a class="fi-chip{% if not source %} active{% endif %}" href="?days={{ days }}&q={{ q|urlencode }}">全部</a>
+  {% for key, label, n in sources %}
+  <a class="fi-chip{% if source == key %} active{% endif %}" href="?source={{ key }}&days={{ days }}&q={{ q|urlencode }}">{{ label }}（{{ n }}）</a>
+  {% endfor %}
+  <input type="hidden" name="source" value="{{ source }}">
+  <select name="days" onchange="this.form.submit()">
+    {% for d in day_choices %}<option value="{{ d }}"{% if d == days %} selected{% endif %}>近 {{ d }} 天</option>{% endfor %}
+  </select>
+  <input type="search" name="q" value="{{ q }}" placeholder="搜尋 edition／內容">
+  <input type="submit" value="篩選">
+</form>
+
+<table class="fi-table">
+  <thead>
+    <tr><th>時間</th><th>來源</th><th>Edition／對象</th><th>內容</th><th>提交者</th><th>狀態</th></tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td class="fi-quiet" style="white-space:nowrap;"><a href="{{ r.url }}">{{ r.at|date:"Y-m-d H:i" }}</a></td>
+      <td class="fi-src">{{ r.source_label }}</td>
+      <td>{{ r.edition|default:"—" }}{% if r.context %}<div class="fi-quiet">{{ r.context }}</div>{% endif %}</td>
+      <td class="fi-content">{{ r.content|default:"—" }}</td>
+      <td class="fi-quiet">{{ r.who }}</td>
+      <td class="fi-quiet">{{ r.status }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6">這段期間沒有回饋。</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

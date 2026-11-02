@@ -12,6 +12,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_protect
 
+from feedback.security import anon_quota_exceeded, csrf_if_authenticated, is_honeypot_filled
 from game.models import Edition, FlowchartSuggestion, GameSuggestion, RulebookFlowchart
 from translation.selectors import get_translation
 
@@ -261,7 +262,6 @@ class GameSuggestionCreateView(View):
 SUGGESTION_MAX_LENGTH = 2000
 
 
-@method_decorator(csrf_protect, name="dispatch")
 def _member_unlocked_flowchart(member, flowchart) -> bool:
     """這位會員有沒有永久解鎖「這張圖會出現在其上」的任何一款 edition。
 
@@ -278,16 +278,24 @@ def _member_unlocked_flowchart(member, flowchart) -> bool:
     return flowchart.linked_editions.filter(id__in=unlocked).exists()
 
 
+@method_decorator(csrf_if_authenticated, name="dispatch")
 class FlowchartSuggestionCreateView(View):
     """
-    讓已登入會員對某張流程圖（以 flowchart_id 指定，即 edition 頁上選中的那個
-    ruleset）留下改善建議，存成待審核的 FlowchartSuggestion。
+    對某張流程圖（以 flowchart_id 指定，即 edition 頁上選中的那個 ruleset）
+    留下改善建議，存成待審核的 FlowchartSuggestion。帶 node_id 時是導覽中
+    針對單一節點的回饋。
+
+    平常只限登入會員；beta 期間匿名也能送（submitted_by 留空），關掉 beta
+    就自動恢復成會員限定。
 
     不直接改動流程圖 —— 由 staff 在 admin 讀過後人工調整。
     """
 
     def post(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
+        from member.beta import is_beta
+
+        is_anon = not request.user.is_authenticated
+        if is_anon and not is_beta():
             return JsonResponse({"error": "login_required"}, status=401)
 
         try:
@@ -295,9 +303,20 @@ class FlowchartSuggestionCreateView(View):
         except json.JSONDecodeError:
             payload = request.POST
 
+        if is_honeypot_filled(payload):
+            # 假裝成功，不讓機器人知道被擋
+            return JsonResponse({"success": True})
+        if is_anon and anon_quota_exceeded():
+            return JsonResponse({"success": False, "errors": {"content": _t(
+                request, "game.flowchart.suggest.error.generic",
+                "Something went wrong. Please try again.",
+            )}}, status=429)
+
         flowchart_id = (payload.get("flowchart_id") or "").strip()
         edition_id = (payload.get("edition_id") or "").strip()
         content = (payload.get("content") or "").strip()
+        node_id = (payload.get("node_id") or "").strip()[:100]
+        node_label = (payload.get("node_label") or "").strip()[:300]
 
         if not content:
             return JsonResponse({"success": False, "errors": {"content": _t(
@@ -329,8 +348,7 @@ class FlowchartSuggestionCreateView(View):
         # 第 2 點刻意不採信 payload 裡的 edition_id —— 那是客戶端給的，拿一個
         # 自己解鎖過的 edition 配上別人的 flowchart_id 就能繞過。改成從
         # flowchart 自己的歸屬（rulebook 的 edition + linked_editions）反推，
-        # 與解鎖集合取交集。
-        from member.beta import is_beta
+        # 與解鎖集合取交集。匿名者只會在 beta 期間走到這裡，條件本來就放行。
         if not flowchart.initial and not is_beta() and not (
             member and (
                 member.can('flowchart_non_initial')
@@ -347,6 +365,8 @@ class FlowchartSuggestionCreateView(View):
             flowchart=flowchart,
             edition=edition,
             ruleset=flowchart.ruleset,
+            node_id=node_id,
+            node_label=node_label,
             content=content,
             submitted_by=member,
         )

@@ -73,14 +73,14 @@ const ADD_NODE_OPTIONS = [
   { rfType: "phase",   kind: "phase",    label: "Phase",    icon: "⬡" },
 ];
 
-// A3 / A4 / A5 at 72 DPI (PDF points) — 1 canvas px ≈ 1 print pt
+// A3 / A4 / 16:9 at 72 DPI (PDF points) — 1 canvas px ≈ 1 print pt
 const PAGE_FRAME_OPTIONS = [
   { label: "A3 Portrait",  short: "A3↕", w: 842, h: 1191 },
   { label: "A3 Landscape", short: "A3↔", w: 1191, h: 842 },
   { label: "A4 Portrait",  short: "A4↕", w: 595, h: 842 },
   { label: "A4 Landscape", short: "A4↔", w: 842, h: 595 },
-  { label: "A5 Portrait",  short: "A5↕", w: 420, h: 595 },
-  { label: "A5 Landscape", short: "A5↔", w: 595, h: 420 },
+  // 16:9，高度與 A4 Landscape 相同
+  { label: "16:9",         short: "16:9", w: 1058, h: 595 },
 ];
 
 const NODE_TYPE_ICONS: Record<string, string> = {

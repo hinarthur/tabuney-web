@@ -569,6 +569,7 @@ class EditionDetailView(DetailView):
                     # 改善建議表單要指名對象（見 FlowchartSuggestionCreateView）
                     "id": str(chart.id),
                     "ruleset_label": ruleset_label, "locked": locked,
+                    "show_print_button": chart.show_print_button,
                     # 文字版大綱：付費鎖住的 ruleset 一律留 None，內容不進頁面原始碼。
                     "outline": None,
                 }

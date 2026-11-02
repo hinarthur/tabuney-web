@@ -118,3 +118,9 @@
 
 {% block edition_tail %}{% endblock edition_tail %}
 {% endblock content %}
+
+{% comment %} edition 所有分頁共用同一份問卷，填過一次就全部消失（每個 edition 各填一次）。
+   取代 base.html 的全站問卷：edition 頁不顯示全站問卷。 {% endcomment %}
+{% block survey_fab %}
+{% if not flowchart_preview %}{% firstof edition.name edition.game.canonical_name as survey_edition_name %}{% include "feedback/partials/survey_fab.html" with survey_kind="edition" survey_edition_id=edition.id survey_edition_name=survey_edition_name survey_page=initial_tab %}{% endif %}
+{% endblock survey_fab %}

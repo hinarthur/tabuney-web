@@ -1,0 +1,53 @@
+{% load static static_v translate_tags %}
+{% comment %}
+問卷浮動按鈕。參數：
+  survey_kind        "edition" | "site"
+  survey_edition_id  edition 問卷必填
+  survey_page        送出時記在 SurveyResponse.page（分頁名或 path）
+
+圖示 SVG 放在 <template>（用 currentColor，顏色由 CSS 決定），JS 依 kind 複製一份。
+這裡只放設定與 UI 字串，按鈕本身由 survey.js 在確認「有開放中的問卷、而且還沒填過」
+之後才畫出來，所以沒有問卷時頁面上什麼都不會出現。
+
+csrf：只給已登入者。匿名渲染 {{ csrf_token }} 會讓瀏覽器拿到 csrftoken cookie，
+後端對匿名請求不檢查 CSRF（feedback/security.py）。
+譯文進 HTML 屬性一律 force_escape。
+{% endcomment %}
+{% if survey_kind == "site" %}{% t "feedback.survey.fab.site" as l_fab %}{% else %}{% t "feedback.survey.fab.edition" as l_fab %}{% endif %}
+{% t "feedback.survey.dismiss" as l_dismiss %}
+{% t "feedback.survey.submit" as l_submit %}
+{% t "feedback.survey.thanks" as l_thanks %}
+{% t "feedback.survey.multi_hint" as l_multi %}
+{% t "feedback.survey.required_note" as l_required %}
+{% t "feedback.survey.error.required" as l_err_required %}
+{% t "feedback.survey.error.too_long" as l_err_long %}
+{% t "feedback.survey.error.generic" as l_err_generic %}
+{% t "feedback.survey.close" as l_close %}
+{% t "feedback.survey.step" as l_step %}
+{% t "feedback.survey.next" as l_next %}
+{% t "feedback.survey.back" as l_back %}
+<div id="tj-survey" hidden
+     data-kind="{{ survey_kind }}"
+     data-edition="{{ survey_edition_id|default:'' }}"
+     data-edition-name="{{ survey_edition_name|default:''|force_escape }}"
+     data-page="{{ survey_page|default:''|force_escape }}"
+     data-lang="{{ request.lang|default:'en' }}"
+     data-api="/api/feedback/surveys/"
+     data-csrf="{% if request.user.is_authenticated %}{{ csrf_token }}{% endif %}"
+     data-l-fab="{{ l_fab|force_escape }}"
+     data-l-dismiss="{{ l_dismiss|force_escape }}"
+     data-l-submit="{{ l_submit|force_escape }}"
+     data-l-thanks="{{ l_thanks|force_escape }}"
+     data-l-multi="{{ l_multi|force_escape }}"
+     data-l-required="{{ l_required|force_escape }}"
+     data-l-err-required="{{ l_err_required|force_escape }}"
+     data-l-err-too-long="{{ l_err_long|force_escape }}"
+     data-l-err-generic="{{ l_err_generic|force_escape }}"
+     data-l-step="{{ l_step|force_escape }}"
+     data-l-next="{{ l_next|force_escape }}"
+     data-l-back="{{ l_back|force_escape }}"
+     data-l-close="{{ l_close|force_escape }}"></div>
+<template id="tj-survey-icon-site"><svg viewBox="144 144 512 512" fill="currentColor" aria-hidden="true" focusable="false"><path d="m400 187.45c-41.531-0.011719-81.684 14.906-113.13 42.031-31.445 27.129-52.098 64.652-58.184 105.73-6.0859 41.082 2.7969 82.984 25.027 118.06 0.09375 0.14453 0.19141 0.28516 0.30078 0.42969 5.9961 9.4766 12.918 18.332 20.672 26.43 8.3945 15.977 11.008 34.363 7.4023 52.043-4.8906 20.773-17.781 38.777-35.871 50.094-2.5938 1.6406-3.9961 4.6406-3.5938 7.6836 0.40234 3.043 2.5352 5.5742 5.4688 6.4844 12.332 3.625 25.129 5.4414 37.984 5.3906 22.891 0.32422 45.395-5.9102 64.848-17.973 19.457-12.062 35.051-29.445 44.938-50.094 1.3672 0.039063 2.7461 0.054688 4.1367 0.054688 45.93 0 89.98-18.246 122.46-50.723 32.477-32.48 50.727-76.527 50.727-122.46 0-45.93-18.246-89.98-50.727-122.46-32.477-32.48-76.527-50.727-122.46-50.727zm0 330.62c-2.8594 0-5.6445-0.070313-8.4336-0.29297-3.3477-0.25391-6.4922 1.6328-7.8438 4.707-7.5586 17.734-19.848 33.055-35.523 44.277-23.203 16.113-51.746 22.605-79.633 18.105 14.578-13.027 24.695-30.309 28.918-49.398 4.4492-21.672 1.1211-44.215-9.3945-63.676-0.35156-0.65625-0.78906-1.2578-1.3047-1.793-7.4258-7.6484-14.023-16.051-19.695-25.074-0.10547-0.17188-0.22266-0.33594-0.34766-0.49219-24.949-39.691-30.914-88.434-16.266-132.96 14.645-44.531 48.375-80.223 92.012-97.352 43.637-17.133 92.641-13.926 133.67 8.75 41.027 22.672 69.82 62.453 78.535 108.52 8.7148 46.062-3.5547 93.613-33.465 129.71-29.91 36.094-74.352 56.984-121.23 56.977z"/><path d="m455.23 315.4c-7.1797-7.1602-16.656-11.559-26.762-12.418-10.105-0.85938-20.188 1.875-28.473 7.7188-8.2852-5.8477-18.371-8.5859-28.477-7.7266-10.105 0.85938-19.582 5.2617-26.762 12.426l-3.0195 3.0195c-8.0508 8.0703-12.574 19-12.574 30.402 0 11.398 4.5234 22.332 12.574 30.398l52.691 52.691c1.4766 1.4766 3.4766 2.3047 5.5664 2.3047 2.0859 0 4.0898-0.82812 5.5625-2.3047l52.688-52.695c8.0547-8.0664 12.578-19 12.578-30.398 0-11.398-4.5234-22.332-12.578-30.402zm-8.1094 52.691-47.125 47.121-47.125-47.125c-5.1016-5.1133-7.9688-12.043-7.9688-19.266 0-7.2266 2.8672-14.156 7.9688-19.27l3.0195-3.0195v-0.003906c5.1172-5.0977 12.047-7.9609 19.27-7.9609 7.2227 0 14.152 2.8633 19.27 7.9609 3.0742 3.0742 8.0547 3.0742 11.129 0 5.1133-5.1055 12.043-7.9727 19.27-7.9727 7.2266 0 14.156 2.8672 19.27 7.9727l3.0195 3.0195v0.003906c5.1055 5.1133 7.9688 12.043 7.9688 19.27 0 7.2227-2.8633 14.152-7.9688 19.266z"/></svg></template>
+<template id="tj-survey-icon-edition"><svg viewBox="144 144 512 512" fill="none" stroke="currentColor" stroke-width="15.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M400 195.3c-89 0-161.2 72.2-161.2 161.2 0 34 10.7 65.6 28.9 91.6 5.7 9.1 12.3 17.6 19.7 25.3 15 28.1 6.7 74.8-39 115.3 55.8 16.4 112-8.4 140.1-58.3 4.1.3 8.3.4 12.5.4 89 0 161.2-72.2 161.2-161.2S489 195.3 400 195.3Z"/><path d="M400 284 467 320 400 357 333 320Z"/><path d="M333 320 400 357 400 432 333 395Z"/><path d="M467 320 400 357 400 432 467 395Z"/></svg></template>
+<link rel="stylesheet" href="{% static_v 'css/survey.css' %}">
+<script src="{% static_v 'js/survey.js' %}" defer></script>

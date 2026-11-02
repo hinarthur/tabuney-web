@@ -1,0 +1,88 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a>
+  &rsaquo; <a href="{% url 'admin:feedback_survey_changelist' %}">Surveys</a>
+  &rsaquo; <a href="{% url 'admin:feedback_survey_change' survey.pk %}">{{ survey.name }}</a>
+  &rsaquo; Results
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+  .sr-wrap { max-width: 860px; }
+  .sr-filter { margin: 0 0 18px; }
+  .sr-q { margin: 0 0 22px; padding: 12px 14px; border: 1px solid var(--hairline-color); border-radius: 6px; }
+  .sr-q h3 { margin: 0 0 8px; font-size: 14px; }
+  .sr-meta { color: var(--body-quiet-color); font-size: 12px; font-weight: normal; }
+  .sr-bar-row { display: grid; grid-template-columns: 220px 1fr 70px; gap: 8px; align-items: center; margin: 4px 0; }
+  .sr-bar { height: 12px; background: var(--darkened-bg); border-radius: 3px; overflow: hidden; }
+  .sr-bar span { display: block; height: 100%; background: var(--secondary); }
+  .sr-num { text-align: right; font-variant-numeric: tabular-nums; }
+  .sr-texts { margin: 0; padding-left: 18px; max-height: 360px; overflow-y: auto; }
+  .sr-texts li { margin: 4px 0; white-space: pre-wrap; }
+</style>
+
+<div class="sr-wrap">
+  <h1>{{ title }}</h1>
+  <p>
+    共 <strong>{{ total }}</strong> 份回答（會員 {{ member_count }}，匿名 {{ anon_count }}）。
+    匿名回答不記任何識別資訊，同一人可能填過不只一次。
+  </p>
+
+  {% if editions %}
+  <form method="get" class="sr-filter">
+    <label>Edition：
+      <select name="edition" onchange="this.form.submit()">
+        <option value="">全部</option>
+        {% for e in editions %}
+        <option value="{{ e.edition_id }}"{% if e.edition_id|stringformat:'s' == edition_id %} selected{% endif %}>
+          {{ e.edition_name|default:e.edition_id }}（{{ e.n }}）
+        </option>
+        {% endfor %}
+      </select>
+    </label>
+  </form>
+  {% endif %}
+
+  {% for row in questions %}
+  <div class="sr-q">
+    <h3>Q{{ forloop.counter }}. {{ row.text }}
+      <span class="sr-meta">· {{ row.q.get_qtype_display }}{% if row.q.required %} · 必填{% endif %}{% if row.answered is not None %} · {{ row.answered }} 人作答{% endif %}</span>
+    </h3>
+    {% if row.choices is not None %}
+      {% for c in row.choices %}
+      <div class="sr-bar-row">
+        <div>{{ c.text }}</div>
+        <div class="sr-bar"><span style="width:{{ c.pct }}%"></span></div>
+        <div class="sr-num">{{ c.count }}（{{ c.pct }}%）</div>
+      </div>
+      {% if c.others %}
+      <ul class="sr-texts">
+        {% for t in c.others %}
+        <li>{{ t.text }} <span class="sr-meta">— {{ t.response__edition_name|default:"" }} {{ t.response__created_at|date:"Y-m-d" }}</span></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% endfor %}
+    {% else %}
+      {% if row.texts %}
+      <ul class="sr-texts">
+        {% for t in row.texts %}
+        <li>{{ t.text }} <span class="sr-meta">— {{ t.response__edition_name|default:"" }} {{ t.response__created_at|date:"Y-m-d" }}
+          <a href="{% url 'admin:feedback_surveyresponse_change' t.response_id %}">#{{ t.response_id }}</a></span></li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="sr-meta">還沒有人填這題。</p>
+      {% endif %}
+    {% endif %}
+  </div>
+  {% empty %}
+  <p>這份問卷還沒有題目。</p>
+  {% endfor %}
+</div>
+{% endblock %}

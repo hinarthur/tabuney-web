@@ -13,6 +13,7 @@
                         <button type="button"
                                 class="flowchart-ruleset-pill{% if fc.locked %} locked{% endif %}{% if forloop.first and not fc.locked %} active{% endif %}"
                                 data-ruleset-key="{{ fc.key }}"
+                                data-show-print="{% if fc.show_print_button %}1{% else %}0{% endif %}"
                                 {% if fc.locked %}title="{% t 'game.flowchart.paid_feature' %}"{% endif %}>
                             {% if fc.locked %}<i class="fas fa-lock"></i>{% endif %}
                             <span>{{ fc.ruleset_label|capfirst }}</span>
@@ -35,6 +36,7 @@
                         </button>
                         <button type="button" class="fc-toolbar-btn{% if not can_flowchart_print %} locked{% endif %}"
                                 data-fc-action="print"
+                                {% if not flowchart_charts.0.show_print_button %}hidden{% endif %}
                                 title="{% if not can_flowchart_print %}{% t 'game.flowchart.paid_feature' %}{% else %}{% t 'game.flowchart.print' %}{% endif %}">
                             {% if not can_flowchart_print %}<i class="fas fa-lock"></i>{% endif %}
                             <i class="fas fa-print"></i>

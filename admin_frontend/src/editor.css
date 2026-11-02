@@ -246,6 +246,49 @@
   cursor: pointer;
 }
 
+/* Per-node feedback — reuses the .fc-tour-note box so it opens in the same
+   spot as a note and never moves the viewport */
+.fc-tour-feedback-btn.active {
+  border-color: var(--color-primary, #0E8ED0);
+  background: var(--color-bg-hover, #eee);
+}
+/* The panel shrinks to its widest child, so a short node would squeeze the
+   textarea into a sliver; keep the box at a usable width regardless. */
+.fc-tour-feedback { min-width: min(86vw, 480px); box-sizing: border-box; }
+.fc-tour-feedback .fc-tour-note-title { font-size: 16px; }
+.fc-tour-feedback-target {
+  color: var(--color-text-minor, #666);
+  font-weight: 400;
+}
+.fc-tour-feedback-text {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--color-text-disabled, #ccc);
+  border-radius: 6px;
+  background: var(--color-bg-alt, #f5f5f5);
+  color: var(--color-text-main, #333);
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+.fc-tour-feedback-text:focus { outline: none; border-color: var(--color-primary, #0E8ED0); }
+.fc-tour-feedback-msg { margin-top: 6px; font-size: 13px; }
+.fc-tour-feedback-msg.success { color: var(--color-success, #2F9E44); }
+.fc-tour-feedback-msg.error { color: var(--color-error, #D9363E); }
+.fc-tour-feedback-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
+.fc-tour-feedback-submit {
+  padding: 5px 14px;
+  border: none;
+  border-radius: 6px;
+  background: var(--color-primary, #0E8ED0);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fc-tour-feedback-submit:disabled { opacity: 0.5; cursor: default; }
+
 @media (max-width: 600px) {
   .fc-tour-panel { max-width: 96vw; padding: 8px 10px; font-size: 12px; }
   .fc-tour-btn { min-width: 38px; padding: 5px 8px; }

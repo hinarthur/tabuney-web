@@ -84,17 +84,21 @@
 </div>
 
 <!-- Flowchart 改善建議 Modal：內容由目前顯示中的 viewer pane
-     （data-fc-id / data-ruleset-label）決定。僅限登入會員送出。 -->
+     （data-fc-id / data-ruleset-label）決定。平常限登入會員；beta 期間匿名也能送。 -->
 <div id="fc-suggest-modal" class="fc-suggest-modal" aria-hidden="true">
     <div class="fc-suggest-backdrop"></div>
     <div class="fc-suggest-content" role="dialog" aria-modal="true" aria-labelledby="fc-suggest-heading">
         <button type="button" class="fc-suggest-x fc-suggest-close" aria-label="{% t 'cancel' %}">&times;</button>
         <h3 id="fc-suggest-heading">{% t "game.flowchart.suggest.modal.title" %}</h3>
         <p class="fc-suggest-target"><i class="fas fa-sitemap"></i> <span id="fc-suggest-target-label"></span></p>
-        {% if request.user.is_authenticated %}
+        {% if request.user.is_authenticated or beta_mode %}
         <p class="fc-suggest-desc">{% t "game.flowchart.suggest.modal.desc" %}</p>
         <form id="fc-suggest-form">
-            {% csrf_token %}
+            {% comment %} 匿名不渲染 csrf_token：那會讓瀏覽器拿到 csrftoken cookie，
+               違反匿名零 cookie。後端對匿名請求不檢查 CSRF（feedback.security）。 {% endcomment %}
+            {% if request.user.is_authenticated %}{% csrf_token %}{% endif %}
+            {% comment %} honeypot：真人看不到也不會填 {% endcomment %}
+            <input type="text" name="website" class="fb-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
             {% t 'game.flowchart.suggest.modal.placeholder' as fc_sg_placeholder %}
             <textarea id="fc-suggest-content" rows="6" maxlength="2000"
                       placeholder="{{ fc_sg_placeholder|force_escape }}" required></textarea>
@@ -227,7 +231,8 @@
                     body: JSON.stringify({
                         flowchart_id: currentId,
                         edition_id: '{{ edition.id }}',
-                        content: content
+                        content: content,
+                        website: (form.querySelector('[name=website]') || {}).value || ''
                     })
                 }).then(function(res) {
                     return res.json().then(function(data) {
@@ -289,6 +294,7 @@
 /* 全螢幕／列印：icon-only 工具按鈕，沿用 .icon-btn 的視覺語彙，hover 顯示原生 title tooltip */
 .fc-toolbar-btn { cursor:pointer; border:1px solid var(--color-bg-hover); background:var(--color-bg-alt); color:var(--color-text-minor); border-radius:8px; padding:6px; font-size:0.95em; line-height:1; display:inline-flex; align-items:center; justify-content:center; gap:4px; min-width:32px; min-height:32px; transition:all 0.15s ease; }
 .fc-toolbar-btn:hover { border-color:var(--color-primary); color:var(--color-text-main); transform:translateY(-1px); }
+.fc-toolbar-btn[hidden] { display:none; }
 .fc-toolbar-btn.locked { color:var(--color-text-minor); opacity:0.7; }
 .fc-locked-notice { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; height:100%; color:#888; text-align:center; }
 .fc-locked-notice i { font-size:2em; }
@@ -320,6 +326,7 @@
 .fc-suggest-feedback.success { color:#52c41a; }
 .fc-suggest-feedback.error { color:#ff4d4f; }
 .fc-suggest-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:14px; }
+.fb-hp { position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
 </style>
 {{ flowchart_viewer_configs|json_script:"fc-viewer-data" }}
 <script>
@@ -352,6 +359,9 @@ function _setupFcRulesetSwitch(listId) {
                 b.classList.remove('active');
             });
             this.classList.add('active');
+            // A4 列印按鈕依各流程圖的設定顯示／隱藏
+            var printBtn = document.querySelector('.fc-toolbar-btn[data-fc-action="print"]');
+            if (printBtn) printBtn.hidden = this.getAttribute('data-show-print') !== '1';
         });
     });
 }
@@ -723,6 +733,13 @@ _setupFcRulesetSwitch('flowchart-ruleset-list');
     {% t 'game.flowchart.tour.choose' as fc_tour_choose %}
     {% t 'game.flowchart.tour.notes' as fc_tour_notes %}
     {% t 'game.flowchart.tour.branch_unnamed' as fc_tour_unnamed %}
+    {% t 'game.flowchart.tour.feedback.button' as fc_tour_fb_button %}
+    {% t 'game.flowchart.tour.feedback.placeholder' as fc_tour_fb_placeholder %}
+    {% t 'game.flowchart.tour.feedback.success' as fc_tour_fb_success %}
+    {% t 'game.flowchart.suggest.error.empty' as fc_tour_fb_empty %}
+    {% t 'game.flowchart.suggest.error.generic' as fc_tour_fb_error %}
+    {% t 'common.btn.submit' as fc_tour_fb_submit %}
+    {% t 'cancel' as fc_tour_fb_cancel %}
     var FC_TOUR_LABELS = {
         first:          "{{ fc_tour_first|escapejs }}",
         prev:           "{{ fc_tour_prev|escapejs }}",
@@ -730,7 +747,23 @@ _setupFcRulesetSwitch('flowchart-ruleset-list');
         last:           "{{ fc_tour_last|escapejs }}",
         choose:         "{{ fc_tour_choose|escapejs }}",
         notes:          "{{ fc_tour_notes|escapejs }}",
-        branch_unnamed: "{{ fc_tour_unnamed|escapejs }}"
+        branch_unnamed: "{{ fc_tour_unnamed|escapejs }}",
+        fb_button:      "{{ fc_tour_fb_button|escapejs }}",
+        fb_placeholder: "{{ fc_tour_fb_placeholder|escapejs }}",
+        fb_success:     "{{ fc_tour_fb_success|escapejs }}",
+        fb_empty:       "{{ fc_tour_fb_empty|escapejs }}",
+        fb_error:       "{{ fc_tour_fb_error|escapejs }}",
+        fb_submit:      "{{ fc_tour_fb_submit|escapejs }}",
+        fb_cancel:      "{{ fc_tour_fb_cancel|escapejs }}"
+    };
+    // 導覽中對單一節點的回饋，走跟旗子按鈕同一個端點（FlowchartSuggestionCreateView）。
+    // 送出條件也相同：會員，或 beta 期間的匿名訪客。csrfToken 只給已登入者——
+    // 匿名渲染 {{ csrf_token }} 會讓瀏覽器拿到 cookie。
+    var FC_TOUR_FEEDBACK = {
+        enabled:   {% if request.user.is_authenticated or beta_mode %}true{% else %}false{% endif %},
+        url:       "{% url 'games:suggest-flowchart' %}",
+        editionId: "{{ edition.id }}",
+        csrfToken: "{% if request.user.is_authenticated %}{{ csrf_token }}{% endif %}"
     };
     function tourPane(pane){
         // 導覽跟 print/fullscreen 不同：需要反覆 pan/zoom 與逐節點切換模糊，
@@ -751,7 +784,10 @@ _setupFcRulesetSwitch('flowchart-ruleset-list');
         var payload = JSON.stringify({
             reactFlowData: cfg.reactFlowData,
             title: paneTitle(pane),
-            labels: FC_TOUR_LABELS
+            labels: FC_TOUR_LABELS,
+            feedback: Object.assign({}, FC_TOUR_FEEDBACK, {
+                flowchartId: pane.getAttribute('data-fc-id') || ''
+            })
         }).replace(/<\//g, '<\\/');
         var doc = w.document;
         doc.open();

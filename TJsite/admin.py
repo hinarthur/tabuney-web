@@ -21,6 +21,7 @@ from stats.reports import (
 from stats.models import ErrorAlertAck
 from game.selectors import rulesbot_ready_rulebooks
 from game.reports import flowchart_insights, rulesbot_insights, script_insights
+from feedback.reports import recent_feedback_count, survey_insights
 from .prod_stats import fetch_prod_stats
 from django.db.models import Count, Q
 from rest_framework.response import Response
@@ -343,6 +344,8 @@ class AdminStatsView(APIView):
         data['rulesbot_insights'] = rulesbot_insights()
         data['flowchart_insights'] = flowchart_insights()
         data['script_insights'] = script_insights()
+        data['survey_insights'] = survey_insights()
+        data['feedback_recent_count'] = recent_feedback_count()
         data['error_insights'] = error_insights()
         data['server_insights'] = server_insights()
         data['email_usage'] = email_usage()

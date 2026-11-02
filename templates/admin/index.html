@@ -142,6 +142,17 @@
     .todo-sub { font-size: 0.8em; opacity: 0.9; min-height: 1.2em; }
 
     /* ── 分頁 ── */
+    .sv-note { color: #666; font-size: 0.9em; }
+    .sv-daily { display: flex; align-items: flex-end; gap: 2px; height: 90px; margin: 6px 0 14px; }
+    .sv-daily > div { flex: 1 1 0; min-width: 2px; background: var(--primary, #417690); border-radius: 2px 2px 0 0; }
+    .sv-daily > div.zero { background: var(--hairline-color, #ddd); }
+    .sv-q { margin: 0 0 16px; }
+    .sv-q h3 { margin: 8px 0 6px; }
+    .sv-q-meta { color: #666; font-weight: 400; font-size: 0.85em; }
+    .sv-bar-row { display: grid; grid-template-columns: minmax(120px, 1fr) 2fr 90px; gap: 8px; align-items: center; margin: 3px 0; }
+    .sv-bar { height: 12px; border-radius: 6px; background: var(--hairline-color, #eee); overflow: hidden; }
+    .sv-bar > span { display: block; height: 100%; background: var(--primary, #417690); }
+    .sv-num { text-align: right; font-variant-numeric: tabular-nums; }
     .dash-tabs {
         display: flex;
         flex-wrap: wrap;
@@ -238,6 +249,10 @@
     <a class="todo-tile zero" id="todo-flowchart" href="{% url 'admin:game_flowchartsuggestion_changelist' %}?status__exact=pending">
         <span class="todo-num">—</span><span class="todo-label">流程圖改善建議</span><span class="todo-sub"></span>
     </a>
+    {# 近 7 天有文字內容的回饋（流程圖建議、問卷文字題、Rulesbot 說明、聯絡表單），見 feedback/reports.py #}
+    <a class="todo-tile zero" id="todo-feedback" href="{% url 'admin_feedback_inbox' %}?days=7">
+        <span class="todo-num">—</span><span class="todo-label">新回饋（7 天）</span><span class="todo-sub"></span>
+    </a>
     <a class="todo-tile zero" id="todo-rss" href="{% url 'admin:feed_rss_changelist' %}?review=pending">
         <span class="todo-num">—</span><span class="todo-label">RSS 推薦</span><span class="todo-sub"></span>
     </a>
@@ -272,11 +287,12 @@
     </a>
 </div>
 
-{# 分頁狀態記在網址 hash（#users / #usage / #rss / #system），重新整理會停在同一頁。
+{# 分頁狀態記在網址 hash（#users / #usage / #survey / #rss / #system），重新整理會停在同一頁。
    hash 刻意不等於任何元素的 id，點了才不會讓瀏覽器跳捲動位置。 #}
 <div class="dash-tabs" role="tablist">
     <button type="button" role="tab" data-tab="users">用戶統計</button>
     <button type="button" role="tab" data-tab="usage">桌遊使用統計</button>
+    <button type="button" role="tab" data-tab="survey">問卷統計</button>
     <button type="button" role="tab" data-tab="rss">RSS 統計</button>
     <button type="button" role="tab" data-tab="system">系統<span id="tab-badge-system" class="err-badge critical" hidden></span></button>
 </div>
@@ -461,6 +477,7 @@
     </table>
 </div>
 
+
 {# ── 搜 ───────────────────────────────────────────────────────── #}
 <div class="module">
     <h2>搜尋行為（近 30 天，已排除爬蟲）</h2>
@@ -488,6 +505,52 @@
             <tr><th>關鍵字</th><th>次數</th><th>最後搜尋</th></tr>
         </thead>
         <tbody id="search-top-keywords-body"></tbody>
+    </table>
+</div>
+</div>
+
+<div class="dash-panel" id="panel-survey" role="tabpanel">
+<div class="module">
+    <h2>問卷統計（近 30 天）</h2>
+    <p id="survey-summary">載入中…</p>
+    <p class="sv-note">
+        匿名回答不留任何識別碼，同一人可能填過不只一次，所以匿名數是份數不是人數。
+        「中途離開」是填到一半就關掉、只送出已答題目的份數。
+        文字回饋集中在 <a href="{% url 'admin_feedback_inbox' %}">回饋總覽</a>，
+        單份問卷可依 edition 篩選的結果在 <a href="{% url 'admin:feedback_survey_changelist' %}">問卷</a> 列表的「📊 看結果」。
+    </p>
+    <h3>每日回答數</h3>
+    <div id="survey-daily" class="sv-daily"></div>
+    <h3>問卷</h3>
+    <table>
+        <thead>
+            <tr><th>問卷</th><th>種類</th><th>啟用中</th><th>回答數</th><th>中途離開</th></tr>
+        </thead>
+        <tbody id="survey-list-body"></tbody>
+    </table>
+</div>
+
+<div class="module">
+    <h2>各題分布（啟用中的問卷）</h2>
+    <div id="survey-questions"></div>
+</div>
+
+<div class="module">
+    <h2>來源</h2>
+    <h3>最多人填的 edition</h3>
+    <table>
+        <thead><tr><th>遊戲</th><th>回答數</th></tr></thead>
+        <tbody id="survey-top-body"></tbody>
+    </table>
+    <h3>從哪個分頁／頁面送出</h3>
+    <table>
+        <thead><tr><th>頁面</th><th>回答數</th></tr></thead>
+        <tbody id="survey-page-body"></tbody>
+    </table>
+    <h3>語言</h3>
+    <table>
+        <thead><tr><th>語言</th><th>回答數</th></tr></thead>
+        <tbody id="survey-lang-body"></tbody>
     </table>
 </div>
 </div>
@@ -1154,6 +1217,81 @@
             ['edition', 'total'], '近 30 天沒有人被擋下');
     }
 
+    function renderSurvey(insights) {
+        const summaryEl = document.getElementById('survey-summary');
+        // 正式站還沒部署 feedback app 時，代理回來的資料沒有這個 key
+        if (!insights) {
+            summaryEl.textContent = '這個來源還沒有問卷資料（正式站可能尚未部署）。';
+            ['survey-list-body', 'survey-top-body', 'survey-page-body', 'survey-lang-body']
+                .forEach(id => fillRows(id, [], ['x'], '—'));
+            document.getElementById('survey-daily').textContent = '';
+            document.getElementById('survey-questions').textContent = '';
+            return;
+        }
+        const s = insights.summary;
+        const rate = s.responses ? Math.round(s.completed * 100 / s.responses) : 0;
+        summaryEl.textContent =
+            `回答 ${s.responses} 份（完整 ${s.completed}｜中途離開 ${s.partial}，完成率 ${rate}%）` +
+            `｜會員 ${s.members}／匿名 ${s.anon}｜文字回答 ${s.text_answers} 則`;
+
+        // 每日回答數：純 CSS 長條，沒有第三方圖表庫
+        const daily = document.getElementById('survey-daily');
+        daily.textContent = '';
+        const max = Math.max(1, ...(insights.daily || []).map(d => d.count));
+        (insights.daily || []).forEach(d => {
+            const bar = document.createElement('div');
+            bar.className = d.count ? '' : 'zero';
+            bar.style.height = d.count ? Math.max(4, Math.round(d.count * 100 / max)) + '%' : '2px';
+            bar.title = `${d.date}：${d.count} 份`;
+            daily.appendChild(bar);
+        });
+
+        fillRows('survey-list-body',
+            (insights.surveys || []).map(r => ({ ...r, is_active: r.is_active ? '✅' : '' })),
+            ['name', 'kind', 'is_active', 'responses', 'partial'], '還沒有建立問卷');
+        fillRows('survey-top-body', insights.top_editions,
+            ['edition', 'total'], '近 30 天沒有人填 edition 問卷');
+        fillRows('survey-page-body', insights.by_page, ['page', 'total'], '—');
+        fillRows('survey-lang-body', insights.by_lang, ['lang', 'total'], '—');
+
+        // 各題分布
+        const box = document.getElementById('survey-questions');
+        box.textContent = '';
+        const qs = insights.questions || [];
+        if (!qs.length) {
+            box.textContent = '目前沒有啟用中的問卷。';
+            return;
+        }
+        qs.forEach((q, idx) => {
+            const wrap = document.createElement('div');
+            wrap.className = 'sv-q';
+            const h = document.createElement('h3');
+            h.textContent = `${q.survey} · Q${idx + 1}. ${q.text} `;
+            const meta = document.createElement('span');
+            meta.className = 'sv-q-meta';
+            meta.textContent = q.type === 'text' ? `· 文字題 ${q.answered} 則` : `· ${q.answered} 人作答`;
+            h.appendChild(meta);
+            wrap.appendChild(h);
+            (q.choices || []).forEach(c => {
+                const row = document.createElement('div');
+                row.className = 'sv-bar-row';
+                const label = document.createElement('div');
+                label.textContent = c.text;
+                const bar = document.createElement('div');
+                bar.className = 'sv-bar';
+                const fill = document.createElement('span');
+                fill.style.width = c.pct + '%';
+                bar.appendChild(fill);
+                const num = document.createElement('div');
+                num.className = 'sv-num';
+                num.textContent = `${c.count}（${c.pct}%）`;
+                row.append(label, bar, num);
+                wrap.appendChild(row);
+            });
+            box.appendChild(wrap);
+        });
+    }
+
     // 警示表。這裡刻意不做任何篩選，只負責畫——門檻與分級全在後端
     // stats/reports.py 決定，前端再加一層條件就會出現「畫面上的規則」與
     // 「後端的規則」兩套說法。
@@ -1692,6 +1830,7 @@
         setTile('todo-game', (data['game_suggestion_counts'] || {})['pending']);
         setTile('todo-flowchart', (data['flowchart_suggestion_counts'] || {})['pending']);
         setTile('todo-rss', data['rss_user_pending_count']);
+        setTile('todo-feedback', data['feedback_recent_count'], '到回饋總覽查看');
 
         const c = (data['error_insights'] || {})['alert_counts'];
         setTile('todo-error',
@@ -1723,7 +1862,7 @@
     }
 
     // ── 分頁 ─────────────────────────────────────────────────────
-    const DASH_TABS = ['users', 'usage', 'rss', 'system'];
+    const DASH_TABS = ['users', 'usage', 'survey', 'rss', 'system'];
 
     function showTab(name) {
         if (!DASH_TABS.includes(name)) { name = DASH_TABS[0]; }
@@ -1853,6 +1992,7 @@
             renderRulesbot(data['rulesbot_insights']);
             renderFlowchart(data['flowchart_insights']);
             renderScript(data['script_insights']);
+            renderSurvey(data['survey_insights']);
             renderErrorInsights(data['error_insights']);
             renderServer(data['server_insights']);
             renderEmailUsage(data['email_usage']);

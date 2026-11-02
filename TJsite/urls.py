@@ -9,6 +9,7 @@ from feed.views import FetchRssView
 from django.conf import settings
 from django.conf.urls.static import static
 from .admin import feed_panel, AdminStatsView, ErrorAlertAckView
+from feedback.admin_views import feedback_inbox
 from feed.sitemaps import WorkSitemap
 from game.legacy_views import LegacyEditionRedirect
 from game.sitemaps import EditionFlowchartSitemap, EditionSitemap
@@ -49,6 +50,7 @@ urlpatterns = [
     path('api/game/', include('game.urls')),
     path('api/msg/', include('msg.urls')),
     path('api/messaging/', include('messaging.urls')),
+    path('api/feedback/', include('feedback.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('interaction/', include('interaction.urls')),
@@ -60,6 +62,7 @@ urlpatterns = [
     path('power/fetch_rss/', FetchRssView.as_view()),
     path('power/AdminStatsView/', AdminStatsView.as_view(), name='admin_stats'),
     path('power/error-ack/', ErrorAlertAckView.as_view(), name='admin_error_ack'),
+    path('power/feedback-inbox/', feedback_inbox, name='admin_feedback_inbox'),
     path('power/', admin.site.urls),
     path('tablejourney/', include('tablejourney.urls')),
 

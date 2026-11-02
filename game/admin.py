@@ -2217,7 +2217,7 @@ class WholeContextFilter(admin.SimpleListFilter):
 @admin.register(Rulebook)
 class RulebookAdmin(admin.ModelAdmin):
     list_display = (
-        "title", "language", "edition_summary", "file_link", "has_source_url",
+        "title", "language", "edition_summary", "complexity", "file_link", "has_source_url",
         # "status",
         "last_error_display",
         "token_summary",
@@ -2523,7 +2523,8 @@ class RulebookAdmin(admin.ModelAdmin):
         ("基本資訊", {
             "fields": (
                 "edition", "title", "language",
-                "source_url", "source_url_status", "source_url_checked_at", "file"
+                "source_url", "source_url_status", "source_url_checked_at", "file",
+                "complexity",
             )
         }),
         ("處理狀態", {
@@ -5115,14 +5116,14 @@ class FlowchartSuggestionAdmin(admin.ModelAdmin):
     """會員在 edition 流程圖分頁留下的改善建議。只讀不改圖，採納與否人工決定。"""
 
     list_display = (
-        "created_at", "edition_name", "ruleset", "content_preview",
-        "submitted_by", "status",
+        "created_at", "edition_name", "ruleset", "target", "content_preview",
+        "submitter", "status",
     )
     list_filter = ("status", "ruleset")
-    search_fields = ("content", "ruleset", "edition__name")
+    search_fields = ("content", "ruleset", "edition__name", "node_label")
     readonly_fields = (
-        "flowchart", "edition", "ruleset", "content", "submitted_by",
-        "reviewed_by", "reviewed_at", "created_at",
+        "flowchart", "edition", "ruleset", "node_id", "node_label", "content",
+        "submitted_by", "reviewed_by", "reviewed_at", "created_at",
     )
     raw_id_fields = ("flowchart", "edition", "submitted_by", "reviewed_by")
     actions = ["set_status_approved", "set_status_rejected"]
@@ -5133,6 +5134,18 @@ class FlowchartSuggestionAdmin(admin.ModelAdmin):
     @admin.display(description="版本")
     def edition_name(self, obj):
         return obj.edition.name if obj.edition else "—"
+
+    @admin.display(description="對象")
+    def target(self, obj):
+        # 導覽中針對單一節點送出的才有 node_label
+        if not obj.node_id:
+            return "整張圖"
+        label = obj.node_label or obj.node_id
+        return f"節點：{label if len(label) <= 30 else label[:30] + '…'}"
+
+    @admin.display(description="提交者")
+    def submitter(self, obj):
+        return obj.submitted_by or "（匿名）"
 
     @admin.display(description="建議內容")
     def content_preview(self, obj):
@@ -5441,7 +5454,7 @@ class FlowchartReviewStatusFilter(admin.SimpleListFilter):
 @admin.register(RulebookFlowchart)
 class RulebookFlowchartAdmin(admin.ModelAdmin):
     list_display = (
-        "rulebook_title", "ruleset", "display_order", "initial",
+        "rulebook_title", "ruleset", "display_order", "initial", "show_print_button",
         "node_count", "linkage_count", "review_status",
         # "error_check_summary", "self_check_summary",
         "updated_at",
@@ -6166,7 +6179,7 @@ class RulebookFlowchartAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("圖表資訊", {
-            "fields": ("rulebook", "ruleset", "display_order", "initial"),
+            "fields": ("rulebook", "ruleset", "display_order", "initial", "show_print_button"),
             "description": "「Initial」＝入門圖：一般會員與未登入者看得到內容。"
                            "取消勾選的圖只有 subscriber（含 admin）看得到，其他人"
                            "在流程圖分頁只會看到 ruleset 名稱與付費牆。"

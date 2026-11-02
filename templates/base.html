@@ -317,6 +317,12 @@
     {% block extrascript %}
     {% endblock extrascript %}
 
+    {% comment %} 問卷浮動按鈕。預設是只在 beta 期間開放的全站問卷；edition 頁覆寫成
+       該 edition 的問卷（見 game/edition_detail.html）。沒有開放中的問卷時什麼都不畫。 {% endcomment %}
+    {% block survey_fab %}
+    {% if beta_mode %}{% include "feedback/partials/survey_fab.html" with survey_kind="site" survey_page=request.path %}{% endif %}
+    {% endblock survey_fab %}
+
     <footer>
         {% block footer %}
         {% endblock footer %}

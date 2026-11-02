@@ -592,6 +592,13 @@ class Rulebook(TimeStampedModel):
         help_text="LlamaParse 全文擷取（無 markdown 分層，只保留 <PAGE:N>），供 whole-context 問答使用"
     )
 
+    # 規則書複雜度：1~999 的正整數
+    complexity = models.PositiveSmallIntegerField(
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(999)],
+        help_text="規則書複雜度，1~999",
+    )
+
     needs_ocr = models.BooleanField(default=False)
     ocr_done = models.BooleanField(default=False)
 
@@ -1436,6 +1443,12 @@ class RulebookFlowchart(TimeStampedModel):
         help_text="瀏覽頁 ruleset 顯示次序，數字小的在前（相同時入門圖優先，再依名稱）",
     )
 
+    # 前端流程圖頁是否顯示 A4 列印按鈕。新圖預設不顯示（要列印的圖要手動開）。
+    show_print_button = models.BooleanField(
+        default=False,
+        help_text="勾選＝流程圖瀏覽頁顯示 A4 列印按鈕",
+    )
+
     intermediate_json = models.JSONField(default=dict, blank=True)
     source_chunk_ids = models.JSONField(default=list, blank=True)
 
@@ -1631,6 +1644,12 @@ class FlowchartSuggestion(TimeStampedModel):
         max_length=100, blank=True, verbose_name="ruleset（送出時快照）",
     )
 
+    # 從導覽（FlowchartTour）的單一節點送出時才有值；整張圖的建議兩者皆空。
+    # node_label 是送出當下的節點文字快照：重新生成流程圖後節點 id 會換，
+    # 只剩 id 就不知道會員當初指的是哪一步。
+    node_id = models.CharField(max_length=100, blank=True, verbose_name="節點 id")
+    node_label = models.CharField(max_length=300, blank=True, verbose_name="節點文字（送出時快照）")
+
     content = models.TextField(verbose_name="改善建議")
 
     submitted_by = models.ForeignKey(
@@ -1638,7 +1657,7 @@ class FlowchartSuggestion(TimeStampedModel):
         null=True, blank=True,
         on_delete=models.SET_NULL,
         related_name='flowchart_suggestions',
-        help_text="提交者（登入會員；帳號被刪除時保留紀錄但設為 null）",
+        help_text="提交者（登入會員；null＝匿名送出，或帳號已刪除）",
     )
 
     status = models.CharField(

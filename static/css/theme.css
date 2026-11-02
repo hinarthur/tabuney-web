@@ -41,6 +41,10 @@
     */
     --color-secondary: #E9BE45;
 
+    /* 純色底（主色／副色按鈕）上的文字色 */
+    --color-on-primary: #FFFFFF;
+    --color-on-secondary: #253247;
+
 
     /* --------------------------------------------------------
        General backgrounds
@@ -64,6 +68,10 @@
 
     --color-link: var(--color-primary);
     --color-link-hover: #1477A8;
+
+    /* 表單送出結果（回饋、問卷） */
+    --color-success: #2F9E44;
+    --color-error: #D9363E;
 
 
     /* --------------------------------------------------------
@@ -465,6 +473,8 @@
     --color-primary: #5EB5D8;
     --color-primary-light: #80CFD2;
     --color-secondary: #E4C665;
+    --color-on-primary: #10202E;
+    --color-on-secondary: #253247;
 
 
     /* --------------------------------------------------------
@@ -489,6 +499,10 @@
 
     --color-link: var(--color-primary);
     --color-link-hover: #83CBE7;
+
+    /* 表單送出結果（回饋、問卷） */
+    --color-success: #69C47F;
+    --color-error: #F07178;
 
 
     /* --------------------------------------------------------

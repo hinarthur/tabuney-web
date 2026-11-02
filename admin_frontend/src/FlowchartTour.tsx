@@ -31,11 +31,27 @@ import { BoardContext } from "./board/BoardContext";
 import BoardModal from "./board/BoardModal";
 import { asBoard } from "./board/types";
 
+// Per-node feedback goes to the same endpoint as the page's 🚩 suggestion
+// button (FlowchartSuggestionCreateView), with node_id / node_label added.
+// csrfToken is only present for signed-in readers: anonymous requests are
+// exempt server-side, so the page never has to hand out a csrftoken cookie.
+export interface TourFeedbackConfig {
+  enabled: boolean;
+  url: string;
+  flowchartId: string;
+  editionId?: string;
+  csrfToken?: string;
+}
+
 export interface TourConfig {
   reactFlowData: { nodes: Node[]; edges: Edge[] } | null;
   title?: string;
   labels?: Record<string, string>;
+  feedback?: TourFeedbackConfig;
 }
+
+// Matches SUGGESTION_MAX_LENGTH in game/views/suggestion_views.py
+const FEEDBACK_MAX_LEN = 2000;
 
 // Decorative node types that are never a tour stop — they stay blurred
 // throughout so the legend / captions still read as background context.
@@ -56,7 +72,19 @@ const FALLBACK_LABELS: Record<string, string> = {
   choose: "Choose a branch:",
   notes: "Notes",
   branch_unnamed: "(unnamed branch)",
+  fb_button: "Feedback on this step",
+  fb_placeholder: "What is wrong or unclear about this step?",
+  fb_success: "Thanks! We'll take a look.",
+  fb_empty: "Please write your suggestion",
+  fb_error: "Something went wrong. Please try again.",
+  fb_submit: "Submit",
+  fb_cancel: "Cancel",
 };
+
+type FeedbackState =
+  | { phase: "closed" }
+  | { phase: "editing" | "sending"; text: string; error?: string }
+  | { phase: "sent" };
 
 function nodeLabel(n: Node | undefined): string {
   const raw = (n?.data as { label?: unknown } | undefined)?.label;
@@ -175,8 +203,51 @@ function Tour({ config }: { config: TourConfig }) {
   const boardNode = boardNodeId ? nodeById.get(boardNodeId) : undefined;
   const openBoard = asBoard((boardNode?.data as { board?: unknown } | undefined)?.board);
 
-  // A note or board opened from the previous node must not follow the reader along.
-  useEffect(() => { setOpenNoteIds([]); setBoardNodeId(null); }, [currentId]);
+  const fbConfig = config.feedback?.enabled && config.feedback.flowchartId ? config.feedback : null;
+  const [feedback, setFeedback] = useState<FeedbackState>({ phase: "closed" });
+
+  // A note, board or feedback form opened from the previous node must not
+  // follow the reader along.
+  useEffect(() => {
+    setOpenNoteIds([]);
+    setBoardNodeId(null);
+    setFeedback({ phase: "closed" });
+  }, [currentId]);
+
+  const submitFeedback = useCallback(async () => {
+    if (!fbConfig || !currentId || feedback.phase !== "editing") return;
+    const text = feedback.text.trim();
+    if (!text) {
+      setFeedback({ ...feedback, error: t("fb_empty") });
+      return;
+    }
+    setFeedback({ phase: "sending", text: feedback.text });
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (fbConfig.csrfToken) headers["X-CSRFToken"] = fbConfig.csrfToken;
+      const res = await fetch(fbConfig.url, {
+        method: "POST",
+        headers,
+        credentials: "same-origin",
+        body: JSON.stringify({
+          flowchart_id: fbConfig.flowchartId,
+          edition_id: fbConfig.editionId ?? "",
+          node_id: currentId,
+          node_label: nodeLabel(nodeById.get(currentId)),
+          content: text,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setFeedback({ phase: "sent" });
+      } else {
+        const errs = data.errors ? Object.values(data.errors).join(" ") : "";
+        setFeedback({ phase: "editing", text: feedback.text, error: errs || t("fb_error") });
+      }
+    } catch {
+      setFeedback({ phase: "editing", text: feedback.text, error: t("fb_error") });
+    }
+  }, [fbConfig, currentId, feedback, nodeById, t]);
   // Memoised so activeEdgeIds/viewEdges don't rebuild on every render
   const outs = useMemo(
     () => (currentId ? outgoingBySource.get(currentId) ?? [] : []),
@@ -202,6 +273,9 @@ function Tour({ config }: { config: TourConfig }) {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      // Arrow/Home/End inside the feedback textarea move the caret, not the tour
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "TEXTAREA" || el.tagName === "INPUT")) return;
       if (e.key === "ArrowRight") { e.preventDefault(); goNext(); }
       else if (e.key === "ArrowLeft") { e.preventDefault(); goPrev(); }
       else if (e.key === "Home") { e.preventDefault(); goFirst(); }
@@ -325,11 +399,57 @@ function Tour({ config }: { config: TourConfig }) {
             </div>
           )}
 
+          {fbConfig && feedback.phase !== "closed" && (
+            <div className="fc-tour-note fc-tour-feedback" role="dialog" aria-label={t("fb_button")}>
+              <button type="button" className="fc-tour-note-close"
+                      aria-label={t("fb_cancel")}
+                      onClick={() => setFeedback({ phase: "closed" })}>×</button>
+              <div className="fc-tour-note-title">
+                {t("fb_button")}
+                {nodeLabel(nodeById.get(currentId)) && (
+                  <span className="fc-tour-feedback-target">
+                    {" · "}{truncate(nodeLabel(nodeById.get(currentId)), 40)}
+                  </span>
+                )}
+              </div>
+              {feedback.phase === "sent" ? (
+                <div className="fc-tour-feedback-msg success" role="status">{t("fb_success")}</div>
+              ) : (
+                <>
+                  <textarea className="fc-tour-feedback-text" rows={3} autoFocus
+                            maxLength={FEEDBACK_MAX_LEN}
+                            placeholder={t("fb_placeholder")}
+                            value={feedback.text}
+                            disabled={feedback.phase === "sending"}
+                            onChange={(e) => setFeedback({ phase: "editing", text: e.target.value })} />
+                  {feedback.phase === "editing" && feedback.error && (
+                    <div className="fc-tour-feedback-msg error" role="status">{feedback.error}</div>
+                  )}
+                  <div className="fc-tour-feedback-actions">
+                    <button type="button" className="fc-tour-feedback-submit"
+                            disabled={feedback.phase === "sending"}
+                            onClick={submitFeedback}>{t("fb_submit")}</button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           <div className="fc-tour-nav">
             {btn("first", "⏮", goFirst, path.length === 1)}
             {btn("prev", "◀", goPrev, path.length === 1)}
             {btn("next", "▶", goNext, outs.length !== 1)}
             {btn("last", "⏭", goLast, !endId || currentId === endId)}
+            {fbConfig && (
+              <button type="button"
+                      className={`fc-tour-btn fc-tour-feedback-btn${feedback.phase !== "closed" ? " active" : ""}`}
+                      title={t("fb_button")} aria-label={t("fb_button")}
+                      onClick={() => setFeedback(
+                        feedback.phase === "closed" ? { phase: "editing", text: "" } : { phase: "closed" }
+                      )}>
+                <span aria-hidden="true">💬</span>
+              </button>
+            )}
           </div>
 
           {legends.length > 0 && (
