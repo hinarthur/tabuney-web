@@ -110,7 +110,9 @@
     window.editionInteraction = {
         editionId: '{{ edition.id }}',
         updateUrl: '{% url "update-interaction" %}',
-        csrfToken: '{{ csrf_token }}',
+        {% comment %} 匿名不渲染 csrf_token：那會讓瀏覽器拿到 csrftoken cookie（違反零 cookie）。
+           匿名 Rulesbot 走 DRF SessionAuthentication，未登入時不檢查 CSRF，不需要 token。 {% endcomment %}
+        csrfToken: '{% if user.is_authenticated %}{{ csrf_token }}{% endif %}',
         isAuthenticated: {% if user.is_authenticated %}true{% else %}false{% endif %},
         collectionTitle: '{% t "game.collection.title" %}'
     };
