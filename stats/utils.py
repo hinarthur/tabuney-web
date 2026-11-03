@@ -206,11 +206,18 @@ _ERROR_SCAN_MARKERS = (
     '.vscode', 'sftp-config', '/.aws', '/.ssh', '/.svn', '/.azure',
     '/actuator', '/telescope',
     '/backup/', '/old/', '/new/', '/blog/',
+    # 雲端／基礎設施憑證掃描（terraform、k8s、docker、aws、s3、gcloud、amplify）
+    '.tfstate', '.tfvars', '.terraform', '/.kube', '/.docker', '.dockercfg',
+    '/.boto', '.s3cfg', '/.config/', '/credentials', '/aws/', '/s3/',
+    '/amplify/', '/etc/', '/root/', 'secrets', 'hubspot.config',
 )
 
 # 憑證外洩掃描：/config.yaml、/docker-compose.yml、/app/config.toml、/src/config.yaml…
 # 用 endswith 而不是子字串——'.yml' 當子字串會誤殺任何含這三個字的 slug。
-_ERROR_SCAN_SUFFIXES = ('.yml', '.yaml', '.toml', '.ini', '.conf', '.pem', '.key')
+_ERROR_SCAN_SUFFIXES = (
+    '.yml', '.yaml', '.toml', '.ini', '.conf', '.pem', '.key',
+    '.json', '.cfg', '.backup',
+)
 
 # 精確比對的掃描 path。這些字串太短，當子字串會誤殺未來真的做出來的路由；
 # 精確比對就沒這問題——哪天真的開了 /mcp 端點，它會回 200，根本走不到這裡。
@@ -221,6 +228,9 @@ _ERROR_SCAN_PATHS = frozenset({
     '/fetch', '/fetch/', '/proxy', '/proxy/',
     '/graphql', '/graphql/', '/graphql/console',
     '/open', '/open/', '/open/visitors/info/gets',
+    # 其他 CMS（Drupal／OpenCart）與前端設定檔探測；站上沒有這些目錄。
+    '/files/', '/images/', '/uploads/', '/sites/default/files/',
+    '/admin/controller/extension/extension/', '/config.js', '/env.js',
 })
 
 
