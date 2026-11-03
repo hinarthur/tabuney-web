@@ -65,7 +65,7 @@ class HomeView(TemplateView):
         def pick(language):
             return list(
                 Work.objects.filter(lang=language, irrelevant=0, image__isnull=False)
-                .exclude(image='').order_by('-publishdate')[:limit]
+                .exclude(image='').exclude(rss__status='rejected').order_by('-publishdate')[:limit]
             )
 
         works = pick(lang)

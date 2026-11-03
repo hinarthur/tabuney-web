@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.conf import settings
 from .models import Rss, Work, SavedWork, WorkLabel
 from .tasks import fetch_one_rss
+from django_q.models import Schedule as QSchedule
 from django.contrib import messages
 from django.utils import timezone
 from django.urls import path
@@ -29,6 +30,28 @@ def mark_rss_reviewed(modeladmin, request, queryset):
     messages.success(request, f"已標記 {updated} 筆")
 
 
+@admin.action(description="核准會員推薦（status 改為 admin 並標記已審）")
+def approve_rss(modeladmin, request, queryset):
+    now = timezone.now()
+    targets = queryset.filter(status='user')
+    # reviewed_at 已有值的保留原審核時間
+    targets.filter(reviewed_at__isnull=True).update(reviewed_at=now)
+    updated = targets.update(status='admin')
+    messages.success(request, f"已核准 {updated} 筆")
+
+
+@admin.action(description="拒絕會員推薦（停止抓取並標記已審）")
+def reject_rss(modeladmin, request, queryset):
+    now = timezone.now()
+    targets = queryset.filter(status='user')
+    ids = list(targets.values_list('id', flat=True))
+    targets.filter(reviewed_at__isnull=True).update(reviewed_at=now)
+    updated = targets.update(status='rejected')
+    # 移除已排程的定期抓取
+    QSchedule.objects.filter(name__in=[f"Fetch RSS {i}" for i in ids]).delete()
+    messages.success(request, f"已拒絕 {updated} 筆")
+
+
 class RssReviewFilter(admin.SimpleListFilter):
     title = '審核'
     parameter_name = 'review'
@@ -49,7 +72,7 @@ class RssAdmin(admin.ModelAdmin):
     list_filter = (RssReviewFilter, 'lang', 'status')
     search_fields = ('sitename',)
     # list_editable = ('lang',)
-    actions = [fetch_selected_rss, mark_rss_reviewed]
+    actions = [fetch_selected_rss, mark_rss_reviewed, approve_rss, reject_rss]
     ordering = ('-createdate',)
    
 

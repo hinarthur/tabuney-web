@@ -204,8 +204,13 @@ def fetch_one_rss(rss_id):
         print(f"Deleted {deleted} schedule(s) named '{task_name}'")
 
         return  # 提早結束函數
-    
-    feed = feedparser.parse(rss_feed.rss)
+
+    # 被拒絕的推薦源不再抓取（含手動 action / 殘留排程）
+    if rss_feed.status == 'rejected':
+        QSchedule.objects.filter(name=f"Fetch RSS {rss_id}").delete()
+        return
+
+    feed =feedparser.parse(rss_feed.rss)
     
     now = timezone.now()
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)

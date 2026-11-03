@@ -65,7 +65,7 @@ class FeedListView(APIView):
             lang__in=languages,
             irrelevant=0
         # ).order_by('-publishdate')[offset:offset + limit]
-        ).select_related('rss').order_by('-publishdate')[offset:offset + limit]
+        ).exclude(rss__status='rejected').select_related('rss').order_by('-publishdate')[offset:offset + limit]
         
         data = []
 
@@ -254,7 +254,7 @@ class ResetRssTasksView(APIView):
             Schedule.objects.filter(name__startswith="Fetch RSS").delete()
             Task.objects.all().delete()
 
-            rss_feeds = Rss.objects.all()
+            rss_feeds = Rss.objects.exclude(status='rejected')
             total_feeds = rss_feeds.count()
 
             if total_feeds == 0:

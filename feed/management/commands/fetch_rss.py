@@ -9,7 +9,7 @@ class Command(BaseCommand):
 
     
     def handle(self, *args, **kwargs):
-        rss_feeds = Rss.objects.all()
+        rss_feeds = Rss.objects.exclude(status='rejected')
         for rss_feed in rss_feeds:
             async_task('feed.tasks.fetch_one_rss', rss_feed.id)
             self.stdout.write(self.style.SUCCESS(f'Scheduled task for RSS feed: {rss_feed.id}'))

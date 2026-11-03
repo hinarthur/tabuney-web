@@ -23,7 +23,7 @@ class Rss(models.Model):
     )
     scale = models.CharField(max_length=10, default=None, null=True, blank=True, help_text="indie/corp/group")
     total_irrelevant = models.PositiveIntegerField(default=0, null=False, blank=False)
-    status = models.CharField(max_length=32, default="admin", choices=[("admin", "Admin"), ("user", "User")])
+    status = models.CharField(max_length=32, default="admin", choices=[("admin", "Admin"), ("user", "User"), ("rejected", "Rejected")])
     recommender = models.ForeignKey('member.Member', on_delete=models.SET_NULL, null=True, blank=True, related_name='rss_recommender')
     # 只對 status='user'（會員推薦）有意義：null＝還沒審過，會算進 admin 首頁的待辦色塊。
     # 用時間戳而不是布林值，之後要查「什麼時候審的」不用再加欄位。
