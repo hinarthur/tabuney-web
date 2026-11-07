@@ -66,8 +66,8 @@ export function withDefaults(edges: Edge[]): Edge[] {
       ...e,
       type,
       markerEnd: e.markerEnd && typeof e.markerEnd === "object"
-        ? { ...(e.markerEnd as object), width: MARKER_SIZE, height: MARKER_SIZE, color: stroke }
-        : { ...DEFAULT_MARKER, color: stroke },
+        ? ({ ...(e.markerEnd as object), width: MARKER_SIZE, height: MARKER_SIZE, color: stroke } as Edge["markerEnd"])
+        : ({ ...DEFAULT_MARKER, color: stroke } as Edge["markerEnd"]),
       style: mergedStyle,
     };
   });

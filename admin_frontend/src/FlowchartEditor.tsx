@@ -110,7 +110,9 @@ function Editor({ config }: { config: Config }) {
   const nodesRef = useRef<Node[]>([]);
   const edgesRef = useRef<Edge[]>([]);
   const pendingHistorySaveRef = useRef(false);
+  const redoRef = useRef<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
   const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   // 自上次存檔後有沒有改過（所有編輯都會經過 saveHistory）。送審／Django Save 前
   // 的自動存檔只在有改動時才送出，避免沒動過的自動排版圖被存成 adjusted。
   const dirtyRef = useRef(false);
@@ -161,6 +163,9 @@ function Editor({ config }: { config: Config }) {
         edges: [...edgesRef.current],
       },
     ];
+    // 有新編輯就清掉 redo 堆疊
+    redoRef.current = [];
+    setCanRedo(false);
     setCanUndo(true);
   }
 
@@ -176,25 +181,60 @@ function Editor({ config }: { config: Config }) {
     if (!stack.length) return;
     const prev = stack[stack.length - 1];
     historyRef.current = stack.slice(0, -1);
+    redoRef.current = [
+      ...redoRef.current,
+      {
+        nodes: nodesRef.current.map((n) => ({ ...n, data: { ...(n.data as object) } })),
+        edges: [...edgesRef.current],
+      },
+    ];
+    dirtyRef.current = true;
     setNodes(prev.nodes as Node[]);
     setEdges(prev.edges as Edge[]);
     setSelectedNodeId(null);
     setSelectedEdgeIds([]);
     setCanUndo(stack.length > 1);
+    setCanRedo(true);
+  }, [setNodes, setEdges]);
+
+  const redo = useCallback(() => {
+    const stack = redoRef.current;
+    if (!stack.length) return;
+    const next = stack[stack.length - 1];
+    redoRef.current = stack.slice(0, -1);
+    historyRef.current = [
+      ...historyRef.current.slice(-49),
+      {
+        nodes: nodesRef.current.map((n) => ({ ...n, data: { ...(n.data as object) } })),
+        edges: [...edgesRef.current],
+      },
+    ];
+    dirtyRef.current = true;
+    setNodes(next.nodes as Node[]);
+    setEdges(next.edges as Edge[]);
+    setSelectedNodeId(null);
+    setSelectedEdgeIds([]);
+    setCanUndo(true);
+    setCanRedo(stack.length > 1);
   }, [setNodes, setEdges]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "z") {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const k = e.key.toLowerCase();
+      if (k === "z" && !e.shiftKey) {
         e.preventDefault();
         undo();
+      } else if ((k === "z" && e.shiftKey) || k === "y") {
+        e.preventDefault();
+        redo();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [undo]);
+  }, [undo, redo]);
 
   // Reset pending flag when selection changes so next edit in new context saves
   useEffect(() => { pendingHistorySaveRef.current = false; }, [selectedNodeId, selectedEdgeIds]);
@@ -594,6 +634,7 @@ function Editor({ config }: { config: Config }) {
               <button style={btn(isBusy)} onClick={save} disabled={isBusy}>💾 Save</button>
               {isAdjusted && <button style={btn(isBusy)} onClick={revert} disabled={isBusy}>↩ Revert</button>}
               <button style={btn(!canUndo)} onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)">↺ Undo</button>
+              <button style={btn(!canRedo)} onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z / Ctrl+Y)">↻ Redo</button>
 
               <div style={{ width: 1, height: 18, background: "var(--fc-node-border, #ddd)", margin: "0 3px" }} />
 

@@ -1,4 +1,5 @@
 import React from "react";
+import type { Edge, Node } from "@xyflow/react";
 import { createRoot } from "react-dom/client";
 import FlowchartEditor from "./FlowchartEditor";
 import FlowchartTour, { type TourConfig } from "./FlowchartTour";
@@ -6,11 +7,13 @@ import "@xyflow/react/dist/style.css";
 import "./editor.css";
 import "./nodes.css";
 
+type FlowData = { nodes: Node[]; edges: Edge[] };
+
 declare global {
   interface Window {
     FLOWCHART_EDITOR_CONFIG: {
-      reactFlowData: Record<string, unknown> | null;
-      adjustedJson: Record<string, unknown> | null;
+      reactFlowData: FlowData | null;
+      adjustedJson: FlowData | null;
       adjustUrl: string;
       csrfToken: string;
       detail: string;
@@ -24,7 +27,7 @@ declare global {
     flowchartEditorAutosave?: () => Promise<boolean>;
     FLOWCHART_VIEWER_CONFIGS?: Array<{
       mountId: string;
-      reactFlowData: Record<string, unknown> | null;
+      reactFlowData: FlowData | null;
       detail: string;
       rulebookTitle: string;
       isAdjusted: boolean;

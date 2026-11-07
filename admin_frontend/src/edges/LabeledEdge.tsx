@@ -90,9 +90,9 @@ function SvgDraggableLabel({ edgeId, label, x, y, color }: {
       transform={`translate(${x},${y})`}
       onMouseDown={onMouseDown}
       onDoubleClick={onDblClick}
-      title={readOnly ? undefined : "Drag to reposition · Double-click to reset"}
       style={{ cursor: readOnly ? "default" : "move" }}
     >
+      {!readOnly && <title>Drag to reposition · Double-click to reset</title>}
       {tw > 0 && (
         <rect x={-rw / 2 - HIT} y={-rh / 2 - HIT} width={rw + HIT * 2} height={rh + HIT * 2}
           fill="transparent" stroke="none" style={{ pointerEvents: "all" }} />
