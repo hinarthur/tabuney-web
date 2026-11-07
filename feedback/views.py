@@ -68,6 +68,33 @@ def _edition(kind, raw_id):
     return edition, edition is not None
 
 
+def _member_partial(survey, edition, member):
+    """會員中途離開留下的未完成回答；它同時就是「草稿」，下次進來接著填、送出時原地更新。"""
+    if member is None:
+        return None
+    return (
+        SurveyResponse.objects
+        .filter(survey=survey, edition=edition, member=member, is_partial=True)
+        .order_by("-created_at").first()
+    )
+
+
+def _draft_payload(response):
+    """把一份未完成回答轉回前端送出時的形狀：{answers: {題目 id: 值}, others: {選項 id: 文字}}。"""
+    answers, others = {}, {}
+    for a in response.answers.select_related("question").order_by("choice_id", "id"):
+        qid = str(a.question_id)
+        if a.question.qtype == SurveyQuestion.QType.TEXT:
+            answers[qid] = a.text
+        elif a.question.qtype == SurveyQuestion.QType.MULTI:
+            answers.setdefault(qid, []).append(a.choice_id)
+        else:
+            answers[qid] = a.choice_id
+        if a.choice_id and a.text:
+            others[str(a.choice_id)] = a.text
+    return {"answers": answers, "others": others}
+
+
 def _survey_payload(survey, lang):
     version = cache.get(CACHE_VERSION_KEY, 0)
     key = f"feedback:survey:{survey.id}:{lang}:{version}"
@@ -114,10 +141,14 @@ class SurveyView(View):
         if not ok:
             return JsonResponse({"error": "edition_required"}, status=400)
 
-        response = JsonResponse({
+        body = {
             "token": issue_token(survey.id),   # 每次都重發，不能放進上面的快取
             "survey": _survey_payload(survey, _lang(request.GET.get("l"))),
-        })
+        }
+        draft = _member_partial(survey, edition, _member(request))
+        if draft is not None:
+            body["draft"] = _draft_payload(draft)   # 只有會員有；匿名不存任何東西
+        response = JsonResponse(body)
         response["Cache-Control"] = "private, no-store"
         return response
 
@@ -241,16 +272,25 @@ class SurveyResponseCreateView(View):
         if edition is not None:
             edition_name = edition.name or (edition.game.canonical_name if edition.game_id else "")
 
+        fields = {
+            "edition_name": edition_name[:300],
+            "lang": _lang(payload.get("lang")),
+            "page": str(payload.get("page") or "")[:PAGE_MAX_LENGTH],
+            "is_partial": partial,
+        }
         with transaction.atomic():
-            response = SurveyResponse.objects.create(
-                survey=survey,
-                edition=edition,
-                edition_name=edition_name[:300],
-                member=member,
-                lang=_lang(payload.get("lang")),
-                page=str(payload.get("page") or "")[:PAGE_MAX_LENGTH],
-                is_partial=partial,
-            )
+            # 會員先前中途離開留下的草稿 → 原地更新，不產生第二份回答
+            response = _member_partial(survey, edition, member)
+            if response is not None:
+                response.answers.all().delete()
+                for name, value in fields.items():
+                    setattr(response, name, value)
+                response.created_at = timezone.now()
+                response.save()
+            else:
+                response = SurveyResponse.objects.create(
+                    survey=survey, edition=edition, member=member, **fields,
+                )
             for a in answers:
                 a.response = response
             SurveyAnswer.objects.bulk_create(answers)

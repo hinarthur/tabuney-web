@@ -221,6 +221,44 @@ class SurveyApiTests(EditionUnlockTestBase):
         self.assertEqual(_post(client, self.post_url, again).status_code, 200)
         self.assertEqual(SurveyResponse.objects.exclude(member=None).count(), 2)
 
+    def test_member_partial_response_is_a_resumable_draft(self):
+        client = Client()
+        client.force_login(self.user)
+        self.m[2].is_other = True
+        self.m[2].save()
+        cache.clear()
+
+        payload = self.answers()
+        del payload["answers"][str(self.q_single.id)]
+        payload["others"] = {str(self.m[2].id): "my tool"}
+        payload["partial"] = True
+        self.assertEqual(_post(client, self.post_url, payload).status_code, 200)
+
+        data = client.get(self.get_url, {"edition": str(self.edition.id)}).json()
+        self.assertEqual(data["draft"]["answers"][str(self.q_multi.id)], [self.m[0].id, self.m[2].id])
+        self.assertEqual(data["draft"]["answers"][str(self.q_text.id)], "Loved the tour")
+        self.assertEqual(data["draft"]["others"], {str(self.m[2].id): "my tool"})
+        self.assertNotIn(str(self.q_single.id), data["draft"]["answers"])
+
+        # 補完後正式送出 → 原地更新同一份，不是第二筆
+        final = self.answers(**{str(self.q_text.id): "Finished"})
+        self.assertEqual(_post(client, self.post_url, final).status_code, 200)
+        r = SurveyResponse.objects.get()
+        self.assertFalse(r.is_partial)
+        self.assertEqual(r.answers.get(question=self.q_text).text, "Finished")
+        self.assertEqual(r.answers.filter(question=self.q_single).count(), 1)
+
+        # 送出後就不再有草稿
+        data = client.get(self.get_url, {"edition": str(self.edition.id)}).json()
+        self.assertNotIn("draft", data)
+
+    def test_anonymous_never_gets_a_draft(self):
+        payload = self.answers()
+        payload["partial"] = True
+        self.assertEqual(_post(Client(), self.post_url, payload).status_code, 200)
+        data = Client().get(self.get_url, {"edition": str(self.edition.id)}).json()
+        self.assertNotIn("draft", data)
+
     # ── 防機器人 ──
 
     def test_missing_or_forged_token_is_silently_dropped(self):

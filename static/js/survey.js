@@ -4,7 +4,11 @@
  * 流程：GET 問卷 → 沒有開放中的問卷（204）或這個分頁按過「先不要」就什麼都不畫；
  * 否則畫右下角的浮動按鈕，按下開 modal，正式送出後按鈕在這次瀏覽中消失。
  *
- * 不記「填過」：填到一半不小心關掉的人要能再填（中途離開會先補送已答的題目）。
+ * 不記「填過」，也不會因為填到一半關掉 modal 而丟掉進度：關閉只是把 modal 藏起來，
+ * 再按浮動按鈕會回到原本那一題、答案都還在（匿名訪客只存在這一頁的記憶體裡）。
+ * 真的離開這一頁（換頁、關分頁）時，才把已答的題目補送出去。
+ * 會員補送的那份就是草稿：GET 會把它帶回來（data.draft），換頁、重新整理後接著填，
+ * 正式送出時伺服器原地更新同一份，不會變成兩筆。
  * 「先不要」只存 sessionStorage：關掉分頁後下次還會再出現。
  * sessionStorage 可能被瀏覽器擋掉（無痕、封鎖網站資料），讀寫一律包 try/catch。
  *
@@ -47,6 +51,7 @@
             if (!data || !data.survey) return;
             if (!data.survey.questions || !data.survey.questions.length) return;
             token = data.token || '';
+            draft = data.draft || null;
             renderFab(data.survey);
         })
         .catch(function () { /* 問卷是附加功能，失敗就不顯示 */ });
@@ -54,6 +59,7 @@
     // ── 浮動按鈕 ───────────────────────────────────────────────────────────────
     var fab = null;
     var token = '';
+    var draft = null;   // 會員先前沒填完的答案（匿名一律是 null）
 
     // 開場動畫：載入約 1 秒後展開完整 CTA，停 3.5 秒再收成圓形圖示。
     // 每個瀏覽工作階段只播一次（sessionStorage），切換遊戲時直接是收合狀態；
@@ -120,7 +126,8 @@
     var modal = null;
     var lastFocus = null;
 
-    // 填到一半離開（關閉、Esc、點背景、換頁）就把已答的題目先送出，必填題可缺漏。
+    // 填到一半離開這一頁（換頁、關分頁）就把已答的題目先送出，必填題可缺漏。
+    // 關閉 modal（×、Esc、點背景）不送：只是藏起來，之後還能接著填。
     // finished＝已經正式送出過；sending＝正式送出還在途中，兩者都不再補送。
     var session = null;   // { survey, form, finished, sending, partialSent }
 
@@ -151,14 +158,22 @@
         }).catch(function () { /* 補送失敗就算了 */ });
     }
 
-    window.addEventListener('pagehide', function () { if (modal) sendPartial(); });
+    window.addEventListener('pagehide', function () { if (session) sendPartial(); });
 
-    function closeModal() {
+    function destroyModal() {
         if (!modal) return;
-        sendPartial();
-        session = null;
         modal.parentNode.removeChild(modal);
         modal = null;
+        session = null;
+        document.removeEventListener('keydown', onKey);
+        if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+
+    // 還沒送出的問卷只藏起來（保留作答進度）；已送出或已關閉的才真正移除
+    function closeModal() {
+        if (!modal) return;
+        if (!session || session.finished) { destroyModal(); return; }
+        modal.style.display = 'none';
         document.removeEventListener('keydown', onKey);
         if (lastFocus && lastFocus.focus) lastFocus.focus();
     }
@@ -221,6 +236,30 @@
         return box;
     }
 
+    function applyDraft(form, survey, draft) {
+        var answers = draft.answers || {};
+        var others = draft.others || {};
+        survey.questions.forEach(function (q) {
+            var v = answers[q.id];
+            if (v === undefined || v === null) return;   // 題目被改過、或沒答的就略過
+            if (q.type === 'text') {
+                var field = form.elements['q' + q.id];
+                if (field) field.value = v;
+                return;
+            }
+            var ids = (Array.isArray(v) ? v : [v]).map(String);
+            form.querySelectorAll('input[name="q' + q.id + '"]').forEach(function (inp) {
+                if (ids.indexOf(String(inp.value)) < 0) return;
+                inp.checked = true;
+                inp.dispatchEvent(new Event('change', { bubbles: true }));   // 展開「其他」欄
+            });
+        });
+        Object.keys(others).forEach(function (cid) {
+            var f = form.querySelector('input[name="other' + cid + '"]');
+            if (f) f.value = others[cid];
+        });
+    }
+
     // 被選中的「其他」選項填的字：{選項 id: 文字}
     function collectOthers(form) {
         var others = {};
@@ -277,8 +316,16 @@
     }
 
     function openModal(survey) {
-        if (modal) return;
         lastFocus = document.activeElement;
+        if (modal) {
+            // 先前藏起來的 modal：回到原本那一題，答案都還在
+            if (modal.style.display === 'none') {
+                modal.style.display = '';
+                document.addEventListener('keydown', onKey);
+                if (session && session.resume) session.resume();
+            }
+            return;
+        }
 
         modal = el('div', 'tj-survey-modal');
         var backdrop = el('div', 'tj-survey-backdrop');
@@ -449,7 +496,7 @@
                     showThanks(content);
                 } else if (r.status === 410) {
                     removeFab();
-                    closeModal();
+                    destroyModal();
                 } else if (r.data.errors) {
                     showErrors(form, r.data.errors);
                     showStep(indexOfFirstError(r.data.errors));
@@ -471,6 +518,18 @@
         document.body.appendChild(modal);
         document.addEventListener('keydown', onKey);
 
-        showStep(0, true);
+        session.resume = function () { showStep(step, true); };
+
+        // 把草稿填回表單，並從第一題還沒答的開始（都答完了就停在最後一題）
+        var startStep = 0;
+        if (draft) {
+            applyDraft(form, survey, draft);
+            var done = collectAnswers(form, survey);
+            startStep = total - 1;
+            for (var k = 0; k < total; k++) {
+                if (!(survey.questions[k].id in done)) { startStep = k; break; }
+            }
+        }
+        showStep(startStep, true);
     }
 })();
