@@ -23,7 +23,7 @@ from game.selectors import rulesbot_ready_rulebooks
 from game.reports import flowchart_insights, rulesbot_insights, script_insights
 from feedback.reports import recent_feedback_count, survey_insights
 from .prod_stats import fetch_prod_stats
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAdminUser
@@ -294,16 +294,9 @@ class AdminStatsView(APIView):
         data['rulebook_flowchart_translated_count'] = _fc_translated.count()
         data['rulebook_flowchart_initial_count'] = _fc_translated.filter(initial=True).count()
         data['rulebook_flowchart_variant_count'] = _fc_translated.filter(initial=False).count()
-        # 待審＝最新一筆審核紀錄是「送審」，且送審的就是目前這一版（送審後沒再改過）
-        from django.db.models import F, OuterRef, Subquery
-        from game.models import FlowchartReview
-        _latest_review = FlowchartReview.objects.filter(flowchart=OuterRef('pk')).order_by('-created_at')
-        data['rulebook_flowchart_pending_review_count'] = (
-            RulebookFlowchart.objects.annotate(
-                _la=Subquery(_latest_review.values('action')[:1]),
-                _lh=Subquery(_latest_review.values('content_hash')[:1]),
-            ).filter(_la=FlowchartReview.Action.SUBMITTED, _lh=F('content_hash')).count()
-        )
+        # 待審的判準見 game.flowchart_review.pending_review_queryset（與審核狀態篩選一致）
+        from game.flowchart_review import pending_review_queryset
+        data['rulebook_flowchart_pending_review_count'] = pending_review_queryset().count()
         # ── 待辦色塊：製作流程的各關卡積壓 ──
         # 待搜／待寫入：Edition import queue 的兩個「等人動手」狀態
         from game.models import EditionImportQueue

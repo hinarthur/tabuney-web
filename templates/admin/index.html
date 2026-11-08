@@ -1428,6 +1428,7 @@
     const errorAckUrl = "{% url 'admin_error_ack' %}";
     const csrfToken = "{{ csrf_token }}";
     const PROD_ADMIN_SYSTEM_URL = 'https://tabuney.com/power/#system';
+    const PROD_ORIGIN = 'https://tabuney.com';
 
     function ackCell(a) {
         const td = document.createElement('td');
@@ -1898,6 +1899,25 @@
         document.getElementById('stats-source-module').style.background =
             showingProd ? '#ffecec' : '';
         document.getElementById('stats-source-note').textContent = note || '';
+        syncTileLinks(source === 'prod');
+    }
+
+    // 待辦色塊的數字來自正式站時，連結也要去正式站：本機資料庫是另一份，點進去會是空的。
+    // #system 這類頁內連結不動。原本的相對網址記在 data-href，切回本機時還原。
+    function syncTileLinks(toProd) {
+        document.querySelectorAll('.todo-tile[href]').forEach(a => {
+            if (!a.dataset.href) { a.dataset.href = a.getAttribute('href'); }
+            const href = a.dataset.href;
+            if (href.startsWith('#')) { return; }
+            a.setAttribute('href', toProd ? PROD_ORIGIN + href : href);
+            if (toProd) {
+                a.target = '_blank';
+                a.rel = 'noopener';
+            } else {
+                a.removeAttribute('target');
+                a.removeAttribute('rel');
+            }
+        });
     }
 
     function loadStats(source, forceRefresh) {

@@ -264,6 +264,31 @@ class PublishFlowTests(FlowchartReviewTestBase):
         self.assertEqual(list(resp.context["cl"].queryset), [])
 
 
+class PendingCountTests(FlowchartReviewTestBase):
+    """後台待辦色塊的「待審」數字要和審核狀態篩選的 pending 列表一致。"""
+
+    def _tile_and_list(self):
+        self.client.force_login(self.reviewer)
+        url = reverse("admin:game_rulebookflowchart_changelist")
+        listed = self.client.get(url, {"review": "pending"}).context["cl"].queryset.count()
+        return fr.pending_review_queryset().count(), listed
+
+    def test_submitted_chart_is_counted_and_listed(self):
+        fr.submit(self.chart, self.editor)
+        self.assertEqual(self._tile_and_list(), (1, 1))
+
+    def test_synced_live_copy_of_submitted_version_is_not_pending(self):
+        # VPS：審核紀錄停在「送審」，公開版（從本機同步來）卻已經是同一版
+        fr.submit(self.chart, self.editor)
+        self.chart.refresh_from_db()
+        FlowchartPublication.objects.create(
+            flowchart=self.chart, content=self.chart.effective_json,
+            content_hash=self.chart.content_hash, is_live=True,
+        )
+        self.assertEqual(fr.review_state(self.chart), fr.State.LIVE)
+        self.assertEqual(self._tile_and_list(), (0, 0))
+
+
 class TranslationAndSyncTests(FlowchartReviewTestBase):
     def test_gc_keeps_texts_used_only_by_live_version(self):
         from game.rag.flowchart.i18n import collect_inuse_hashes, compute_hash

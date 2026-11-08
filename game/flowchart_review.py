@@ -88,6 +88,28 @@ def review_state(chart, latest=None) -> str:
     return State.DRAFT
 
 
+def pending_review_queryset():
+    """
+    目前待審的流程圖：最新一筆審核紀錄是「送審」且就是目前這一版，而且公開版不是這一版。
+
+    後台待辦色塊的數字用這個。判準要和 review_state() 的 PENDING 一致：審核紀錄只存在
+    各自的資料庫（不同步），公開版卻會從本機同步到 VPS，所以 VPS 上可能出現「最新紀錄
+    停在送審、公開版卻已經是同一版」的圖，那種圖的狀態是 LIVE，不是待審。
+    """
+    from django.db.models import F, OuterRef, Q, Subquery
+
+    latest = FlowchartReview.objects.filter(flowchart=OuterRef("pk")).order_by("-created_at")
+    return (
+        RulebookFlowchart.objects
+        .annotate(
+            _la=Subquery(latest.values("action")[:1]),
+            _lh=Subquery(latest.values("content_hash")[:1]),
+        )
+        .filter(_la=FlowchartReview.Action.SUBMITTED, _lh=F("content_hash"))
+        .exclude(Q(publication__is_live=True) & Q(publication__content_hash=F("content_hash")))
+    )
+
+
 # ─── 動作 ──────────────────────────────────────────
 
 def _locked(chart):
