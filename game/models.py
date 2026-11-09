@@ -1532,11 +1532,18 @@ class RulebookFlowchart(TimeStampedModel):
 
     def save(self, *args, **kwargs):
         self.content_hash = self.compute_content_hash()
+        # edition 是 rulebook.edition 的冗餘副本，一律跟著 rulebook 走，
+        # 避免 duplicate 後改 rulebook 卻殘留舊 edition。
+        self.edition_id = self.rulebook.edition_id
         update_fields = kwargs.get("update_fields")
-        if update_fields is not None and (
-            {"adjusted_json", "react_flow_json"} & set(update_fields)
-        ):
-            kwargs["update_fields"] = list(set(update_fields) | {"content_hash"})
+        if update_fields is not None:
+            extra = set()
+            if {"adjusted_json", "react_flow_json"} & set(update_fields):
+                extra.add("content_hash")
+            if "rulebook" in update_fields or "rulebook_id" in update_fields:
+                extra.add("edition")
+            if extra:
+                kwargs["update_fields"] = list(set(update_fields) | extra)
         super().save(*args, **kwargs)
 
 
