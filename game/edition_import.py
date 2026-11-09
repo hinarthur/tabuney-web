@@ -6,8 +6,9 @@ Game / GameTitle / Edition / Entity+EditionRole / Rulebook（與選填的縮圖�
 行首空白一律忽略，所以縮排打錯不影響結果。完整說明見 admin 的匯入頁。
 
 設計原則
-- 全有或全無：先把格式錯誤全部收集；通過後在單一 transaction 內執行，
-  任何一個錯誤（含查無語言代碼、必填缺漏）都整批 rollback，不會加一半。
+- 格式錯誤（打錯 key、區段順序、`<<<` 沒收尾）整份文字都不執行，全部列出。
+- 通過格式檢查後，每個 Edition（連同它的 Entity 角色、Rulebook、縮圖）是一個獨立單位
+  （savepoint）：某個 Edition 出錯，只有它不寫入，其他照常寫入。
 - 預覽 (commit=False) 與寫入 (commit=True) 走同一份程式碼，預覽只是最後 rollback，
   所以預覽看到的「新建 / 沿用 / 補欄位」就是實際寫入會發生的事。
 - 既有資料只補空白欄位、不覆蓋。
@@ -101,6 +102,11 @@ class Report:
     @property
     def has_errors(self):
         return any(i["level"] == "error" for i in self.items)
+
+    @property
+    def has_changes(self):
+        """有沒有任何會被寫入的項目（新建 / 補欄位）。"""
+        return any(i["level"] in ("new", "fill") for i in self.items)
 
 
 # ---------------------------------------------------------------------------
@@ -280,6 +286,9 @@ class _EntityNames:
         if self._names is not None:
             self._names.append(name)
 
+    def reset(self):
+        self._names = None
+
 
 # ---------------------------------------------------------------------------
 # 縮圖
@@ -314,8 +323,8 @@ class _Rollback(Exception):
 
 def run_import(text, commit):
     """
-    解析並執行。commit=False 只預覽（最後一律 rollback）；commit=True 且沒有任何錯誤才真的寫入。
-    回傳 Report。
+    解析並執行。commit=False 只預覽（最後一律 rollback）；commit=True 會寫入所有沒出錯的
+    Edition，出錯的 Edition 略過（格式錯誤則整份都不執行）。回傳 Report。
     """
     rep = Report()
     games = parse(text, rep)
@@ -328,20 +337,27 @@ def run_import(text, commit):
     try:
         with transaction.atomic():
             for gb in games:
-                _do_game(gb, rep, commit, pending_thumbs, names)
+                # strict=False：game 本身的錯誤在寫入前就 return 了；底下 Edition 的錯誤
+                # 已由各自的 _unit 處理，不該連累整個 Game（除非全軍覆沒，見 _do_game）
+                _unit(rep, pending_thumbs, names,
+                      lambda gb=gb: _do_game(gb, rep, commit, pending_thumbs, names),
+                      strict=False)
 
-            if commit and not rep.has_errors:
+            if commit:
                 for edition, data, line in pending_thumbs:
                     edition.thumbnail_optimized = True
                     edition.thumbnail.save("thumb.webp", ContentFile(data), save=True)
                     saved_files.append(edition.thumbnail)
-            if rep.has_errors or not commit:
+            else:
                 raise _Rollback()
     except _Rollback:
         pass
-    except Exception as e:   # IntegrityError 等：整批已還原，把圖檔也清掉
+    except Exception as e:   # 連 savepoint 外的步驟（如存圖檔）都失敗：全部還原，圖檔也清掉
         rep.error(f"寫入失敗，已全部還原：{e}")
-    if rep.has_errors:
+        for it in rep.items:
+            if it["level"] in ("new", "fill"):
+                it["level"] = "skip"
+                it["text"] = "（未寫入）" + it["text"]
         for f in saved_files:
             try:
                 f.storage.delete(f.name)
@@ -417,6 +433,7 @@ def _do_game(gb, rep, commit, pending_thumbs, names):
         "bgg_id": bgg_id, "kind": kind or None, "min_players": min_p, "max_players": max_p,
         "min_playtime": min_t, "max_playtime": max_t, "parent_game": parent,
     }
+    created = game is None
     if game is None:
         game = Game(canonical_name=name, **{k: v for k, v in values.items() if v is not None})
         game.save()
@@ -434,8 +451,42 @@ def _do_game(gb, rep, commit, pending_thumbs, names):
     for tribe, title, primary in titles:
         _do_title(game, tribe, title, primary, gb.line, rep)
 
+    ok = 0
     for eb in gb.children:
-        _do_edition(game, eb, rep, commit, pending_thumbs, names)
+        n_err = len(rep.errors)
+        _unit(rep, pending_thumbs, names,
+              lambda eb=eb: _do_edition(game, eb, rep, commit, pending_thumbs, names))
+        ok += len(rep.errors) == n_err
+    # 全新的 Game、底下的 Edition 卻全部失敗：留一個空殼 Game 沒有意義，連它一起不寫
+    if created and gb.children and ok == 0:
+        raise _Rollback()
+
+
+def _unit(rep, pending_thumbs, names, fn, strict=True):
+    """
+    在 savepoint 內執行 fn。strict 時 fn 產生任何錯誤、或 fn 主動丟 _Rollback，
+    就只還原這一個單位（不 strict 則只看 _Rollback 與 DB 例外），
+    並把它先前列出的 新建/補欄位 改標為「未寫入」，其他單位不受影響。
+    """
+    start, n_err, n_pend = len(rep.items), len(rep.errors), len(pending_thumbs)
+    failed = False
+    try:
+        with transaction.atomic():
+            fn()
+            if strict and len(rep.errors) > n_err:
+                raise _Rollback()
+    except _Rollback:
+        failed = True
+    except Exception as e:
+        failed = True
+        rep.error(f"寫入失敗，這一筆已還原：{e}")
+    if failed:
+        for it in rep.items[start:]:
+            if it["level"] in ("new", "fill"):
+                it["level"] = "skip"
+                it["text"] = "（未寫入）" + it["text"]
+        del pending_thumbs[n_pend:]
+        names.reset()
 
 
 def _do_title(game, tribe, title, primary, line, rep):

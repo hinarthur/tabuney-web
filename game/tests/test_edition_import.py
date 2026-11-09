@@ -126,17 +126,91 @@ class EditionImportTests(TestCase):
         self.assertTrue(rep.has_errors)
         self.assertEqual(Edition.objects.count(), 1)
 
-    def test_all_or_nothing_on_bad_language(self):
+    def test_bad_edition_is_skipped_others_still_written(self):
         two = SAMPLE + "\n[game]\nname: Second\n[edition]\nname: x\nlanguage: xx\nrelease_year: 2020\n"
         rep = run_import(two, commit=True)
         self.assertTrue(rep.has_errors)
-        self.assertEqual(counts(), (0, 0, 0, 0, 0, 0))   # 第一款遊戲也沒寫進去
+        self.assertTrue(rep.has_changes)
+        self.assertEqual(Edition.objects.count(), 1)             # Catan 的 edition 照寫
+        self.assertEqual(Rulebook.objects.count(), 1)
+        self.assertFalse(Edition.objects.filter(name="x").exists())
+        self.assertFalse(Game.objects.filter(canonical_name="Second").exists())   # 全新 Game 的 edition 全失敗，Game 也不留
 
     def test_missing_required_fields_collected_together(self):
         rep = run_import("[game]\nname: A\n[edition]\nlanguage: zh\n[rulebook]\ntitle: t\n", commit=True)
         msgs = " ".join(i["text"] for i in rep.errors)
         self.assertIn("name", msgs)
         self.assertIn("release_year", msgs)
+        self.assertEqual(Edition.objects.count(), 0)
+        self.assertEqual(Rulebook.objects.count(), 0)
+
+    def test_game_with_multiple_editions(self):
+        text = (
+            "[game]\nname: Multi\nbgg_id: 99\n"
+            "[edition]\nname: ZH\nlanguage: zh\nrelease_year: 2023\npublisher: Pub A\n"
+            "[rulebook]\nlanguage: zh\nurl: https://e.com/zh.pdf\n"
+            "[edition]\nname: EN\nlanguage: en\nrelease_year: 2015\npublisher: Pub A\n"
+            "[rulebook]\nlanguage: en\nurl: https://e.com/en.pdf\n"
+            "[edition]\nname: EN\nlanguage: en\nrelease_year: 2020\npublisher: Pub B\n"
+        )
+        rep = run_import(text, commit=True)
+        self.assertFalse(rep.has_errors, rep.errors)
+        g = Game.objects.get(bgg_id=99)
+        self.assertEqual(g.editions.count(), 3)
+        self.assertEqual(Rulebook.objects.filter(edition__game=g).count(), 2)
+        self.assertEqual(Entity.objects.filter(name="Pub A").count(), 1)   # 同名 Entity 只建一次
+        self.assertEqual(EditionRole.objects.filter(edition__game=g).count(), 3)
+        before = counts()
+        self.assertFalse(run_import(text, commit=True).has_errors)
+        self.assertEqual(counts(), before)                                 # 重貼不重複
+
+    def test_one_bad_edition_among_several_only_that_one_skipped(self):
+        text = (
+            "[game]\nname: Multi\nbgg_id: 99\n"
+            "[edition]\nname: ZH\nlanguage: zh\nrelease_year: 2023\npublisher: Pub A\n"
+            "[edition]\nname: BAD\nlanguage: xx\nrelease_year: 2022\npublisher: Pub Ghost\n"
+            "[rulebook]\nlanguage: zh\nurl: https://e.com/bad.pdf\n"
+            "[edition]\nname: EN\nlanguage: en\nrelease_year: 2015\npublisher: Pub C\n"
+        )
+        rep = run_import(text, commit=True)
+        self.assertEqual(len(rep.errors), 1)
+        self.assertEqual(rep.errors[0]["line"], 11)
+        g = Game.objects.get(bgg_id=99)
+        self.assertEqual(sorted(g.editions.values_list("name", flat=True)), ["EN", "ZH"])
+        self.assertFalse(Entity.objects.filter(name="Pub Ghost").exists())    # 出錯那筆連 Entity 都沒留下
+        self.assertEqual(Rulebook.objects.count(), 0)
+        self.assertTrue(Entity.objects.filter(name="Pub C").exists())         # 出錯之後的 edition 照寫
+
+    def test_error_in_later_rulebook_rolls_back_its_edition_only(self):
+        text = (
+            "[game]\nname: Multi\n"
+            "[edition]\nname: GOOD\nlanguage: zh\nrelease_year: 2023\n"
+            "[edition]\nname: HALF\nlanguage: en\nrelease_year: 2022\npublisher: Pub H\n"
+            "[rulebook]\nlanguage: zz\nurl: https://e.com/x.pdf\n"
+        )
+        rep = run_import(text, commit=True)
+        self.assertTrue(rep.has_errors)
+        self.assertEqual(list(Edition.objects.values_list("name", flat=True)), ["GOOD"])
+        self.assertFalse(Entity.objects.filter(name="Pub H").exists())
+        halves = [i for i in rep.items if "HALF" in i["text"] and i["level"] == "skip"]
+        self.assertTrue(halves)                                              # 預覽列為「未寫入」
+
+    def test_preview_with_bad_edition_writes_nothing(self):
+        text = (
+            "[game]\nname: Multi\n"
+            "[edition]\nname: GOOD\nlanguage: zh\nrelease_year: 2023\n"
+            "[edition]\nname: BAD\nlanguage: xx\nrelease_year: 2022\n"
+        )
+        rep = run_import(text, commit=False)
+        self.assertTrue(rep.has_errors)
+        self.assertTrue(rep.has_changes)                                     # 可以送審
+        self.assertEqual(counts(), (0, 0, 0, 0, 0, 0))
+
+    def test_format_error_blocks_everything(self):
+        text = SAMPLE + "\n[game]\nname: Typo\nrelase_year: 1\n"
+        rep = run_import(text, commit=True)
+        self.assertTrue(rep.has_errors)
+        self.assertFalse(rep.has_changes)
         self.assertEqual(counts(), (0, 0, 0, 0, 0, 0))
 
     def test_format_errors_report_line_numbers(self):

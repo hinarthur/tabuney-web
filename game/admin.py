@@ -924,7 +924,7 @@ class EditionAdmin(admin.ModelAdmin):
 
         if request.method == "POST" and text.strip():
             report = run_import(text, commit=False)
-            if request.POST.get("action") == "commit" and not report.has_errors:
+            if request.POST.get("action") == "commit" and report.has_changes:
                 if queue_item is None:
                     messages.error(request, "請先選擇要送審的桌遊名。")
                 elif request.POST.get("preview_hash") != digest:
@@ -939,7 +939,7 @@ class EditionAdmin(admin.ModelAdmin):
                         "已送審「<a href=\"{}\">{}</a>」，尚未寫入 DB；到Edition import queue按「寫入DB」才會寫入。",
                         url, queue_item.name,
                     ))
-            if not committed and not report.has_errors:
+            if not committed and report.has_changes:
                 can_commit = True
                 preview_hash = digest
 
@@ -4909,7 +4909,8 @@ class GameSuggestionAdmin(admin.ModelAdmin):
 
 
 class EditionImportQueueForm(forms.ModelForm):
-    """改成 approved 前先用 run_import 預覽一次，有錯就擋下（變更頁與 list_editable 共用）。"""
+    """改成 approved 前先用 run_import 預覽一次，沒有任何可寫入的內容才擋下
+    （部分 Edition 出錯仍可核准，出錯的會被略過；變更頁與 list_editable 共用）。"""
 
     request = None   # admin 的 get_form / get_changelist_form 會掛上，用來檢查權限
 
@@ -4948,7 +4949,7 @@ class EditionImportQueueForm(forms.ModelForm):
         if not text.strip():
             raise forms.ValidationError("版本輸入預覽是空的，不能寫入DB（請先到版本輸入頁送審）。")
         report = run_import(text, commit=False)
-        if report.has_errors:
+        if report.has_errors and not report.has_changes:
             raise forms.ValidationError([
                 f"第 {e['line']} 行：{e['text']}" if e["line"] else e["text"] for e in report.errors
             ])
@@ -5025,15 +5026,20 @@ class EditionImportQueueAdmin(admin.ModelAdmin):
         was = EditionImportQueue.objects.filter(pk=obj.pk).values_list("status", flat=True).first()
         if obj.status == Q.APPROVED and was != Q.APPROVED:
             report = run_import(obj.import_text, commit=True)
-            if report.has_errors:
-                # 例如縮圖下載失敗（預覽不下載）：整批已 rollback，狀態退回待approval
+            errs = "；".join(
+                f"第 {e['line']} 行：{e['text']}" if e["line"] else e["text"] for e in report.errors
+            )
+            if report.has_errors and not report.has_changes:
+                # 例如縮圖下載失敗（預覽不下載）：什麼都沒寫入，狀態退回待approval
                 obj.status = Q.REVIEW
-                errs = "；".join(e["text"] for e in report.errors)
-                messages.error(request, f"「{obj.name}」寫入失敗，已全部還原並退回待approval：{errs}")
+                messages.error(request, f"「{obj.name}」沒有寫入任何資料，已退回待approval：{errs}")
             else:
                 obj.reviewed_by = getattr(request.user, "member", None)
                 obj.reviewed_at = timezone.now()
-                messages.success(request, f"「{obj.name}」已寫入 DB。")
+                if report.has_errors:
+                    messages.warning(request, f"「{obj.name}」已寫入 DB，但以下項目出錯而未寫入：{errs}")
+                else:
+                    messages.success(request, f"「{obj.name}」已寫入 DB。")
         super().save_model(request, obj, form, change)
 
     def batch_add_view(self, request):

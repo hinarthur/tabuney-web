@@ -72,7 +72,8 @@ url: https://example.com/catan-zh.pdf   # ※
 </pre>
     <ul>
       <li>已存在的資料<b>只補空白欄位，不覆蓋</b>；Edition 以 (遊戲, name, release_year) 判斷是否已存在，語言不同會報錯。</li>
-      <li>任何錯誤（缺必填、打錯 key、查無語言代碼…）都會<b>整批不寫入</b>，不會加一半。</li>
+      <li>格式錯誤（打錯 key、缺 [game]、<code>&lt;&lt;&lt;</code> 沒收尾）會<b>整份都不執行</b>。</li>
+      <li>內容錯誤（缺必填、查無語言代碼、條碼重複…）只讓<b>該 Edition 不寫入</b>（連同它的出版社、規則書、縮圖），其他 Edition 照常寫入。</li>
       <li>先「預覽」才能「送審」；預覽後改過文字要重新預覽。</li>
       <li>「送審」<b>不會寫入 DB</b>，只把文字存進所選的<a href="{% url 'admin:game_editionimportqueue_changelist' %}">Edition import queue</a>並改成待approval；在佇列按「寫入DB」才會真正寫入。</li>
     </ul>
@@ -95,7 +96,7 @@ url: https://example.com/catan-zh.pdf   # ※
     <div class="imp-actions">
       <button type="submit" name="action" value="preview" class="default">預覽</button>
       {% if can_commit %}
-      <button type="submit" name="action" value="commit" style="background:#2e8b57;color:#fff;">送審</button>
+      <button type="submit" name="action" value="commit" style="background:#2e8b57;color:#fff;">{% if report.has_errors %}略過錯誤，送審其餘{% else %}送審{% endif %}</button>
       {% endif %}
     </div>
   </form>
@@ -103,8 +104,10 @@ url: https://example.com/catan-zh.pdf   # ※
   {% if report %}
     {% if committed %}
       <div class="imp-summary ok">✅ 已送審（尚未寫入 DB）。到Edition import queue按「寫入DB」才會寫入。</div>
+    {% elif report.has_errors and can_commit %}
+      <div class="imp-summary bad">有 {{ report.errors|length }} 個錯誤。核准寫入時<b>出錯的 Edition 會被略過</b>（標示「未寫入」），其餘照常寫入。</div>
     {% elif report.has_errors %}
-      <div class="imp-summary bad">❌ 有 {{ report.errors|length }} 個錯誤，<b>完全沒有寫入任何資料</b>。請修正後重新預覽。</div>
+      <div class="imp-summary bad">❌ 有 {{ report.errors|length }} 個錯誤，<b>沒有任何可寫入的資料</b>。請修正後重新預覽。</div>
     {% else %}
       <div class="imp-summary ok">預覽正常（尚未寫入）{% if report.warnings %}，有 {{ report.warnings|length }} 個警告{% endif %}。確認無誤請按「送審」。</div>
     {% endif %}

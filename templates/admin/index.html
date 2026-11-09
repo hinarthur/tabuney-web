@@ -239,9 +239,9 @@
     <p id="stats-error" style="color:#ba2121;font-weight:bold;"></p>
 </div>
 
-{# ── 待辦 ─────────────────────────────────────────────────────
+{% comment %} ── 待辦 ─────────────────────────────────────────────────────
    只放「數字 > 0 就代表有事要做」的東西，其餘統計一律進下面的分頁。
-   數字由 renderTodo() 填；正式站還沒部署新欄位時顯示「—」而不是 0。 #}
+   數字由 renderTodo() 填；正式站還沒部署新欄位時顯示「—」而不是 0。{% endcomment %}
 <div class="todo-grid" style="margin-bottom:12px;">
     <a class="todo-tile zero" id="todo-game" href="{% url 'admin:game_gamesuggestion_changelist' %}?status__exact=pending">
         <span class="todo-num">—</span><span class="todo-label">推薦新增桌遊</span><span class="todo-sub"></span>
@@ -287,8 +287,8 @@
     </a>
 </div>
 
-{# 分頁狀態記在網址 hash（#users / #usage / #survey / #rss / #system），重新整理會停在同一頁。
-   hash 刻意不等於任何元素的 id，點了才不會讓瀏覽器跳捲動位置。 #}
+{% comment %} 分頁狀態記在網址 hash（#users / #usage / #survey / #rss / #system），重新整理會停在同一頁。
+   hash 刻意不等於任何元素的 id，點了才不會讓瀏覽器跳捲動位置。{% endcomment %}
 <div class="dash-tabs" role="tablist">
     <button type="button" role="tab" data-tab="users">用戶統計</button>
     <button type="button" role="tab" data-tab="usage">桌遊使用統計</button>
@@ -623,9 +623,9 @@
 </div>
 
 <div class="dash-panel" id="panel-system" role="tabpanel">
-{# ── VPS ──────────────────────────────────────────────────────
+{% comment %} ── VPS ──────────────────────────────────────────────────────
    資料來自 stats.ServerSample（django-q 每 10 分鐘採樣一次，留 14 天）。
-   紅燈門檻跟 deploy/vps/mem-snapshot.sh 同一組，定義在 stats/reports.py。 #}
+   紅燈門檻跟 deploy/vps/mem-snapshot.sh 同一組，定義在 stats/reports.py。{% endcomment %}
 <div class="module">
     <h2>VPS 負荷</h2>
     <p id="server-alert">載入中…</p>
@@ -655,9 +655,9 @@
     </p>
 </div>
 
-{# ── 寄信用量 ──────────────────────────────────────────────────
+{% comment %} ── 寄信用量 ──────────────────────────────────────────────────
    資料來自 stats.EmailLog（stats.email_backend 每封成功寄出的信記一列）。
-   額度與警示規則都在後端：settings.EMAIL_*_LIMIT、stats/reports.py email_usage()。 #}
+   額度與警示規則都在後端：settings.EMAIL_*_LIMIT、stats/reports.py email_usage()。{% endcomment %}
 <div class="module">
     <h2>寄信用量（Resend）</h2>
     <p id="email-alert">載入中…</p>
