@@ -121,5 +121,11 @@ urlpatterns += i18n_patterns(
     prefix_default_language=False,
 )
 
+# ── 自訂錯誤頁（只在 DEBUG=False 時生效）──
+handler404 = 'home.error_views.not_found'
+handler500 = 'home.error_views.server_error'
+handler403 = 'home.error_views.permission_denied'
+handler400 = 'home.error_views.bad_request'
+
 if settings.DEBUG:  # 只有在開發模式下才提供 media 檔案
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

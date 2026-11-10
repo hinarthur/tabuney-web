@@ -1,0 +1,42 @@
+<!doctype html>
+{# 獨立頁面：不 extends base.html（base 會查 DB、跑 context processor，500 時可能再次出錯），CSS 全部內嵌。 #}
+<html lang="{{ error_lang }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>{{ title }} - Tabuney</title>
+    <style>
+        :root { --bg: #F5F7FA; --text: #253247; --minor: #657287; --primary: #168BC3; --primary-light: #71C7D4; }
+        @media (prefers-color-scheme: dark) {
+            :root { --bg: #131A26; --text: #E8EEF5; --minor: #9CA9BB; }
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            padding: 24px; text-align: center; background: var(--bg); color: var(--text);
+            font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        }
+        main { max-width: 560px; }
+        .code {
+            font-size: clamp(5rem, 22vw, 9rem); font-weight: 700; line-height: 1; letter-spacing: -0.04em;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        h1 { margin: 16px 0 12px; font-size: 1.6rem; line-height: 1.3; }
+        p { margin: 0 auto 32px; max-width: 46ch; font-size: 1.0625rem; line-height: 1.7; color: var(--minor); }
+        a {
+            display: inline-block; padding: 12px 24px; border-radius: 999px; font-weight: 600;
+            text-decoration: none; background: var(--primary); color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="code" aria-hidden="true">500</div>
+        <h1>{{ title }}</h1>
+        <p>{{ text }}</p>
+        <a href="/">{{ home }}</a>
+    </main>
+</body>
+</html>

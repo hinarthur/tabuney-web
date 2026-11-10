@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static translate_tags %}
+
+{# 400 / 403 / 404 共用。view 傳入 code、title_key、text_key，文案走 {% t %}。 #}
+{% block title %}{% t title_key %} - Tabuney{% endblock title %}
+{# 錯誤頁不該被收錄，也不該有 canonical（會讓搜尋引擎把任意壞網址當成同一頁） #}
+{% block robots %}<meta name="robots" content="noindex, nofollow">{% endblock robots %}
+{% block canonical %}{% endblock canonical %}
+{% block og_title %}{% t title_key %}{% endblock og_title %}
+{% block twitter_title %}{% t title_key %}{% endblock twitter_title %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/error.css' %}?v=1">
+{% endblock extrahead %}
+
+{% block content %}
+<section class="error-page">
+    <div class="error-code" aria-hidden="true">{{ code }}</div>
+    <h1 class="error-title">{% t title_key %}</h1>
+    <p class="error-text">{% t text_key %}</p>
+    <div class="error-actions">
+        <a class="error-btn error-btn-primary" href="{% url 'home' %}">{% t "error.btn.home" %}</a>
+        <a class="error-btn error-btn-secondary" href="{% url 'games:search' %}">{% t "error.btn.games" %}</a>
+    </div>
+</section>
+{% endblock content %}
