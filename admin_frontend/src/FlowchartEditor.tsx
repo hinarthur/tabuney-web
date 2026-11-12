@@ -603,13 +603,14 @@ function Editor({ config }: { config: Config }) {
     padding: "4px 9px", fontSize: 12, borderRadius: 4,
     border: "1px solid var(--fc-node-border, #ccc)", cursor: disabled ? "not-allowed" : "pointer",
     opacity: disabled ? 0.6 : 1, background: disabled ? "var(--color-bg-alt, #f5f5f5)" : "var(--color-bg-popup, #fff)",
+    color: "var(--color-text-main, #333)",
     ...extra,
   });
 
   const smBtn = (disabled = false, extra?: React.CSSProperties): React.CSSProperties => ({
     padding: "1px 5px", fontSize: 11, borderRadius: 3,
     border: "1px solid var(--fc-node-border, #ddd)", cursor: disabled ? "default" : "pointer",
-    opacity: disabled ? 0.35 : 1, background: "var(--color-bg-popup, #fff)", lineHeight: "16px",
+    opacity: disabled ? 0.35 : 1, background: "var(--color-bg-popup, #fff)", lineHeight: "16px", color: "var(--color-text-main, #333)",
     ...extra,
   });
 
@@ -1161,7 +1162,7 @@ function Editor({ config }: { config: Config }) {
                   onClick={() => setShowLayers((v) => !v)}
                   style={{
                     width: "100%", textAlign: "left",
-                    padding: "7px 12px", fontSize: 12, fontWeight: 600,
+                    padding: "7px 12px", fontSize: 12, fontWeight: 600, color: "var(--color-text-main, #333)",
                     background: "var(--color-bg-alt, #f0f0f0)", border: "none", borderBottom: "1px solid var(--fc-node-border, #ddd)",
                     cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center",
                   }}

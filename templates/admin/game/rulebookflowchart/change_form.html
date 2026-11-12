@@ -134,15 +134,23 @@
 <link rel="stylesheet" href="{% static_v 'css/theme.css' %}">
 <script>
 /* Django admin's theme.js rewrites <html data-theme> to auto/light/dark; theme.css only
-   knows default/dark, so map anything else to "default" and keep it that way. */
+   knows default/dark. Resolve Django's choice (localStorage "theme": auto/light/dark) to
+   default/dark ourselves: "auto" follows the OS preference, live. */
 (function () {
   var root = document.documentElement;
+  var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  function choice() {
+    try { return localStorage.getItem('theme') || 'auto'; } catch (e) { return 'auto'; }
+  }
   function sync() {
-    var t = root.getAttribute('data-theme');
-    if (t !== 'default' && t !== 'dark') root.setAttribute('data-theme', 'default');
+    var c = choice();
+    var dark = c === 'dark' || (c !== 'light' && mq && mq.matches);
+    var want = dark ? 'dark' : 'default';
+    if (root.getAttribute('data-theme') !== want) root.setAttribute('data-theme', want);
   }
   sync();
   new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+  if (mq) mq.addEventListener('change', sync);
 })();
 </script>
 <link rel="stylesheet" href="{% static_v 'game/admin/flowchart_editor/index.css' %}">

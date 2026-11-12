@@ -595,8 +595,8 @@ class Rulebook(TimeStampedModel):
     # 規則書複雜度：1~999 的正整數
     complexity = models.PositiveSmallIntegerField(
         default=1,
-        validators=[MinValueValidator(1), MaxValueValidator(999)],
-        help_text="規則書複雜度，1~999",
+        validators=[MinValueValidator(1), MaxValueValidator(9999)],
+        help_text="規則書複雜度，1~9999",
     )
 
     needs_ocr = models.BooleanField(default=False)
