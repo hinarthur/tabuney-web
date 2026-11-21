@@ -284,8 +284,10 @@ class AdminStatsView(APIView):
             .order_by('-created_at').values_list('created_at', flat=True).first()
         )
         data['rulebook_source_broken_total'] = _broken.count()
+        # 沒有成功 sync 紀錄（例如 VPS 是接收端，GameSyncLog 只寫在本機）時
+        # 「新發現」沒有意義，回傳 None 讓前端顯示 '-'，不要誤報成全部都是新的。
         data['rulebook_source_broken_new'] = (
-            _broken.filter(updated_at__gt=_last_sync).count() if _last_sync else _broken.count()
+            _broken.filter(updated_at__gt=_last_sync).count() if _last_sync else None
         )
         # Flowchart 一格拆成「入門圖 | 變體圖」兩個數字（initial=True / False）。
         # 母體是「已公開」（reviewer 核准且未下架）：公開頁、sitemap 實際看得到的才算。
