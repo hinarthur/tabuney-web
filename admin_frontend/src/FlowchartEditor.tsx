@@ -494,7 +494,19 @@ function Editor({ config }: { config: Config }) {
       // Capture React Flow's rendered geometry so other renderers (e.g. the
       // mobile app's SVG viewer) can draw identical paths instead of
       // re-deriving them. Coordinates are in flow space (same as node.position).
-      const edgesToSave = edges.map((e) => {
+      // Drop references to nodes that no longer exist: legend_ids left behind
+      // by a deleted legend (React Flow's Delete key bypasses deleteSelectedNode),
+      // and any edge whose endpoint is gone.
+      const liveIds = new Set(nodes.map((n) => n.id));
+      const nodesToSave = nodes.map((n) => {
+        const ids = (n.data as { legend_ids?: unknown } | undefined)?.legend_ids;
+        if (!Array.isArray(ids)) return n;
+        const kept = ids.filter((id) => typeof id === "string" && liveIds.has(id));
+        if (kept.length === ids.length) return n;
+        const { legend_ids: _old, ...rest } = n.data as Record<string, unknown>;
+        return { ...n, data: kept.length ? { ...rest, legend_ids: kept } : rest };
+      });
+      const edgesToSave = edges.filter((e) => liveIds.has(e.source) && liveIds.has(e.target)).map((e) => {
         const pathEl = document.getElementById(e.id);
         const d = pathEl?.getAttribute("d") ?? null;
         let viewLabelX: number | undefined;
@@ -515,7 +527,7 @@ function Editor({ config }: { config: Config }) {
       const res = await fetch(config.adjustUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "X-CSRFToken": config.csrfToken },
-        body: JSON.stringify({ detail: config.detail, adjusted_json: { nodes, edges: edgesToSave } }),
+        body: JSON.stringify({ detail: config.detail, adjusted_json: { nodes: nodesToSave, edges: edgesToSave } }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
