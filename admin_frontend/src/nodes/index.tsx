@@ -9,6 +9,7 @@ import {
 } from "@xyflow/react";
 import { ReadOnlyContext } from "../ReadOnlyContext";
 import { BoardContext } from "../board/BoardContext";
+import { LegendRefContext, RefText, plainLabel, suffixText } from "../legendRefs";
 
 type NodeData = {
   label: string;
@@ -17,6 +18,7 @@ type NodeData = {
   phase_label?: string | null;
   phase_order?: number | null;
   customBorder?: string;
+  legend_ids?: string[];
 };
 
 // Per-node border colour. `data.customBorder` is set from the editor's
@@ -58,23 +60,6 @@ export function phaseActionTheme(data: unknown): PhaseTheme | null {
   if (!d) return null;
   const slot = phaseSlot(d);
   return slot ? PHASE_ACTION_THEMES[slot] : null;
-}
-
-// Tour-only: FlowchartTour injects data.onShowLegend into the current node when
-// it has legends bound (data.legend_ids). Never present in the editor.
-function LegendButton({ data }: { data: unknown }) {
-  const fn = (data as { onShowLegend?: () => void } | undefined)?.onShowLegend;
-  if (typeof fn !== "function") return null;
-  return (
-    <button
-      type="button"
-      className="fc-node-legend-btn nodrag nopan"
-      aria-label="Legend"
-      onClick={(e) => { e.stopPropagation(); fn(); }}
-    >
-      <i className="fa-solid fa-circle-info" aria-hidden="true" />
-    </button>
-  );
 }
 
 // A board diagram bound to this step (data.board) opens from this button in
@@ -129,8 +114,7 @@ export function OvalNode({ data, selected }: NodeProps) {
         <Handle type="source" position={Position.Top}    id="top"    style={hStyle} />
         <Handle type="source" position={Position.Right}  id="right"  style={hStyle} />
         <Handle type="source" position={Position.Bottom} id="bottom" style={hStyle} />
-        <span style={{ whiteSpace: "pre-wrap", padding: "8px 16px", textAlign: "center" }}>{d.label}</span>
-        <LegendButton data={d} />
+        <span style={{ whiteSpace: "pre-wrap", padding: "8px 16px", textAlign: "center" }}><RefText text={d.label} ids={d.legend_ids} /></span>
         <BoardButton data={d} />
       </div>
     </>
@@ -140,7 +124,10 @@ export function OvalNode({ data, selected }: NodeProps) {
 // Fixed 11px font. Instead of shrinking text, the diamond grows (never shrinks)
 // until the label fits the inscribed text box (60% x 40% of the node).
 const DIAMOND_FONT = 11;
-function DiamondLabel({ text, color }: { text: string; color: string }) {
+function DiamondLabel({ text, color, ids }: { text: string; color: string; ids?: unknown }) {
+  const refCtx = useContext(LegendRefContext);
+  const nums = refCtx?.numbers ?? new Map<string, number>();
+  const measureText = plainLabel(text, nums) + suffixText({ legend_ids: ids }, nums, text);
   const id = useNodeId();
   const { getNode, updateNode } = useReactFlow();
   const measureRef = useRef<HTMLSpanElement>(null);
@@ -162,12 +149,12 @@ function DiamondLabel({ text, color }: { text: string; color: string }) {
     if (w > curW + 0.5 || h > curH + 0.5) {
       updateNode(id!, { style: { ...(node.style ?? {}), width: w, height: h } });
     }
-  }, [text, id]);
+  }, [measureText, id]);
   return (
     <>
-      <span ref={measureRef} aria-hidden style={{ position: "absolute", visibility: "hidden", pointerEvents: "none", fontSize: DIAMOND_FONT, lineHeight: 1.2, whiteSpace: "pre-wrap", overflowWrap: "anywhere", boxSizing: "border-box" }}>{text}</span>
+      <span ref={measureRef} aria-hidden style={{ position: "absolute", visibility: "hidden", pointerEvents: "none", fontSize: DIAMOND_FONT, lineHeight: 1.2, whiteSpace: "pre-wrap", overflowWrap: "anywhere", boxSizing: "border-box" }}>{measureText}</span>
       <div style={{ position: "absolute", top: "27%", bottom: "27%", left: "20%", right: "20%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontSize: DIAMOND_FONT, lineHeight: 1.2, textAlign: "center", overflowWrap: "anywhere", whiteSpace: "pre-wrap", color, maxWidth: "100%" }}>{text}</span>
+        <span style={{ fontSize: DIAMOND_FONT, lineHeight: 1.2, textAlign: "center", overflowWrap: "anywhere", whiteSpace: "pre-wrap", color, maxWidth: "100%" }}><RefText text={text} ids={ids} /></span>
       </div>
     </>
   );
@@ -200,8 +187,7 @@ export function DiamondNode({ data, selected }: NodeProps) {
         <div className="fc-diamond-texture" />
         {/* Text lives in the rectangle inscribed in the diamond (60% x 40%);
             the font shrinks until the label fits, so long / translated text stays inside. */}
-        <DiamondLabel text={d.label} color={textColor} />
-        <LegendButton data={d} />
+        <DiamondLabel text={d.label} color={textColor} ids={(d as any).legend_ids} />
         <BoardButton data={d} />
       </div>
     </>
@@ -224,8 +210,7 @@ export function DoubleNode({ data, selected }: NodeProps) {
         <Handle type="source" position={Position.Top}    id="top"    style={hStyle} />
         <Handle type="source" position={Position.Right}  id="right"  style={hStyle} />
         <Handle type="source" position={Position.Bottom} id="bottom" style={hStyle} />
-        <span style={{ position: "relative", zIndex: 1, padding: "8px 12px", whiteSpace: "pre-wrap" }}>{d.label}</span>
-        <LegendButton data={d} />
+        <span style={{ position: "relative", zIndex: 1, padding: "8px 12px", whiteSpace: "pre-wrap" }}><RefText text={d.label} ids={d.legend_ids} /></span>
         <BoardButton data={d} />
       </div>
     </>
@@ -245,8 +230,7 @@ export function PhaseNode({ data, selected }: NodeProps) {
         <Handle type="source" position={Position.Top}    id="top"    style={hStyle} />
         <Handle type="source" position={Position.Right}  id="right"  style={hStyle} />
         <Handle type="source" position={Position.Bottom} id="bottom" style={hStyle} />
-        <span style={{ position: "relative", zIndex: 1, padding: "6px 14px", whiteSpace: "pre-wrap" }}>{d.label}</span>
-        <LegendButton data={d} />
+        <span style={{ position: "relative", zIndex: 1, padding: "6px 14px", whiteSpace: "pre-wrap" }}><RefText text={d.label} ids={d.legend_ids} /></span>
         <BoardButton data={d} />
       </div>
     </>
@@ -285,8 +269,7 @@ export function ActionNode({ data, selected }: NodeProps) {
         <Handle type="source" position={Position.Top}    id="top"    style={hStyle} />
         <Handle type="source" position={Position.Right}  id="right"  style={hStyle} />
         <Handle type="source" position={Position.Bottom} id="bottom" style={hStyle} />
-        <span style={{ position: "relative", zIndex: 1, padding: "8px 12px", whiteSpace: "pre-wrap" }}>{d.label}</span>
-        <LegendButton data={d} />
+        <span style={{ position: "relative", zIndex: 1, padding: "8px 12px", whiteSpace: "pre-wrap" }}><RefText text={d.label} ids={d.legend_ids} /></span>
         <BoardButton data={d} />
       </div>
     </>
@@ -297,6 +280,9 @@ export function ActionNode({ data, selected }: NodeProps) {
 export function LegendNode({ data, selected }: NodeProps) {
   const readOnly = useContext(ReadOnlyContext);
   const d = data as any;
+  const nodeId = useNodeId();
+  const refCtx = useContext(LegendRefContext);
+  const num = nodeId ? refCtx?.numbers.get(nodeId) : undefined;
   const lines: string[] = (d.content ?? "").split("\n").filter(Boolean);
   return (
     <>
@@ -309,9 +295,9 @@ export function LegendNode({ data, selected }: NodeProps) {
           : `1.5px dashed ${borderColor(d, "var(--fc-node-border, #bbb)")}`,
         borderRadius: 6, padding: "6px 10px", fontSize: 11, userSelect: "none",
       }}>
-        {d.title && (
+        {(d.title || num) && (
           <div style={{ fontWeight: 700, marginBottom: 3, color: "var(--fc-legend-title, #444)", whiteSpace: "pre-wrap" }}>
-            {d.title}
+            {num ? `[${num}] ` : ""}{d.title}
           </div>
         )}
         {lines.map((l, i) => (
@@ -342,7 +328,7 @@ export function TextNode({ data, selected }: NodeProps) {
         padding: "2px 8px", background: "transparent", userSelect: "none",
       }}>
         <span style={{ fontSize, color, fontWeight, textAlign, lineHeight: 1.3, whiteSpace: "pre-wrap" }}>
-          {d.label ?? "Text"}
+          <RefText text={String(d.label ?? "Text")} />
         </span>
       </div>
     </>

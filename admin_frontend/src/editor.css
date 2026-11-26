@@ -9,11 +9,14 @@
 
 /* Connection handles: a bigger dot plus an invisible, larger hit area so the
    handle is easy to grab and to drop an edge onto. */
+/* 不可改 width/height/border 寬度：固定 handle 的 edge 端點是取 handle 外框的
+   外緣（React Flow getHandlePosition），外框一變，editor 與唯讀預覽（沿用
+   React Flow 預設 6px + 1px 框）的線端就會差幾 px。視覺放大一律用 box-shadow
+   （不影響版面與量測）。 */
 #flowchart-editor-root .react-flow__handle {
-  width: 12px;
-  height: 12px;
   background: var(--fc-select, #1677ff);
-  border: 2px solid var(--fc-editor-bg, #fff);
+  border-color: var(--fc-editor-bg, #fff);
+  box-shadow: 0 0 0 3px var(--fc-select, #1677ff);
   opacity: 0.55;
   z-index: 5; /* above the label span (z-index:1) so tight text can't cover it */
   cursor: crosshair;
@@ -493,4 +496,32 @@ circle.fc-board-hit:hover { fill: var(--color-primary, #168BC3); fill-opacity: .
 @media (max-width: 720px) {
   .fc-be-body { flex-direction: column; }
   .fc-be-side { width: auto; border-left: none; border-top: 1px solid var(--fc-node-border, #ddd); max-height: 40%; }
+}
+
+/* Legend references: Wikipedia-style superscript [n] */
+.fc-legend-ref {
+  /* read-only mounts put pointer-events:none on node wrappers; opt back in */
+  pointer-events: auto;
+  display: inline;
+  margin: 0 1px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.7em;
+  line-height: 0;
+  vertical-align: super;
+  cursor: pointer;
+}
+.fc-legend-ref:hover { text-decoration: underline; }
+/* Viewing: a distinct link colour (readable on both light and dark node fills) */
+.fc-legend-ref.fc-legend-ref-view { color: var(--fc-legend-ref-color, #7cc4ff); font-weight: 600; }
+[data-fc-node="action"] .fc-legend-ref.fc-legend-ref-view,
+[data-fc-node="phase"] .fc-legend-ref.fc-legend-ref-view { color: var(--fc-legend-ref-color, #0b63c8); }
+.fc-legend-modal-text {
+  font-size: 20px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: var(--color-text-main, #333);
 }

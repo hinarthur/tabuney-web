@@ -33,6 +33,7 @@ import { BoardContext } from "./board/BoardContext";
 import BoardEditor from "./board/BoardEditor";
 import BoardModal from "./board/BoardModal";
 import { asBoard, type Board } from "./board/types";
+import { LegendModal, LegendRefContext, legendNumberMap, legendRefToken, stripDeadRefs } from "./legendRefs";
 
 interface Config {
   id?: string;
@@ -103,9 +104,17 @@ function Editor({ config }: { config: Config }) {
   // Node whose board popup is open (editor or read-only, depending on mode)
   const [boardNodeId, setBoardNodeId] = useState<string | null>(null);
   const boardCtx = useMemo(() => ({ openBoard: setBoardNodeId }), []);
+  // Legend numbers follow node-array order (= the Layers panel), never stored.
+  const [legendModalId, setLegendModalId] = useState<string | null>(null);
+  const legendNumbers = useMemo(() => legendNumberMap(nodes), [nodes]);
+  const legendCtx = useMemo(
+    () => ({ numbers: legendNumbers, open: setLegendModalId }),
+    [legendNumbers]
+  );
   const { fitView, screenToFlowPosition } = useReactFlow();
   const initialised = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const labelRef = useRef<HTMLTextAreaElement>(null);
   const historyRef = useRef<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
   const nodesRef = useRef<Node[]>([]);
   const edgesRef = useRef<Edge[]>([]);
@@ -274,35 +283,6 @@ function Editor({ config }: { config: Config }) {
   }, []);
 
   // ── edge toolbar helper (multi-select) ──────────────────────────────────────
-  function applyEdgeProp(key: string, value: unknown) {
-    saveHistory();
-    setEdges((eds) =>
-      eds.map((e) => {
-        if (!selectedEdgeIds.includes(e.id)) return e;
-        if (key === "markerEnd") {
-          return { ...e, markerEnd: value ? { type: value as MarkerType, width: MARKER_SIZE, height: MARKER_SIZE } : undefined };
-        }
-        return { ...e, [key]: value };
-      })
-    );
-  }
-
-  /**
-   * Switch the selected edges between fixed-handle and floating endpoints,
-   * keeping each one's own path shape (bezier / smooth / straight / step).
-   */
-  function applyEdgeFloating(floating: boolean) {
-    if (!selectedEdgeIds.length) return;
-    saveHistory();
-    setEdges((eds) =>
-      eds.map((e) =>
-        selectedEdgeIds.includes(e.id)
-          ? { ...e, type: edgeTypeFor(edgeShape(e.type), floating) }
-          : e
-      )
-    );
-  }
-
   // ── single-edge panel update ─────────────────────────────────────────────────
   function updateEdge(patch: Partial<Edge>) {
     const id = selectedEdgeIds.length === 1 ? selectedEdgeIds[0] : null;
@@ -482,6 +462,21 @@ function Editor({ config }: { config: Config }) {
     });
   }
 
+  // Drag a layer row to a new position: the dragged node takes the target row's
+  // array index (shifting the ones in between), so the list order = z-order.
+  const [dragLayerIdx, setDragLayerIdx] = useState<number | null>(null);
+  const [overLayerIdx, setOverLayerIdx] = useState<number | null>(null);
+  function moveLayerNode(from: number, to: number) {
+    if (from === to) return;
+    saveHistory();
+    setNodes((nds) => {
+      const arr = [...nds];
+      const [item] = arr.splice(from, 1);
+      arr.splice(to, 0, item);
+      return arr;
+    });
+  }
+
   function selectNodeInCanvas(nodeId: string) {
     setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === nodeId })));
     setSelectedNodeId(nodeId);
@@ -498,7 +493,11 @@ function Editor({ config }: { config: Config }) {
       // by a deleted legend (React Flow's Delete key bypasses deleteSelectedNode),
       // and any edge whose endpoint is gone.
       const liveIds = new Set(nodes.map((n) => n.id));
-      const nodesToSave = nodes.map((n) => {
+      const nodesToSave = nodes.map((n0) => {
+        // {{L:id}} refs in a label whose legend was deleted
+        const lbl = (n0.data as { label?: unknown } | undefined)?.label;
+        const cleaned = typeof lbl === "string" ? stripDeadRefs(lbl, liveIds) : lbl;
+        const n = cleaned === lbl ? n0 : { ...n0, data: { ...n0.data, label: cleaned } };
         const ids = (n.data as { legend_ids?: unknown } | undefined)?.legend_ids;
         if (!Array.isArray(ids)) return n;
         const kept = ids.filter((id) => typeof id === "string" && liveIds.has(id));
@@ -577,12 +576,8 @@ function Editor({ config }: { config: Config }) {
 
   // ── derived state ─────────────────────────────────────────────────────────────
   const isBusy = status === "saving";
-  const hasSelectedEdges = selectedEdgeIds.length > 0;
   const selectedNode = selectedNodeId ? nodes.find((n) => n.id === selectedNodeId) ?? null : null;
   const selectedData = selectedNode?.data as Record<string, unknown> | undefined;
-  const allSelectedEdgesFloating =
-    selectedEdgeIds.length > 0 &&
-    edges.every((e) => !selectedEdgeIds.includes(e.id) || isFloatingEdgeType(e.type));
   const selectedEdgeId = selectedEdgeIds.length === 1 ? selectedEdgeIds[0] : null;
   const selectedEdge = selectedEdgeId ? edges.find((e) => e.id === selectedEdgeId) ?? null : null;
   const boardNode = boardNodeId ? nodes.find((n) => n.id === boardNodeId) ?? null : null;
@@ -629,6 +624,7 @@ function Editor({ config }: { config: Config }) {
   return (
     <ReadOnlyContext.Provider value={isReadOnly}>
     <BoardContext.Provider value={boardCtx}>
+    <LegendRefContext.Provider value={legendCtx}>
       <div ref={containerRef} style={{ height: "100%", display: "flex", flexDirection: "column", color: "var(--fc-editor-text, #333)", background: "var(--fc-editor-bg, #fff)" }}>
 
         {/* ── Toolbar (edit mode only) ────────────────────────────── */}
@@ -694,40 +690,6 @@ function Editor({ config }: { config: Config }) {
                       🔷 Logo
                     </button>
                   )}
-                </>
-              )}
-
-              {hasSelectedEdges && (
-                <>
-                  <div style={{ width: 1, height: 18, background: "var(--fc-node-border, #ddd)", margin: "0 3px" }} />
-                  <span style={{ fontSize: 11, color: "var(--color-text-minor, #888)" }}>Edge:</span>
-                  {EDGE_STYLE_OPTS.map((et) => (
-                    <button key={et.id} style={btn()}
-                      onClick={() => applyEdgeProp("type", edgeTypeFor(et.id, allSelectedEdgesFloating))}>
-                      {et.label}
-                    </button>
-                  ))}
-                  <span style={{ fontSize: 11, color: "var(--color-text-minor, #888)", marginLeft: 2 }}>Ends:</span>
-                  <button style={btn(false, !allSelectedEdgesFloating ? { background: "var(--color-bg-hover, #e6f4ff)", borderColor: "var(--color-primary, #1677ff)" } : {})}
-                    title="Endpoints stay pinned to the handle they were drawn from"
-                    onClick={() => applyEdgeFloating(false)}>
-                    ⚓ Fixed
-                  </button>
-                  <button style={btn(false, allSelectedEdgesFloating ? { background: "var(--color-bg-hover, #e6f4ff)", borderColor: "var(--color-primary, #1677ff)" } : {})}
-                    title="Endpoints follow the nodes and re-attach to the nearest side"
-                    onClick={() => applyEdgeFloating(true)}>
-                    🧲 Floating
-                  </button>
-                  <span style={{ fontSize: 11, color: "var(--color-text-minor, #888)", marginLeft: 2 }}>Arrow:</span>
-                  {ARROW_TYPES.map((at) => (
-                    <button key={at.id} style={btn()} onClick={() => applyEdgeProp("markerEnd", at.id)}>
-                      {at.label}
-                    </button>
-                  ))}
-                  <button style={btn(false, { color: "var(--fc-edge-no, #ff4d4f)" })}
-                    onClick={() => { setEdges((eds) => eds.filter((e) => !selectedEdgeIds.includes(e.id))); setSelectedEdgeIds([]); }}>
-                    🗑 Delete edge
-                  </button>
                 </>
               )}
 
@@ -825,6 +787,16 @@ function Editor({ config }: { config: Config }) {
                       {/* ── Legend: title + content ── */}
                       {isLegend && (
                         <>
+                          <div style={{ fontSize: 11, color: "var(--color-text-minor, #666)" }}>
+                            Number: <strong>[{legendNumbers.get(selectedNodeId!) ?? "?"}]</strong> · set by Layers order
+                            <div style={{ marginTop: 2 }}>
+                              ID: <code style={{ userSelect: "all" }}>{selectedNodeId}</code>{" "}
+                              <button type="button" style={smBtn()} title="Copy {{L:id}} to the clipboard"
+                                onClick={() => { try { navigator.clipboard?.writeText(legendRefToken(selectedNodeId!)); } catch { /* ignore */ } }}>
+                                Copy {"{{L:…}}"}
+                              </button>
+                            </div>
+                          </div>
                           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                             <label style={{ fontSize: 11, color: "var(--color-text-minor, #666)", fontWeight: 500 }}>Title</label>
                             <input type="text"
@@ -845,33 +817,6 @@ function Editor({ config }: { config: Config }) {
                           </div>
                         </>
                       )}
-
-                      {/* ── Bind legends: Tour shows a button on this node ── */}
-                      {["oval", "diamond", "double", "phase", "action"].includes(String(ntype)) && (() => {
-                        const legendNodes = nodes.filter((n) => n.type === "legend");
-                        if (!legendNodes.length) return null;
-                        const bound = Array.isArray(selectedData?.legend_ids)
-                          ? (selectedData!.legend_ids as string[]) : [];
-                        return (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                            <label style={{ fontSize: 11, color: "var(--color-text-minor, #666)", fontWeight: 500 }}>Legends (Tour button)</label>
-                            {legendNodes.map((l) => {
-                              const title = String((l.data as any)?.title ?? "").trim() || l.id;
-                              return (
-                                <label key={l.id} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12, color: "var(--color-text-main, #333)", cursor: "pointer" }}>
-                                  <input type="checkbox" checked={bound.includes(l.id)}
-                                    onChange={(e) => updateSelectedNodeData({
-                                      legend_ids: e.target.checked
-                                        ? [...bound, l.id]
-                                        : bound.filter((x) => x !== l.id),
-                                    })} />
-                                  {title}
-                                </label>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
 
                       {/* ── Board: grid diagram opened from a button on this node ── */}
                       {["oval", "diamond", "double", "phase", "action"].includes(String(ntype)) && (() => {
@@ -987,11 +932,77 @@ function Editor({ config }: { config: Config }) {
                           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                             <label style={{ fontSize: 11, color: "var(--color-text-minor, #666)", fontWeight: 500 }}>Label</label>
                             <textarea
+                              ref={labelRef}
                               value={String(selectedData?.label ?? "")}
                               rows={3}
                               onChange={(e) => updateSelectedNodeData({ label: e.target.value })}
                               style={{ width: "100%", boxSizing: "border-box", fontSize: 12, padding: "4px 6px", border: "1px solid var(--fc-node-border, #d9d9d9)", borderRadius: 4, resize: "vertical", fontFamily: "inherit", background: "var(--color-bg-popup, #fff)", color: "var(--color-text-main, #333)" }}
                             />
+                            {legendNumbers.size > 0 && (() => {
+                              const refs = Array.isArray(selectedData?.legend_ids)
+                                ? (selectedData!.legend_ids as string[]) : [];
+                              const titleOf = (lid: string) =>
+                                String((nodes.find((x) => x.id === lid)?.data as any)?.title ?? "").trim() || lid;
+                              return (
+                                <>
+                                  {refs.length > 0 && (
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                      {refs.filter((lid) => legendNumbers.has(lid)).map((lid) => (
+                                        <span key={lid} title={titleOf(lid)}
+                                          style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, padding: "1px 6px", borderRadius: 10, background: "var(--color-bg-hover, #e6f4ff)", color: "var(--color-primary, #1677ff)" }}>
+                                          [{legendNumbers.get(lid)}] {titleOf(lid)}
+                                          <button type="button" aria-label="Remove"
+                                            onClick={() => updateSelectedNodeData({ legend_ids: refs.filter((x) => x !== lid) })}
+                                            style={{ border: "none", background: "transparent", cursor: "pointer", color: "inherit", padding: 0, fontSize: 12, lineHeight: 1 }}>×</button>
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <select value=""
+                                    onChange={(e) => {
+                                      const lid = e.target.value;
+                                      if (!lid || refs.includes(lid)) return; // no duplicates
+                                      updateSelectedNodeData({ legend_ids: [...refs, lid] });
+                                    }}
+                                    style={{ fontSize: 11, padding: "2px 4px", border: "1px solid var(--fc-node-border, #d9d9d9)", borderRadius: 4, background: "var(--color-bg-popup, #fff)", color: "var(--color-text-main, #333)" }}
+                                    title="Adds a legend reference after the label (shared by all languages). For a mid-sentence reference, type {{L:id}} in the text instead.">
+                                    <option value="">+ Add legend reference…</option>
+                                    {[...legendNumbers.entries()].map(([lid, num]) => (
+                                      <option key={lid} value={lid} disabled={refs.includes(lid)}>
+                                        {refs.includes(lid) ? "✓ " : ""}[{num}] {titleOf(lid)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </>
+                              );
+                            })()}
+                            {legendNumbers.size > 0 && (
+                              <select value=""
+                                onChange={(e) => {
+                                  const lid = e.target.value;
+                                  if (!lid) return;
+                                  const ta = labelRef.current;
+                                  const cur = String(selectedData?.label ?? "");
+                                  const pos = ta ? ta.selectionStart : cur.length;
+                                  const end = ta ? ta.selectionEnd : pos;
+                                  const tok = legendRefToken(lid);
+                                  updateSelectedNodeData({ label: cur.slice(0, pos) + tok + cur.slice(end) });
+                                  requestAnimationFrame(() => {
+                                    if (!ta) return;
+                                    ta.focus();
+                                    ta.setSelectionRange(pos + tok.length, pos + tok.length);
+                                  });
+                                }}
+                                style={{ fontSize: 11, padding: "2px 4px", border: "1px solid var(--fc-node-border, #d9d9d9)", borderRadius: 4, background: "var(--color-bg-popup, #fff)", color: "var(--color-text-main, #333)" }}
+                                title="Click in the label where the reference goes, then pick a legend. Inserts {{L:id}} at the cursor (use for mid-sentence references; translations keep it).">
+                                <option value="">+ Insert mid-sentence at cursor…</option>
+                                {[...legendNumbers.entries()].map(([lid, num]) => (
+                                  <option key={lid} value={lid}>
+                                    [{num}] {String((nodes.find((x) => x.id === lid)?.data as any)?.title ?? "").trim() || lid}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
                           </div>
                           {phaseColors && (
                             /* Action nodes in a phase are colour-locked so they read
@@ -1186,7 +1197,7 @@ function Editor({ config }: { config: Config }) {
                 {showLayers && (
                   <div style={{ padding: "4px 6px", display: "flex", flexDirection: "column", gap: 1 }}>
                     <div style={{ fontSize: 10, color: "var(--color-text-disabled, #aaa)", padding: "2px 4px 4px" }}>
-                      Top = front · ↑↓ to reorder z-order
+                      Top = front · drag or ↑↓ to reorder z-order
                     </div>
                     {/* Reversed: top of list = highest array index = frontmost */}
                     {[...nodes].reverse().map((n, revI) => {
@@ -1197,10 +1208,19 @@ function Editor({ config }: { config: Config }) {
                       return (
                         <div
                           key={n.id}
+                          draggable
+                          onDragStart={(e) => { setDragLayerIdx(realIdx); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", n.id); }}
+                          onDragOver={(e) => { if (dragLayerIdx === null) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (overLayerIdx !== realIdx) setOverLayerIdx(realIdx); }}
+                          onDrop={(e) => { e.preventDefault(); if (dragLayerIdx !== null) moveLayerNode(dragLayerIdx, realIdx); setDragLayerIdx(null); setOverLayerIdx(null); }}
+                          onDragEnd={() => { setDragLayerIdx(null); setOverLayerIdx(null); }}
                           onClick={() => selectNodeInCanvas(n.id)}
                           style={{
                             display: "flex", alignItems: "center", gap: 3,
-                            padding: "3px 4px", borderRadius: 3, cursor: "pointer",
+                            padding: "3px 4px", borderRadius: 3, cursor: "grab",
+                            opacity: dragLayerIdx === realIdx ? 0.4 : 1,
+                            boxShadow: dragLayerIdx !== null && overLayerIdx === realIdx && dragLayerIdx !== realIdx
+                              ? (dragLayerIdx > realIdx ? "inset 0 -2px 0 var(--color-primary, #1677ff)" : "inset 0 2px 0 var(--color-primary, #1677ff)")
+                              : "none",
                             background: isSelected ? "var(--color-bg-hover, #e6f4ff)" : "transparent",
                           }}
                         >
@@ -1210,7 +1230,7 @@ function Editor({ config }: { config: Config }) {
                             textOverflow: "ellipsis", whiteSpace: "nowrap",
                             color: isSelected ? "var(--color-primary, #1677ff)" : "var(--color-text-main, #333)",
                           }}>
-                            {String(label)}
+                            {n.type === "legend" && legendNumbers.has(n.id) ? `[${legendNumbers.get(n.id)}] ` : ""}{String(label)}
                           </span>
                           <span style={{ fontSize: 9, color: "var(--fc-node-border, #ccc)", flexShrink: 0, marginRight: 2 }}>
                             {n.type}
@@ -1246,6 +1266,16 @@ function Editor({ config }: { config: Config }) {
             onRemove={() => { setNodeBoard(boardNode.id, null); setBoardNodeId(null); }}
             onClose={() => setBoardNodeId(null)} />
       )}
+      {legendModalId && legendNumbers.has(legendModalId) && (() => {
+        const ln = nodes.find((n) => n.id === legendModalId);
+        const ld = ln?.data as { title?: unknown; content?: unknown } | undefined;
+        return (
+          <LegendModal number={legendNumbers.get(legendModalId)!}
+            title={String(ld?.title ?? "").trim()} content={String(ld?.content ?? "")}
+            onClose={() => setLegendModalId(null)} />
+        );
+      })()}
+    </LegendRefContext.Provider>
     </BoardContext.Provider>
     </ReadOnlyContext.Provider>
   );

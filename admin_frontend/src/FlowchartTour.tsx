@@ -30,6 +30,7 @@ import { ReadOnlyContext } from "./ReadOnlyContext";
 import { BoardContext } from "./board/BoardContext";
 import BoardModal from "./board/BoardModal";
 import { asBoard } from "./board/types";
+import { LegendModal, LegendRefContext, legendIdsOf, legendNumberMap } from "./legendRefs";
 
 // Per-node feedback goes to the same endpoint as the page's 🚩 suggestion
 // button (FlowchartSuggestionCreateView), with node_id / node_label added.
@@ -106,9 +107,13 @@ function noteContent(n: Node | undefined): string {
   return typeof raw === "string" ? raw : "";
 }
 
-function boundIdsOf(n: Node): string[] {
-  const raw = (n.data as { legend_ids?: unknown } | undefined)?.legend_ids;
-  return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === "string") : [];
+// Legends a node's label points at via {{L:id}} open from that [n]; only the
+// unreferenced ones still need the Notes row.
+const REF_RE = /\{\{L:([^{}]+?)\}\}/g;
+function refIdsOf(n: Node): string[] {
+  const raw = (n.data as { label?: unknown } | undefined)?.label;
+  const inline = typeof raw === "string" ? [...raw.matchAll(REF_RE)].map((m) => m[1].trim()) : [];
+  return [...inline, ...legendIdsOf(n.data)];
 }
 
 function Tour({ config }: { config: TourConfig }) {
@@ -176,13 +181,11 @@ function Tour({ config }: { config: TourConfig }) {
     () => baseNodes.filter((n) => n.type === "legend"),
     [baseNodes]
   );
-  // Legends bound to a node (data.legend_ids) open from a button on that node
-  // instead, so they drop out of the Notes row.
   const boundLegendIds = useMemo(() => {
     const legendIds = new Set(allLegends.map((n) => n.id));
     const s = new Set<string>();
     baseNodes.forEach((n) => {
-      boundIdsOf(n).forEach((id) => { if (legendIds.has(id)) s.add(id); });
+      refIdsOf(n).forEach((id) => { if (legendIds.has(id)) s.add(id); });
     });
     return s;
   }, [baseNodes, allLegends]);
@@ -201,6 +204,12 @@ function Tour({ config }: { config: TourConfig }) {
   const [boardNodeId, setBoardNodeId] = useState<string | null>(null);
   const boardCtx = useMemo(() => ({ openBoard: setBoardNodeId }), []);
   const boardNode = boardNodeId ? nodeById.get(boardNodeId) : undefined;
+  const [legendModalId, setLegendModalId] = useState<string | null>(null);
+  const legendNumbers = useMemo(() => legendNumberMap(baseNodes), [baseNodes]);
+  const legendCtx = useMemo(
+    () => ({ numbers: legendNumbers, open: (id: string) => { setOpenNoteIds([]); setLegendModalId(id); } }),
+    [legendNumbers]
+  );
   const openBoard = asBoard((boardNode?.data as { board?: unknown } | undefined)?.board);
 
   const fbConfig = config.feedback?.enabled && config.feedback.flowchartId ? config.feedback : null;
@@ -289,18 +298,11 @@ function Tour({ config }: { config: TourConfig }) {
   const activeEdgeIds = useMemo(() => new Set(outs.map((e) => e.id)), [outs]);
 
   const viewNodes = useMemo(
-    () => baseNodes.map((n) => {
-      const isCurrent = n.id === currentId;
-      const ids = isCurrent ? boundIdsOf(n).filter((id) => nodeById.get(id)?.type === "legend") : [];
-      return {
-        ...n,
-        className: isCurrent ? "fc-tour-focus" : "fc-tour-dim",
-        ...(ids.length
-          ? { data: { ...n.data, onShowLegend: () => setOpenNoteIds((cur) => (cur.length ? [] : ids)) } }
-          : {}),
-      };
-    }),
-    [baseNodes, currentId, nodeById]
+    () => baseNodes.map((n) => ({
+      ...n,
+      className: n.id === currentId ? "fc-tour-focus" : "fc-tour-dim",
+    })),
+    [baseNodes, currentId]
   );
 
   // Keep the current node's outgoing edges sharp — that is how the reader sees
@@ -353,6 +355,7 @@ function Tour({ config }: { config: TourConfig }) {
   return (
     <ReadOnlyContext.Provider value={true}>
     <BoardContext.Provider value={boardCtx}>
+    <LegendRefContext.Provider value={legendCtx}>
       <ReactFlow
         id="fc-tour"
         nodes={viewNodes}
@@ -474,6 +477,13 @@ function Tour({ config }: { config: TourConfig }) {
         <BoardModal board={openBoard} fallbackTitle={nodeLabel(boardNode)}
           onClose={() => setBoardNodeId(null)} />
       )}
+      {legendModalId && legendNumbers.has(legendModalId) && (
+        <LegendModal number={legendNumbers.get(legendModalId)!}
+          title={noteTitle(nodeById.get(legendModalId))}
+          content={noteContent(nodeById.get(legendModalId))}
+          onClose={() => setLegendModalId(null)} />
+      )}
+    </LegendRefContext.Provider>
     </BoardContext.Provider>
     </ReadOnlyContext.Provider>
   );
